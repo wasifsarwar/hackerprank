@@ -3,6 +3,7 @@
 A local proof of concept for a LeetCode/HackerRank-style coding practice platform.
 
 For project memory, design decisions, and future-chat handoff context, see `PROJECT_NOTES.md`.
+For coding-agent operating instructions and repeatable workflows, see `AGENTS.md` and `SKILLS.md`.
 
 ## Shape of the App
 

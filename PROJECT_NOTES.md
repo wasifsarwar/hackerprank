@@ -4,6 +4,11 @@ Last updated: 2026-05-27
 
 This is the living handoff file for HackerPrank. Future chats should read this first, then run `git status --short --branch`, then check `README.md` for setup commands.
 
+Agentic development docs:
+
+- `AGENTS.md` - operating instructions for coding agents.
+- `SKILLS.md` - repeatable project workflows for agents.
+
 ## Project Goal
 
 HackerPrank is a local LeetCode/HackerRank-style coding practice platform.
@@ -420,4 +425,3 @@ When making a meaningful project change, update this file with:
 - Suggested next step
 
 Keep the README focused on setup and usage. Keep this file focused on project memory and handoff context.
-
