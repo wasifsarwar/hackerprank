@@ -11,6 +11,12 @@ The first version intentionally uses stdin/stdout problems. That keeps the runne
 
 ## Local Commands
 
+Prerequisites:
+
+- Java 21
+- Maven
+- Node.js 20+
+
 Frontend:
 
 ```sh
@@ -26,7 +32,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-If Maven is not installed globally, install Maven or use the project with an IDE that can import Maven projects.
+The backend is configured for Spring Boot 3 and Java 21.
 
 ## Current Limitations
 

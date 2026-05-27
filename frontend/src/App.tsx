@@ -220,7 +220,14 @@ function App() {
                         <span>{test.hidden ? "Hidden" : "Sample"}</span>
                       </div>
                       <p>
-                        {test.passed ? "Passed" : test.timedOut ? "Timed out" : "Failed"} in {test.runtimeMs}ms
+                        {test.passed
+                          ? "Passed"
+                          : test.timedOut
+                            ? "Timed out"
+                            : test.exitCode !== 0
+                              ? "Runtime error"
+                              : "Failed"}{" "}
+                        in {test.runtimeMs}ms
                       </p>
                       {!test.hidden && (
                         <div className="io-grid">

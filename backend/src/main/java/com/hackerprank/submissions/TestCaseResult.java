@@ -8,6 +8,7 @@ public class TestCaseResult {
     private final String actualOutput;
     private final String stderr;
     private final boolean timedOut;
+    private final int exitCode;
     private final long runtimeMs;
 
     public TestCaseResult(
@@ -18,6 +19,7 @@ public class TestCaseResult {
         String actualOutput,
         String stderr,
         boolean timedOut,
+        int exitCode,
         long runtimeMs
     ) {
         this.name = name;
@@ -27,6 +29,7 @@ public class TestCaseResult {
         this.actualOutput = actualOutput;
         this.stderr = stderr;
         this.timedOut = timedOut;
+        this.exitCode = exitCode;
         this.runtimeMs = runtimeMs;
     }
 
@@ -56,6 +59,10 @@ public class TestCaseResult {
 
     public boolean isTimedOut() {
         return timedOut;
+    }
+
+    public int getExitCode() {
+        return exitCode;
     }
 
     public long getRuntimeMs() {

@@ -39,6 +39,7 @@ export interface TestCaseResult {
   actualOutput: string;
   stderr: string;
   timedOut: boolean;
+  exitCode: number;
   runtimeMs: number;
 }
 

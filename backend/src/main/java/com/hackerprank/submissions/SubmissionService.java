@@ -62,15 +62,17 @@ public class SubmissionService {
                 if (result.isTimedOut()) {
                     timedOut = true;
                 }
-                if (!result.isPassed() && !result.isTimedOut() && result.getStderr() != null && !result.getStderr().isEmpty()) {
+                if (!result.isPassed() && !result.isTimedOut() && result.getExitCode() != 0) {
                     runtimeError = true;
                 }
             }
 
             String status = statusFor(passedCount, cases.size(), timedOut, runtimeError);
             return new SubmissionResult(status, passedCount, cases.size(), "", results);
-        } catch (IOException | InterruptedException exception) {
+        } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+            return new SubmissionResult("RUNTIME_ERROR", 0, cases.size(), exception.getMessage(), new ArrayList<>());
+        } catch (IOException exception) {
             return new SubmissionResult("RUNTIME_ERROR", 0, cases.size(), exception.getMessage(), new ArrayList<>());
         } finally {
             deleteRecursively(workspace);
@@ -122,6 +124,7 @@ public class SubmissionService {
             processResult.getStdout(),
             processResult.getStderr(),
             processResult.isTimedOut(),
+            processResult.getExitCode(),
             processResult.getRuntimeMs()
         );
     }
