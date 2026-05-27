@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import Editor from "@monaco-editor/react";
 import { fetchProblem, fetchProblems, runSubmission } from "./api";
 import type { Language, Problem, ProblemSummary, SubmissionResult } from "./types";
 
 const languageLabels: Record<Language, string> = {
   python: "Python",
   java: "Java"
+};
+
+const editorLanguages: Record<Language, string> = {
+  python: "python",
+  java: "java"
 };
 
 function App() {
@@ -189,13 +195,31 @@ function App() {
                 </div>
               </div>
 
-              <textarea
-                aria-label="Code editor"
-                className="code-editor"
-                spellCheck={false}
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-              />
+              <div className="code-editor-shell">
+                <Editor
+                  key={`${problem.id}-${language}`}
+                  aria-label="Code editor"
+                  defaultLanguage={editorLanguages[language]}
+                  language={editorLanguages[language]}
+                  loading={<div className="code-editor-loading">Loading editor...</div>}
+                  onChange={(value) => setCode(value ?? "")}
+                  options={{
+                    automaticLayout: true,
+                    fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+                    fontSize: 15,
+                    formatOnPaste: true,
+                    minimap: { enabled: false },
+                    padding: { top: 16, bottom: 16 },
+                    renderLineHighlight: "all",
+                    scrollBeyondLastLine: false,
+                    tabSize: 4,
+                    wordWrap: "on"
+                  }}
+                  path={`${problem.id}.${language}`}
+                  theme="vs-dark"
+                  value={code}
+                />
+              </div>
 
               <section className={`results ${statusTone}`}>
                 <div className="result-summary">

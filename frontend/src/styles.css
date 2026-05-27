@@ -17,8 +17,7 @@ body {
   min-height: 100vh;
 }
 
-button,
-textarea {
+button {
   font: inherit;
 }
 
@@ -275,19 +274,29 @@ pre {
   background: #c8d8c4;
 }
 
-.code-editor {
+.code-editor-shell {
   width: 100%;
   min-width: 0;
   height: 100%;
-  padding: 18px;
-  border: 0;
-  resize: none;
-  outline: none;
-  color: #e9f5f1;
+  background: #101917;
+}
+
+.code-editor-loading {
+  display: grid;
+  height: 100%;
+  min-height: 280px;
+  place-items: center;
+  color: #bcd4cf;
   background: #101917;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.code-editor-shell .monaco-editor,
+.code-editor-shell .monaco-editor-background,
+.code-editor-shell .monaco-editor .margin {
+  background-color: #101917;
 }
 
 .results {
