@@ -9,6 +9,11 @@ Agentic development docs:
 - `AGENTS.md` - operating instructions for coding agents.
 - `SKILLS.md` - repeatable project workflows for agents.
 
+Agent memory rule:
+
+- Agents must update this file after meaningful implementation or workflow changes so a future chat can reconstruct where the project left off from the repo alone.
+- Agents should start new sessions by reading `PROJECT_NOTES.md`, `AGENTS.md`, `SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
+
 ## Project Goal
 
 HackerPrank is a local LeetCode/HackerRank-style coding practice platform.
@@ -419,9 +424,12 @@ When making a meaningful project change, update this file with:
 
 - What changed
 - Why the decision was made
+- How the change was verified
 - New commands or setup steps
 - New endpoints or data shapes
 - Any broken assumptions
 - Suggested next step
+
+Do this before the final response for non-trivial implementation work. The goal is that opening a fresh chat never loses the thread.
 
 Keep the README focused on setup and usage. Keep this file focused on project memory and handoff context.

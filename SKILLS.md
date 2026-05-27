@@ -11,13 +11,15 @@ Steps:
 1. Read `PROJECT_NOTES.md`.
 2. Read `README.md`.
 3. Read `AGENTS.md`.
-4. Run `git status --short --branch`.
-5. Identify the current milestone and latest commit.
-6. Summarize only the context needed for the next action.
+4. Read the relevant workflow in this file.
+5. Run `git status --short --branch`.
+6. Run `git log -5 --oneline`.
+7. Identify the current milestone, latest commit, and any dirty worktree changes.
+8. Summarize only the context needed for the next action.
 
 Done when:
 
-- The agent knows the current architecture, branch state, and next intended task.
+- The agent knows the current architecture, branch state, trusted checks, known limitations, and next intended task.
 
 ## Skill: Backend API Change
 
@@ -135,11 +137,29 @@ Use after meaningful changes or decisions.
 Steps:
 
 1. Update `PROJECT_NOTES.md` for project memory.
-2. Update `README.md` for setup or usage changes.
-3. Update `AGENTS.md` or `SKILLS.md` for workflow changes.
-4. Run `git diff --check`.
+2. Record what changed, why it changed, how it was verified, and what should happen next.
+3. Update `README.md` for setup or usage changes.
+4. Update `AGENTS.md` or `SKILLS.md` for workflow changes.
+5. Run `git diff --check`.
+6. Check `git status --short --branch`.
 
 Done when:
 
 - A future chat can pick up the project without needing unstated conversation context.
 
+## Skill: End Of Session Handoff
+
+Use before ending a substantial implementation session.
+
+Steps:
+
+1. Confirm the worktree state with `git status --short --branch`.
+2. Confirm the latest commits with `git log -5 --oneline`.
+3. Make sure `PROJECT_NOTES.md` reflects the latest implementation state.
+4. Make sure the next recommended task is written down.
+5. Commit final changes on `main` when appropriate for the project flow.
+6. In the final response, mention the verification performed and the latest commit hash.
+
+Done when:
+
+- Another chat can continue without asking what changed or where to resume.
