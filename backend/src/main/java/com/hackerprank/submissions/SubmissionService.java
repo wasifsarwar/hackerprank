@@ -8,13 +8,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,11 +24,17 @@ public class SubmissionService {
     private static final long RUN_TIMEOUT_MS = 2_000;
 
     private final ProblemRepository problemRepository;
-    private final ProcessRunner processRunner;
+    private final SandboxRunner sandboxRunner;
+    private final Path workspaceRoot;
 
-    public SubmissionService(ProblemRepository problemRepository, ProcessRunner processRunner) {
+    public SubmissionService(
+        ProblemRepository problemRepository,
+        SandboxRunner sandboxRunner,
+        @Value("${hackerprank.runner.workspace-root:.hackerprank-submissions}") String workspaceRoot
+    ) {
         this.problemRepository = problemRepository;
-        this.processRunner = processRunner;
+        this.sandboxRunner = sandboxRunner;
+        this.workspaceRoot = Paths.get(workspaceRoot).toAbsolutePath().normalize();
     }
 
     public SubmissionResult run(SubmissionRequest request) {
@@ -41,7 +48,8 @@ public class SubmissionService {
 
         Path workspace = null;
         try {
-            workspace = Files.createTempDirectory("hackerprank-submission-");
+            Files.createDirectories(workspaceRoot);
+            workspace = Files.createTempDirectory(workspaceRoot, "submission-");
             String compileOutput = prepareSubmission(language, request.getCode(), workspace);
             if (compileOutput != null) {
                 return new SubmissionResult("COMPILE_ERROR", 0, cases.size(), compileOutput, new ArrayList<>());
@@ -92,13 +100,21 @@ public class SubmissionService {
     }
 
     private String prepareSubmission(String language, String code, Path workspace) throws IOException, InterruptedException {
+        String source = code == null ? "" : code;
+
         if (language.equals("python")) {
-            Files.write(workspace.resolve("main.py"), code.getBytes(StandardCharsets.UTF_8));
+            Files.write(workspace.resolve("main.py"), source.getBytes(StandardCharsets.UTF_8));
             return null;
         }
 
-        Files.write(workspace.resolve("Main.java"), code.getBytes(StandardCharsets.UTF_8));
-        ProcessResult compile = processRunner.run(Arrays.asList("javac", "Main.java"), workspace, "", COMPILE_TIMEOUT_MS);
+        Files.write(workspace.resolve("Main.java"), source.getBytes(StandardCharsets.UTF_8));
+        ProcessResult compile = sandboxRunner.run(
+            language,
+            List.of("javac", "Main.java"),
+            workspace,
+            "",
+            COMPILE_TIMEOUT_MS
+        );
         if (compile.getExitCode() != 0 || compile.isTimedOut()) {
             String reason = compile.isTimedOut() ? "Compilation timed out.\n" : "";
             return reason + compile.getStdout() + compile.getStderr();
@@ -108,10 +124,10 @@ public class SubmissionService {
 
     private TestCaseResult runCase(String language, Path workspace, TestCase testCase) throws IOException, InterruptedException {
         List<String> command = language.equals("python")
-            ? Arrays.asList("python3", "main.py")
-            : Arrays.asList("java", "-cp", workspace.toString(), "Main");
+            ? List.of("python3", "main.py")
+            : List.of("java", "Main");
 
-        ProcessResult processResult = processRunner.run(command, workspace, testCase.getInput(), RUN_TIMEOUT_MS);
+        ProcessResult processResult = sandboxRunner.run(language, command, workspace, testCase.getInput(), RUN_TIMEOUT_MS);
         boolean passed = processResult.getExitCode() == 0
             && !processResult.isTimedOut()
             && normalizeOutput(processResult.getStdout()).equals(normalizeOutput(testCase.getExpectedOutput()));

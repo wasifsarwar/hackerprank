@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 class ProcessRunner {
+    private static final int MAX_CAPTURED_BYTES = 128 * 1024;
+
     ProcessResult run(List<String> command, Path workingDirectory, String input, long timeoutMs)
         throws IOException, InterruptedException {
         ProcessBuilder builder = new ProcessBuilder(command);
@@ -35,6 +37,7 @@ class ProcessRunner {
         boolean finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
         if (!finished) {
             process.destroyForcibly();
+            process.waitFor(500, TimeUnit.MILLISECONDS);
         }
 
         int exitCode = finished ? process.exitValue() : -1;
@@ -52,7 +55,10 @@ class ProcessRunner {
             byte[] chunk = new byte[1024];
             int count;
             while ((count = inputStream.read(chunk)) != -1) {
-                buffer.write(chunk, 0, count);
+                if (buffer.size() < MAX_CAPTURED_BYTES) {
+                    int remaining = MAX_CAPTURED_BYTES - buffer.size();
+                    buffer.write(chunk, 0, Math.min(count, remaining));
+                }
             }
             return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
         };

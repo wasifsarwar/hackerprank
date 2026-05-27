@@ -16,6 +16,14 @@ Prerequisites:
 - Java 21
 - Maven
 - Node.js 20+
+- Docker Desktop, or another Docker-compatible runtime with the `docker` CLI
+
+This machine is set up with Colima:
+
+```sh
+brew install docker colima
+colima start --cpu 2 --memory 2 --disk 20
+```
 
 Frontend:
 
@@ -34,16 +42,31 @@ mvn spring-boot:run
 
 The backend is configured for Spring Boot 3 and Java 21.
 
+The submission runner uses Docker by default. Pull the runtime images once before running submissions:
+
+```sh
+docker pull python:3.12-alpine
+docker pull eclipse-temurin:21-jdk-alpine
+```
+
+For local development without Docker, you can temporarily run the backend with:
+
+```sh
+mvn spring-boot:run -Dspring-boot.run.arguments=--hackerprank.runner.mode=local
+```
+
+Docker submissions run with no container network, memory/CPU/pid limits, dropped Linux capabilities, `no-new-privileges`, a read-only root filesystem, and a per-submission temporary workspace mounted at `/workspace`.
+
 ## Current Limitations
 
-- User code runs locally, not inside Docker yet.
+- Docker isolation is local-dev grade, not production hardened.
 - Output matching is exact after trimming trailing whitespace.
 - Problems are seeded in memory.
 - There is no database or auth yet.
 
 ## Next Milestones
 
-1. Add Docker-based execution for safer isolation.
-2. Add persistence for problems and submissions.
-3. Add a generated-problem draft flow.
-4. Add Monaco editor and richer result inspection.
+1. Add persistence for problems and submissions.
+2. Add a generated-problem draft flow.
+3. Add richer result inspection.
+4. Move execution to a worker queue.

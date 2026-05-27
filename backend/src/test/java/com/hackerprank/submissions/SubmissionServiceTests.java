@@ -6,7 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "hackerprank.runner.mode=local",
+    "hackerprank.runner.workspace-root=target/test-submissions"
+})
 class SubmissionServiceTests {
     @Autowired
     private SubmissionService submissionService;
