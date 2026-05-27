@@ -77,6 +77,19 @@ button:disabled {
   font-size: 0.86rem;
 }
 
+.generate-action {
+  min-height: 42px;
+  width: 100%;
+  border-radius: 8px;
+  color: #172421;
+  background: #f6c85f;
+  font-weight: 800;
+}
+
+.generate-action:hover:not(:disabled) {
+  background: #ffd978;
+}
+
 .problem-list {
   display: grid;
   gap: 10px;

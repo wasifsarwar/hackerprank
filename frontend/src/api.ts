@@ -1,4 +1,10 @@
-import type { Problem, ProblemSummary, SubmissionRequest, SubmissionResult } from "./types";
+import type {
+  GenerateProblemRequest,
+  Problem,
+  ProblemSummary,
+  SubmissionRequest,
+  SubmissionResult
+} from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -23,6 +29,13 @@ export function fetchProblems(): Promise<ProblemSummary[]> {
 
 export function fetchProblem(id: string): Promise<Problem> {
   return request<Problem>(`/api/problems/${id}`);
+}
+
+export function generateProblem(payload: GenerateProblemRequest): Promise<Problem> {
+  return request<Problem>("/api/problems/generate", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export function runSubmission(payload: SubmissionRequest): Promise<SubmissionResult> {

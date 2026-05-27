@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Editor from "@monaco-editor/react";
-import { fetchProblem, fetchProblems, runSubmission } from "./api";
+import { fetchProblem, fetchProblems, generateProblem, runSubmission } from "./api";
 import type { Language, Problem, ProblemSummary, SubmissionResult } from "./types";
 
 const languageLabels: Record<Language, string> = {
@@ -21,6 +21,7 @@ function App() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +87,29 @@ function App() {
     }
   }
 
+  async function handleGenerate() {
+    setIsGenerating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const generated = await generateProblem({ topic: "arrays", difficulty: "Easy" });
+      const generatedSummary: ProblemSummary = {
+        id: generated.id,
+        title: generated.title,
+        difficulty: generated.difficulty,
+        tags: generated.tags
+      };
+
+      setProblems((items) => [...items.filter((item) => item.id !== generated.id), generatedSummary]);
+      setSelectedId(generated.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <aside className="problem-rail" aria-label="Problems">
@@ -96,6 +120,10 @@ function App() {
             <p>Local coding practice</p>
           </div>
         </div>
+
+        <button className="generate-action" disabled={isGenerating} onClick={handleGenerate} type="button">
+          {isGenerating ? "Generating..." : "Generate Problem"}
+        </button>
 
         <nav className="problem-list">
           {problems.map((item) => (

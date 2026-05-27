@@ -24,6 +24,11 @@ export interface Problem extends ProblemSummary {
   starterCode: StarterCode;
 }
 
+export interface GenerateProblemRequest {
+  topic?: string;
+  difficulty?: ProblemSummary["difficulty"];
+}
+
 export interface SubmissionRequest {
   problemId: string;
   language: Language;

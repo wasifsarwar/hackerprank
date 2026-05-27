@@ -2,7 +2,6 @@ package com.hackerprank.problems;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,23 +11,32 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class ProblemRepository {
-    private final Map<String, Problem> problems;
+    private final Map<String, Problem> problems = new LinkedHashMap<>();
 
     public ProblemRepository() {
-        Map<String, Problem> seed = new LinkedHashMap<>();
-        Problem addPair = addPairProblem();
-        Problem frequency = frequencyProblem();
-        seed.put(addPair.getId(), addPair);
-        seed.put(frequency.getId(), frequency);
-        this.problems = Collections.unmodifiableMap(seed);
+        save(addPairProblem());
+        save(frequencyProblem());
     }
 
-    public List<Problem> findAll() {
+    public synchronized List<Problem> findAll() {
         return new ArrayList<>(problems.values());
     }
 
-    public Optional<Problem> findById(String id) {
+    public synchronized Optional<Problem> findById(String id) {
         return Optional.ofNullable(problems.get(id));
+    }
+
+    public synchronized Problem save(Problem problem) {
+        if (problem == null || problem.getId() == null || problem.getId().isBlank()) {
+            throw new IllegalArgumentException("Problem id is required");
+        }
+
+        problems.put(problem.getId(), problem);
+        return problem;
+    }
+
+    public synchronized void deleteById(String id) {
+        problems.remove(id);
     }
 
     private Problem addPairProblem() {
