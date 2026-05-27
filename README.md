@@ -2,6 +2,8 @@
 
 A local proof of concept for a LeetCode/HackerRank-style coding practice platform.
 
+For project memory, design decisions, and future-chat handoff context, see `PROJECT_NOTES.md`.
+
 ## Shape of the App
 
 - `frontend/`: React + TypeScript + Vite
