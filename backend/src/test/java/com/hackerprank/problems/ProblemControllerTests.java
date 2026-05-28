@@ -69,6 +69,8 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
             .andExpect(jsonPath("$.generationMetadata.modelId").value("template-v1"))
             .andExpect(jsonPath("$.generationMetadata.validationSummary", containsString("Python/Java")))
+            .andExpect(jsonPath("$.generationMetadata.parametersJson").doesNotExist())
+            .andExpect(jsonPath("$.generationMetadata.validationErrors").doesNotExist())
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())
@@ -85,6 +87,36 @@ class ProblemControllerTests {
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("python"));
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("java"));
         assertFalse(repository.findById(problemId).isPresent());
+    }
+
+    @Test
+    void preservesGeneratorControlsInDraftMetadata() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "topic": "arrays",
+                      "difficulty": "Medium",
+                      "targetConcepts": ["two pointers", "prefix sums"],
+                      "constraintsNotes": "Include at least one boundary-heavy case.",
+                      "interviewStyle": "Edge-case heavy"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
+            .andExpect(jsonPath("$.generationMetadata.parametersJson").doesNotExist())
+            .andReturn();
+
+        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+
+        ProblemDraft persistedDraft = draftRepository.findById(body.get("id").asText()).orElseThrow();
+        JsonNode persistedParameters = objectMapper.readTree(persistedDraft.getGenerationMetadata().parametersJson());
+        assertEquals("arrays", persistedParameters.get("topic").asText());
+        assertEquals("Medium", persistedParameters.get("difficulty").asText());
+        assertEquals("two pointers", persistedParameters.get("targetConcepts").get(0).asText());
+        assertEquals("prefix sums", persistedParameters.get("targetConcepts").get(1).asText());
+        assertEquals("Include at least one boundary-heavy case.", persistedParameters.get("constraintsNotes").asText());
+        assertEquals("Edge-case heavy", persistedParameters.get("interviewStyle").asText());
     }
 
     @Test

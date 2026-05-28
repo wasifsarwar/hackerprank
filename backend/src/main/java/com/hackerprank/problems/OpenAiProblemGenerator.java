@@ -126,11 +126,21 @@ class OpenAiProblemGenerator {
     }
 
     GeneratedProblemSpec generate(String topic, String difficulty) {
+        return generate(topic, difficulty, List.of(), "", "Classic");
+    }
+
+    GeneratedProblemSpec generate(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle
+    ) {
         if (!isConfigured()) {
             throw new OpenAiProblemGenerationException("OpenAI generation requested without OPENAI_API_KEY");
         }
 
-        String userPrompt = userPrompt(topic, difficulty);
+        String userPrompt = userPrompt(topic, difficulty, targetConcepts, constraintsNotes, interviewStyle);
         try {
             String requestBody = requestBody(userPrompt);
             OpenAiHttpResponse response = transport.post(
@@ -145,7 +155,7 @@ class OpenAiProblemGenerator {
 
             String outputText = extractOutputText(objectMapper.readTree(response.body()));
             OpenAiProblemPayload payload = objectMapper.readValue(outputText, OpenAiProblemPayload.class);
-            return toSpec(payload, topic, difficulty, userPrompt);
+            return toSpec(payload, topic, difficulty, targetConcepts, constraintsNotes, interviewStyle, userPrompt);
         } catch (OpenAiProblemGenerationException exception) {
             throw exception;
         } catch (IOException exception) {
@@ -159,7 +169,7 @@ class OpenAiProblemGenerator {
     }
 
     String requestBodyForTest(String topic, String difficulty) {
-        return requestBody(userPrompt(topic, difficulty));
+        return requestBody(userPrompt(topic, difficulty, List.of(), "", "Classic"));
     }
 
     private String requestBody(String userPrompt) {
@@ -184,12 +194,21 @@ class OpenAiProblemGenerator {
         }
     }
 
-    private String userPrompt(String topic, String difficulty) {
+    private String userPrompt(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle
+    ) {
         return """
             Create one original interview-style coding problem.
 
             Requested topic: %s
             Requested difficulty: %s
+            Target concepts: %s
+            Constraints or notes: %s
+            Interview style: %s
 
             Requirements:
             - Use simple stdin/stdout input and output only.
@@ -199,7 +218,13 @@ class OpenAiProblemGenerator {
             - Include complete Python and Java reference solutions that pass every test case.
             - Keep the Java reference solution and starter code in a public class named Main.
             - Make the intended technique clear enough for a tutor to explain later.
-            """.formatted(topic, difficulty);
+            """.formatted(
+                topic,
+                difficulty,
+                formatConcepts(targetConcepts),
+                textOrDefault(constraintsNotes, "none"),
+                textOrDefault(interviewStyle, "Classic")
+            );
     }
 
     private String extractOutputText(JsonNode response) {
@@ -242,6 +267,9 @@ class OpenAiProblemGenerator {
         OpenAiProblemPayload payload,
         String requestedTopic,
         String requestedDifficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle,
         String userPrompt
     ) throws JsonProcessingException {
         OpenAiProblem problemPayload = payload.problem();
@@ -270,19 +298,33 @@ class OpenAiProblemGenerator {
             difficulty,
             problem,
             languageMap(payload.referenceSolutions()),
-            generationMetadata(topic, difficulty, userPrompt, payload.intendedTechnique())
+            generationMetadata(
+                topic,
+                difficulty,
+                targetConcepts,
+                constraintsNotes,
+                interviewStyle,
+                userPrompt,
+                payload.intendedTechnique()
+            )
         );
     }
 
     private GenerationMetadata generationMetadata(
         String topic,
         String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle,
         String userPrompt,
         String intendedTechnique
     ) throws JsonProcessingException {
         Map<String, Object> parameters = new LinkedHashMap<>();
         parameters.put("topic", topic);
         parameters.put("difficulty", difficulty);
+        parameters.put("targetConcepts", targetConcepts == null ? List.of() : targetConcepts);
+        parameters.put("constraintsNotes", textOrDefault(constraintsNotes, ""));
+        parameters.put("interviewStyle", textOrDefault(interviewStyle, "Classic"));
         parameters.put("model", properties.getModel());
         parameters.put("maxOutputTokens", properties.getMaxOutputTokens());
         parameters.put("responsesUrl", properties.getResponsesUrl());
@@ -326,6 +368,14 @@ class OpenAiProblemGenerator {
         ordered.put("python", values.get("python"));
         ordered.put("java", values.get("java"));
         return ordered;
+    }
+
+    private String formatConcepts(List<String> targetConcepts) {
+        if (targetConcepts == null || targetConcepts.isEmpty()) {
+            return "none";
+        }
+
+        return String.join(", ", targetConcepts);
     }
 
     private <T> List<T> listOrEmpty(List<T> values) {

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,13 @@ class OpenAiProblemGeneratorTests {
         StubTransport transport = new StubTransport(responseBody(problemJson()));
         OpenAiProblemGenerator generator = new OpenAiProblemGenerator(properties, objectMapper, transport);
 
-        GeneratedProblemSpec spec = generator.generate("graphs", "Medium");
+        GeneratedProblemSpec spec = generator.generate(
+            "graphs",
+            "Medium",
+            List.of("reachability", "edge cases"),
+            "Avoid recursion-heavy solutions.",
+            "Performance"
+        );
 
         assertEquals("graphs", spec.topic());
         assertEquals("Medium", spec.difficulty());
@@ -33,9 +40,15 @@ class OpenAiProblemGeneratorTests {
         assertEquals("gpt-5-mini", spec.generationMetadata().modelId());
         assertEquals("openai-problem-v1", spec.generationMetadata().promptVersion());
         assertTrue(spec.generationMetadata().promptText().contains("Requested topic: graphs"));
+        assertTrue(spec.generationMetadata().promptText().contains("Target concepts: reachability, edge cases"));
         assertFalse(spec.generationMetadata().parametersJson().contains("sk-test"));
         assertTrue(spec.referenceSolutions().get("python").contains("print(total)"));
         assertTrue(spec.referenceSolutions().get("java").contains("class Main"));
+
+        JsonNode parameters = objectMapper.readTree(spec.generationMetadata().parametersJson());
+        assertEquals("Performance", parameters.path("interviewStyle").asText());
+        assertEquals("reachability", parameters.path("targetConcepts").get(0).asText());
+        assertEquals("Avoid recursion-heavy solutions.", parameters.path("constraintsNotes").asText());
 
         JsonNode request = objectMapper.readTree(transport.requestBody);
         assertEquals("gpt-5-mini", request.path("model").asText());

@@ -1,4 +1,4 @@
-import type { Difficulty, Language } from "./types";
+import type { Difficulty, InterviewStyle, Language } from "./types";
 
 export type ResultView = "current" | "history";
 
@@ -13,3 +13,5 @@ export const editorLanguages: Record<Language, string> = {
 };
 
 export const difficultyOptions: Difficulty[] = ["Easy", "Medium", "Hard"];
+
+export const interviewStyleOptions: InterviewStyle[] = ["Classic", "Edge-case heavy", "Performance", "Practical"];

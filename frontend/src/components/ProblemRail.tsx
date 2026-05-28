@@ -1,15 +1,21 @@
-import type { Difficulty, ProblemDraft, ProblemSummary } from "../types";
-import { difficultyOptions } from "../ui";
+import type { Difficulty, InterviewStyle, ProblemDraft, ProblemSummary } from "../types";
+import { difficultyOptions, interviewStyleOptions } from "../ui";
 
 interface ProblemRailProps {
   draft: ProblemDraft | null;
+  generatorConstraintsNotes: string;
   generatorDifficulty: Difficulty;
+  generatorInterviewStyle: InterviewStyle;
+  generatorTargetConcepts: string;
   generatorTopic: string;
   isGenerating: boolean;
   isPublishing: boolean;
   onDiscardDraft: () => void;
   onGenerate: () => void;
+  onGeneratorConstraintsNotesChange: (constraintsNotes: string) => void;
   onGeneratorDifficultyChange: (difficulty: Difficulty) => void;
+  onGeneratorInterviewStyleChange: (interviewStyle: InterviewStyle) => void;
+  onGeneratorTargetConceptsChange: (targetConcepts: string) => void;
   onGeneratorTopicChange: (topic: string) => void;
   onPublishDraft: () => void;
   onSelectProblem: (id: string) => void;
@@ -19,13 +25,19 @@ interface ProblemRailProps {
 
 export function ProblemRail({
   draft,
+  generatorConstraintsNotes,
   generatorDifficulty,
+  generatorInterviewStyle,
+  generatorTargetConcepts,
   generatorTopic,
   isGenerating,
   isPublishing,
   onDiscardDraft,
   onGenerate,
+  onGeneratorConstraintsNotesChange,
   onGeneratorDifficultyChange,
+  onGeneratorInterviewStyleChange,
+  onGeneratorTargetConceptsChange,
   onGeneratorTopicChange,
   onPublishDraft,
   onSelectProblem,
@@ -69,6 +81,36 @@ export function ProblemRail({
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          <span>Concepts</span>
+          <input
+            onChange={(event) => onGeneratorTargetConceptsChange(event.target.value)}
+            placeholder="two pointers, prefix sums"
+            value={generatorTargetConcepts}
+          />
+        </label>
+        <label>
+          <span>Style</span>
+          <select
+            onChange={(event) => onGeneratorInterviewStyleChange(event.target.value as InterviewStyle)}
+            value={generatorInterviewStyle}
+          >
+            {interviewStyleOptions.map((style) => (
+              <option key={style} value={style}>
+                {style}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Notes</span>
+          <textarea
+            onChange={(event) => onGeneratorConstraintsNotesChange(event.target.value)}
+            placeholder="must include edge cases"
+            rows={3}
+            value={generatorConstraintsNotes}
+          />
         </label>
         <button className="generate-action" disabled={isGenerating} type="submit">
           {isGenerating ? "Generating..." : "Generate Draft"}

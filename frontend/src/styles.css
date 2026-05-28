@@ -109,9 +109,9 @@ button:disabled {
 }
 
 .generator-panel input,
-.generator-panel select {
+.generator-panel select,
+.generator-panel textarea {
   min-width: 0;
-  min-height: 40px;
   width: 100%;
   border: 1px solid #315850;
   border-radius: 8px;
@@ -121,12 +121,23 @@ button:disabled {
   font-weight: 700;
 }
 
+.generator-panel input,
+.generator-panel select {
+  min-height: 40px;
+}
+
 .generator-panel input {
   padding: 0 11px;
 }
 
 .generator-panel select {
   padding: 0 8px;
+}
+
+.generator-panel textarea {
+  min-height: 76px;
+  padding: 10px 11px;
+  resize: vertical;
 }
 
 .draft-card {
@@ -276,6 +287,80 @@ li {
   color: #275448;
   background: #eef8ef;
   font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.draft-metadata {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 24px;
+  padding: 16px;
+  border: 1px solid #d8dcc4;
+  border-radius: 8px;
+  background: #f8f5e9;
+}
+
+.draft-metadata-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.draft-metadata-header div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.draft-metadata span,
+.draft-metadata dt {
+  color: #697061;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.draft-metadata strong {
+  color: #172421;
+  font-size: 1.03rem;
+}
+
+.draft-metadata .validation-pill {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #17352e;
+  background: #cfe8ca;
+  text-transform: none;
+}
+
+.draft-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.draft-metadata-grid div {
+  min-width: 0;
+}
+
+.draft-metadata dd {
+  min-width: 0;
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: #33413d;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-metadata p {
+  margin: 0;
+  color: #4d5b56;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -695,17 +780,19 @@ pre {
     padding: 22px;
   }
 
-	  .problem-heading,
-	  .toolbar,
-	  .format-grid,
-	  .example-grid,
-	  .io-grid,
-	  .history-layout {
-	    grid-template-columns: 1fr;
-	  }
+  .problem-heading,
+  .toolbar,
+  .draft-metadata-grid,
+  .format-grid,
+  .example-grid,
+  .io-grid,
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
 
   .problem-heading,
-  .toolbar {
+  .toolbar,
+  .draft-metadata-header {
     display: grid;
   }
 

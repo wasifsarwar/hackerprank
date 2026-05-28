@@ -1,8 +1,10 @@
 package com.hackerprank.problems;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -90,28 +92,33 @@ public class ProblemGeneratorService {
     }
 
     private ValidatedGeneratedProblem draftFor(GenerateProblemRequest request) {
-        String topic = normalizeTopic(request == null ? null : request.getTopic());
-        String difficulty = normalizeDifficulty(request == null ? null : request.getDifficulty());
+        NormalizedGenerationRequest normalizedRequest = normalizeRequest(request);
 
         if (generationProperties.useOpenAi()) {
-            Optional<ValidatedGeneratedProblem> generated = tryOpenAiDraft(topic, difficulty);
+            Optional<ValidatedGeneratedProblem> generated = tryOpenAiDraft(normalizedRequest);
             if (generated.isPresent()) {
                 return generated.get();
             }
         }
 
-        GeneratedProblemSpec deterministic = deterministicDraftFor(topic, difficulty);
+        GeneratedProblemSpec deterministic = deterministicDraftFor(normalizedRequest);
         return new ValidatedGeneratedProblem(deterministic, generatedProblemValidator.validate(deterministic));
     }
 
-    private Optional<ValidatedGeneratedProblem> tryOpenAiDraft(String topic, String difficulty) {
+    private Optional<ValidatedGeneratedProblem> tryOpenAiDraft(NormalizedGenerationRequest request) {
         if (!openAiProblemGenerator.isConfigured()) {
             LOGGER.info("OpenAI problem generation requested without an API key; using deterministic fallback");
             return Optional.empty();
         }
 
         try {
-            GeneratedProblemSpec generated = withUniqueProblemId(openAiProblemGenerator.generate(topic, difficulty));
+            GeneratedProblemSpec generated = withUniqueProblemId(openAiProblemGenerator.generate(
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle()
+            ));
             GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
             return Optional.of(new ValidatedGeneratedProblem(generated, validationReport));
         } catch (OpenAiProblemGenerationException exception) {
@@ -126,16 +133,16 @@ public class ProblemGeneratorService {
         }
     }
 
-    private GeneratedProblemSpec deterministicDraftFor(String topic, String difficulty) {
-        if (containsAny(topic, "stack", "bracket", "parentheses")) {
-            return bracketBalanceProblem(topic, difficulty);
+    private GeneratedProblemSpec deterministicDraftFor(NormalizedGenerationRequest normalizedRequest) {
+        if (containsAny(normalizedRequest.topic(), "stack", "bracket", "parentheses")) {
+            return bracketBalanceProblem(normalizedRequest);
         }
 
-        if (containsAny(topic, "string", "map", "hash", "count")) {
-            return firstSoloWordProblem(topic, difficulty);
+        if (containsAny(normalizedRequest.topic(), "string", "map", "hash", "count")) {
+            return firstSoloWordProblem(normalizedRequest);
         }
 
-        return signalPeaksProblem(topic, difficulty);
+        return signalPeaksProblem(normalizedRequest);
     }
 
     private GeneratedProblemSpec withUniqueProblemId(GeneratedProblemSpec spec) {
@@ -169,7 +176,7 @@ public class ProblemGeneratorService {
     ) {
     }
 
-    private GeneratedProblemSpec signalPeaksProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec signalPeaksProblem(NormalizedGenerationRequest request) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -204,7 +211,7 @@ public class ProblemGeneratorService {
         Problem problem = new Problem(
             uniqueId("signal-peaks"),
             "Signal Peaks",
-            difficulty,
+            request.difficulty(),
             Arrays.asList("Arrays", "Scanning"),
             "A sensor line reports n readings. A reading is a peak if it is strictly greater than the reading immediately before it and immediately after it. The first and last readings never count as peaks.",
             "The first line contains n. The second line contains n space-separated integers.",
@@ -260,19 +267,22 @@ public class ProblemGeneratorService {
             """);
 
         return new GeneratedProblemSpec(
-            topic,
-            difficulty,
+            request.topic(),
+            request.difficulty(),
             problem,
             referenceSolutions,
             GenerationMetadata.deterministic(
-                topic,
-                difficulty,
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle(),
                 "Single pass array scan comparing each internal reading to its immediate neighbors."
             )
         );
     }
 
-    private GeneratedProblemSpec firstSoloWordProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec firstSoloWordProblem(NormalizedGenerationRequest request) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -307,7 +317,7 @@ public class ProblemGeneratorService {
         Problem problem = new Problem(
             uniqueId("first-solo-word"),
             "First Solo Word",
-            difficulty,
+            request.difficulty(),
             Arrays.asList("Maps", "Counting", "Strings"),
             "Given a list of lowercase words, print the first word that appears exactly once. If every word repeats, print NONE.",
             "The first line contains n. The second line contains n lowercase words separated by spaces.",
@@ -369,19 +379,22 @@ public class ProblemGeneratorService {
             """);
 
         return new GeneratedProblemSpec(
-            topic,
-            difficulty,
+            request.topic(),
+            request.difficulty(),
             problem,
             referenceSolutions,
             GenerationMetadata.deterministic(
-                topic,
-                difficulty,
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle(),
                 "Count each word with a hash map, then scan the original order to find the first count of one."
             )
         );
     }
 
-    private GeneratedProblemSpec bracketBalanceProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec bracketBalanceProblem(NormalizedGenerationRequest request) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -410,7 +423,7 @@ public class ProblemGeneratorService {
         Problem problem = new Problem(
             uniqueId("bracket-balance"),
             "Bracket Balance",
-            difficulty,
+            request.difficulty(),
             Arrays.asList("Stacks", "Parsing"),
             "Given a string containing only bracket characters, decide whether every opening bracket is closed by the same type of bracket in the correct order.",
             "A single line containing a string made of (, ), [, ], {, and } characters.",
@@ -475,16 +488,58 @@ public class ProblemGeneratorService {
             """);
 
         return new GeneratedProblemSpec(
-            topic,
-            difficulty,
+            request.topic(),
+            request.difficulty(),
             problem,
             referenceSolutions,
             GenerationMetadata.deterministic(
-                topic,
-                difficulty,
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle(),
                 "Use a stack of opening brackets and match each closing bracket against the top."
             )
         );
+    }
+
+    private NormalizedGenerationRequest normalizeRequest(GenerateProblemRequest request) {
+        if (request == null) {
+            return new NormalizedGenerationRequest("arrays", "Easy", List.of(), "", "Classic");
+        }
+
+        return new NormalizedGenerationRequest(
+            normalizeTopic(request.getTopic()),
+            normalizeDifficulty(request.getDifficulty()),
+            normalizeTargetConcepts(request.getTargetConcepts()),
+            normalizeText(request.getConstraintsNotes()),
+            normalizeInterviewStyle(request.getInterviewStyle())
+        );
+    }
+
+    private List<String> normalizeTargetConcepts(List<String> targetConcepts) {
+        if (targetConcepts == null || targetConcepts.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> normalized = new ArrayList<>();
+        for (String concept : targetConcepts) {
+            String value = normalizeText(concept);
+            if (!value.isBlank()) {
+                normalized.add(value);
+            }
+        }
+
+        return List.copyOf(normalized);
+    }
+
+    private String normalizeText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String normalizeInterviewStyle(String interviewStyle) {
+        String normalized = normalizeText(interviewStyle);
+        return normalized.isBlank() ? "Classic" : normalized;
     }
 
     private String normalizeTopic(String topic) {
@@ -541,4 +596,12 @@ public class ProblemGeneratorService {
         slug = slug.replaceAll("^-+", "").replaceAll("-+$", "");
         return slug.isBlank() ? "generated-problem" : slug;
     }
+
+    private record NormalizedGenerationRequest(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle
+    ) {}
 }

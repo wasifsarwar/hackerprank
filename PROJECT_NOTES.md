@@ -53,6 +53,9 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
 - Current session - Add an opt-in OpenAI-backed backend generator behind the generated-problem contract, with deterministic fallback
 - Current session - Keep OpenAI validation inside the fallback boundary so schema-valid but incorrect model drafts fall back instead of returning 500s
+- Current session - Add richer frontend generator controls for target concepts, constraints/notes, and interview style, and preserve them in draft generation metadata
+- Current session - Render safe generated-draft metadata in the frontend problem statement
+- Current session - Remove raw generation parameters and validation errors from the public draft metadata DTO
 
 ## Current Application Shape
 
@@ -68,8 +71,9 @@ The frontend is a Vite React app. It currently provides:
 - Monaco code editor
 - Run samples and submit buttons
 - Results panel with per-test output
-- Generator panel with topic input and difficulty selector
+- Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
+- Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
 - Submission history tab for the selected published problem
 - Persisted submission detail view with saved code, compile output, and per-test results
 - Load-code action for restoring a saved submission into Monaco
@@ -79,6 +83,7 @@ Important files:
 - `frontend/src/App.tsx` - app-level state orchestration and API-driven workflows
 - `frontend/src/components/ProblemRail.tsx` - sidebar, generator controls, draft actions, and problem list
 - `frontend/src/components/ProblemStatement.tsx` - problem statement, formats, constraints, and examples
+- `frontend/src/components/DraftMetadata.tsx` - safe generated draft metadata display for draft previews
 - `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
 - `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
 - `frontend/src/components/TestResults.tsx` - per-test result rendering
@@ -91,7 +96,8 @@ Important files:
 
 Current frontend limitation:
 
-- The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
+- The generator controls are persisted in draft metadata, but deterministic templates do not yet use them to alter the generated problem.
+- Draft previews show safe generation metadata, but intentionally omit prompt text, reference solutions, hidden tests, raw validation errors, and raw parameter JSON.
 - Submission history is global per problem because there are no user accounts yet.
 - Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
 
@@ -149,7 +155,10 @@ Request body:
 ```json
 {
   "topic": "stacks",
-  "difficulty": "Medium"
+  "difficulty": "Medium",
+  "targetConcepts": ["monotonic stack", "edge cases"],
+  "constraintsNotes": "Avoid graph traversal. Include a boundary-heavy hidden test.",
+  "interviewStyle": "Edge-case heavy"
 }
 ```
 
@@ -163,9 +172,10 @@ Current behavior:
 - Uses deterministic templates by default.
 - Can use the OpenAI Responses API when `HACKERPRANK_GENERATOR_PROVIDER=openai` and `OPENAI_API_KEY` are configured.
 - Falls back to deterministic templates if OpenAI is disabled, missing an API key, generation fails, or the returned draft fails generated-problem validation.
+- Preserves requested target concepts, constraints/notes, and interview style in generation metadata parameters JSON.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
-- Public draft responses do not expose hidden test cases, prompt text, or reference solutions.
+- Public draft responses do not expose hidden test cases, prompt text, reference solutions, raw validation errors, or raw parameter JSON.
 
 `GET /api/problems/drafts/{id}`
 
@@ -186,7 +196,10 @@ Request body:
 ```json
 {
   "topic": "arrays",
-  "difficulty": "Easy"
+  "difficulty": "Easy",
+  "targetConcepts": ["two pointers"],
+  "constraintsNotes": "Prefer exact-input/output interview format.",
+  "interviewStyle": "Classic"
 }
 ```
 
@@ -588,12 +601,10 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-1. Add richer generator controls for concepts, constraints, and interview style.
-2. Render generation metadata and intended technique details in the draft UI.
-3. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
-4. Add user accounts and user-scoped submission history.
-5. Move execution to a worker queue.
-6. Harden sandboxing before any remote or multi-user deployment.
+1. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
+2. Add user accounts and user-scoped submission history.
+3. Move execution to a worker queue.
+4. Harden sandboxing before any remote or multi-user deployment.
 
 ## OpenAI Generator Notes
 
