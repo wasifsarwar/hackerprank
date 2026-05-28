@@ -101,6 +101,8 @@ export HACKERPRANK_OPENAI_MAX_OUTPUT_TOKENS=6000
 
 The OpenAI path uses the Responses API with structured JSON output, then passes the generated draft through the same Python/Java reference-solution validator before persistence. If OpenAI is disabled, missing `OPENAI_API_KEY`, or generation fails, the backend falls back to deterministic templates.
 
+Generated-problem eval fixtures live in `backend/src/test/resources/generated-problems/`. Add `valid-*.json` and `invalid-*.json` fixtures there when changing prompt versions, mapping, or validation rules so the backend test suite automatically captures generation quality regressions.
+
 The submission runner uses Docker by default. Pull the runtime images once before running submissions:
 
 ```sh

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import org.springframework.stereotype.Component;
 
@@ -27,13 +28,14 @@ class GeneratedProblemValidator {
             throw new IllegalStateException("Generated problem failed schema validation: " + String.join("; ", errors));
         }
 
+        validateExamples(spec, errors);
         validateReferenceSolutions(spec, errors);
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Generated problem failed reference validation: " + String.join("; ", errors));
         }
 
         return GeneratedProblemValidationReport.validated(
-            "Schema checks passed and Python/Java reference solutions passed all visible and hidden tests."
+            "Schema checks passed and Python/Java reference solutions passed examples plus all visible and hidden tests."
         );
     }
 
@@ -81,6 +83,37 @@ class GeneratedProblemValidator {
             SubmissionResult result = submissionService.run(spec.problem(), language, code, true);
             if (!"ACCEPTED".equals(result.getStatus())) {
                 errors.add(language + " reference solution returned " + result.getStatus());
+            }
+        }
+    }
+
+    private void validateExamples(GeneratedProblemSpec spec, List<String> errors) {
+        Problem problem = spec.problem();
+        List<TestCase> exampleCases = IntStream.range(0, problem.getExamples().size())
+            .mapToObj(index -> {
+                Example example = problem.getExamples().get(index);
+                return new TestCase("Example " + (index + 1), example.getInput(), example.getOutput(), false);
+            })
+            .toList();
+        Problem exampleProblem = new Problem(
+            problem.getId(),
+            problem.getTitle(),
+            problem.getDifficulty(),
+            problem.getTags(),
+            problem.getDescription(),
+            problem.getInputFormat(),
+            problem.getOutputFormat(),
+            problem.getConstraints(),
+            problem.getExamples(),
+            exampleCases,
+            problem.getStarterCode()
+        );
+
+        for (String language : REQUIRED_LANGUAGES) {
+            String code = spec.referenceSolutions().get(language);
+            SubmissionResult result = submissionService.run(exampleProblem, language, code, true);
+            if (!"ACCEPTED".equals(result.getStatus())) {
+                errors.add(language + " reference solution returned " + result.getStatus() + " for examples");
             }
         }
     }

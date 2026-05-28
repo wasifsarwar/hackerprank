@@ -56,6 +56,10 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add richer frontend generator controls for target concepts, constraints/notes, and interview style, and preserve them in draft generation metadata
 - Current session - Render safe generated-draft metadata in the frontend problem statement
 - Current session - Remove raw generation parameters and validation errors from the public draft metadata DTO
+- Current session - Add generated-problem eval fixtures and parameterized validation tests for prompt and validator tuning
+- Current session - Auto-discover generated-problem eval fixtures and validate generated examples against reference solutions
+- Current session - Keep auto-discovered valid fixture assertions generic so non-array topics can join the eval corpus
+- Current session - Let invalid generated-problem fixtures omit top-level sections so validator contract errors are asserted
 
 ## Current Application Shape
 
@@ -127,6 +131,8 @@ Important files:
 - `OpenAiProblemGenerator.java` - Responses API request builder, structured JSON schema, response parser, and generated-problem mapper
 - `OpenAiProblemGeneratorProperties.java` - OpenAI model, endpoint, timeout, token, and API key config
 - `JdkOpenAiTransport.java` - JDK `HttpClient` transport for OpenAI calls
+- `GeneratedProblemFixtureValidationTests.java` - fixture-driven generated-problem eval tests for valid drafts and expected contract failures
+- `backend/src/test/resources/generated-problems/` - JSON fixture corpus for generated-problem validation evals
 - `SubmissionController.java` - submission endpoint
 - `SubmissionRepository.java` - JDBC submission and test-result persistence
 - `SubmissionService.java` - prepares code, runs test cases, computes status

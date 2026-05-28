@@ -1,0 +1,52 @@
+{
+  "topic": "arrays",
+  "difficulty": "Easy",
+  "expectedFailureMessage": "reference solution returned WRONG_ANSWER",
+  "problem": {
+    "id": "broken-edge-window-sum",
+    "title": "Broken Edge Window Sum",
+    "difficulty": "Easy",
+    "tags": ["Arrays", "Implementation"],
+    "description": "Given n integers, print the sum of the first and last value. If there is only one value, print that value once.",
+    "inputFormat": "The first line contains n. The second line contains n space-separated integers.",
+    "outputFormat": "Print one integer: the edge window sum.",
+    "constraints": ["1 <= n <= 100000", "-100000 <= value <= 100000"],
+    "examples": [
+      {
+        "input": "5\n4 1 9 2 7\n",
+        "output": "11\n",
+        "explanation": "The first value is 4 and the last value is 7."
+      }
+    ],
+    "testCases": [
+      {
+        "name": "Sample 1",
+        "input": "5\n4 1 9 2 7\n",
+        "expectedOutput": "11\n",
+        "hidden": false
+      },
+      {
+        "name": "Hidden 1",
+        "input": "1\n8\n",
+        "expectedOutput": "8\n",
+        "hidden": true
+      }
+    ],
+    "starterCode": {
+      "python": "print(0)\n",
+      "java": "public class Main { public static void main(String[] args) { System.out.println(0); } }\n"
+    }
+  },
+  "referenceSolutions": {
+    "python": "print(0)\n",
+    "java": "public class Main { public static void main(String[] args) { System.out.println(0); } }\n"
+  },
+  "generationMetadata": {
+    "provider": "fixture",
+    "modelId": "fixture-v1",
+    "promptVersion": "generated-problem-fixture-v1",
+    "promptText": "This fixture intentionally has bad reference solutions.",
+    "parametersJson": "{\"topic\":\"arrays\",\"difficulty\":\"Easy\",\"targetConcepts\":[],\"constraintsNotes\":\"\",\"interviewStyle\":\"Classic\"}",
+    "intendedTechnique": "Fixture should fail reference validation."
+  }
+}
