@@ -3,6 +3,7 @@
 A local proof of concept for a LeetCode/HackerRank-style coding practice platform.
 
 For project memory, design decisions, and future-chat handoff context, see `PROJECT_NOTES.md`.
+For the product north star and iteration roadmap, see `docs/PRODUCT_PLAN.md`.
 For coding-agent operating instructions and repeatable workflows, start with the repo-scoped `AGENTS.md`, then see `docs/agentic/AGENTS.md` and `docs/agentic/SKILLS.md`.
 
 ## Shape of the App
@@ -164,6 +165,8 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 - Deterministic problem templates record richer generator controls but do not yet vary problem content from them.
 
 ## Next Milestones
+
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap.
 
 1. Add tutor follow-up chat attached to failed submissions.
 2. Add a richer generated-draft quality panel.
