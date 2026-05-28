@@ -43,6 +43,23 @@ export interface GenerationMetadata {
   intendedTechnique: string;
 }
 
+export interface DraftQualityCheck {
+  label: string;
+  status: "PASSED";
+  detail: string;
+}
+
+export interface DraftQuality {
+  status: "VALIDATED";
+  summary: string;
+  repairUsed: boolean;
+  exampleCount: number;
+  visibleTestCount: number;
+  hiddenTestCount: number;
+  totalTestCount: number;
+  checks: DraftQualityCheck[];
+}
+
 export interface ProblemDraft {
   id: string;
   topic: string;
@@ -50,6 +67,7 @@ export interface ProblemDraft {
   validationStatus: "VALIDATED";
   createdAt: string;
   generationMetadata: GenerationMetadata;
+  quality: DraftQuality;
   problem: Problem;
 }
 

@@ -1,13 +1,14 @@
-import type { GenerationMetadata, Problem } from "../types";
+import type { DraftQuality, GenerationMetadata, Problem } from "../types";
 import { DraftMetadata } from "./DraftMetadata";
 
 interface ProblemStatementProps {
   generationMetadata?: GenerationMetadata;
+  quality?: DraftQuality;
   isDraftPreview: boolean;
   problem: Problem;
 }
 
-export function ProblemStatement({ generationMetadata, isDraftPreview, problem }: ProblemStatementProps) {
+export function ProblemStatement({ generationMetadata, isDraftPreview, problem, quality }: ProblemStatementProps) {
   return (
     <section className="statement">
       <div className="problem-heading">
@@ -25,7 +26,9 @@ export function ProblemStatement({ generationMetadata, isDraftPreview, problem }
         </div>
       </div>
 
-      {isDraftPreview && generationMetadata ? <DraftMetadata generationMetadata={generationMetadata} /> : null}
+      {isDraftPreview && generationMetadata && quality ? (
+        <DraftMetadata generationMetadata={generationMetadata} quality={quality} />
+      ) : null}
 
       <p>{problem.description}</p>
 

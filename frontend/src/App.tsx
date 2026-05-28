@@ -564,6 +564,7 @@ function App() {
               generationMetadata={draft?.generationMetadata}
               isDraftPreview={isDraftPreview}
               problem={activeProblem}
+              quality={draft?.quality}
             />
             <CodingPanel
               activeProblem={activeProblem}

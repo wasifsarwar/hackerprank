@@ -62,6 +62,12 @@ public record GenerationMetadata(
         );
     }
 
+    public boolean repairUsed() {
+        String privateParameters = parametersJson == null ? "" : parametersJson;
+        String privatePrompt = promptText == null ? "" : promptText;
+        return privateParameters.contains("\"repairUsed\":true") || privatePrompt.contains("Repair context:");
+    }
+
     static GenerationMetadata empty() {
         return new GenerationMetadata("", "", "", "", "", "", "", "", "");
     }

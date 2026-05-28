@@ -71,10 +71,20 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.generationMetadata.validationSummary", containsString("Python/Java")))
             .andExpect(jsonPath("$.generationMetadata.parametersJson").doesNotExist())
             .andExpect(jsonPath("$.generationMetadata.validationErrors").doesNotExist())
+            .andExpect(jsonPath("$.quality.status").value("VALIDATED"))
+            .andExpect(jsonPath("$.quality.repairUsed").value(false))
+            .andExpect(jsonPath("$.quality.exampleCount").value(2))
+            .andExpect(jsonPath("$.quality.visibleTestCount").value(2))
+            .andExpect(jsonPath("$.quality.hiddenTestCount").value(4))
+            .andExpect(jsonPath("$.quality.totalTestCount").value(6))
+            .andExpect(jsonPath("$.quality.checks[0].label").value("Schema"))
+            .andExpect(jsonPath("$.quality.checks[0].status").value("PASSED"))
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())
             .andExpect(jsonPath("$.referenceSolutions").doesNotExist())
+            .andExpect(jsonPath("$.quality.validationErrors").doesNotExist())
+            .andExpect(jsonPath("$.quality.promptText").doesNotExist())
             .andReturn();
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());

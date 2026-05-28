@@ -1,7 +1,8 @@
-import type { GenerationMetadata } from "../types";
+import type { DraftQuality, GenerationMetadata } from "../types";
 
 interface DraftMetadataProps {
   generationMetadata: GenerationMetadata;
+  quality: DraftQuality;
 }
 
 function displayValue(value: string | null | undefined) {
@@ -20,33 +21,50 @@ function formatStatus(status: string | null | undefined) {
   return displayValue(formatted);
 }
 
-export function DraftMetadata({ generationMetadata }: DraftMetadataProps) {
+export function DraftMetadata({ generationMetadata, quality }: DraftMetadataProps) {
+  const metrics = [
+    { label: "Provider", value: displayValue(generationMetadata.provider) },
+    { label: "Model", value: displayValue(generationMetadata.modelId) },
+    { label: "Prompt", value: displayValue(generationMetadata.promptVersion) },
+    { label: "Repair", value: quality.repairUsed ? "Used" : "Not used" },
+    { label: "Examples", value: String(quality.exampleCount) },
+    { label: "Visible", value: String(quality.visibleTestCount) },
+    { label: "Hidden", value: String(quality.hiddenTestCount) },
+    { label: "Total Tests", value: String(quality.totalTestCount) }
+  ];
+
   return (
-    <section className="draft-metadata" aria-label="Draft generation metadata">
+    <section className="draft-quality" aria-label="Draft quality">
       <div className="draft-metadata-header">
         <div>
-          <span>Technique</span>
+          <span>Draft QA</span>
           <strong>{displayValue(generationMetadata.intendedTechnique)}</strong>
         </div>
-        <span className="validation-pill">{formatStatus(generationMetadata.validationStatus)}</span>
+        <span className="validation-pill">{formatStatus(quality.status)}</span>
       </div>
 
       <dl className="draft-metadata-grid">
-        <div>
-          <dt>Provider</dt>
-          <dd>{displayValue(generationMetadata.provider)}</dd>
-        </div>
-        <div>
-          <dt>Model</dt>
-          <dd>{displayValue(generationMetadata.modelId)}</dd>
-        </div>
-        <div>
-          <dt>Prompt Version</dt>
-          <dd>{displayValue(generationMetadata.promptVersion)}</dd>
-        </div>
+        {metrics.map((metric) => (
+          <div key={metric.label}>
+            <dt>{metric.label}</dt>
+            <dd>{metric.value}</dd>
+          </div>
+        ))}
       </dl>
 
-      <p>{displayValue(generationMetadata.validationSummary)}</p>
+      <ul className="draft-quality-checks" aria-label="Validation checks">
+        {quality.checks.map((check) => (
+          <li key={check.label}>
+            <span>{check.status}</span>
+            <div>
+              <strong>{check.label}</strong>
+              <p>{check.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <p>{displayValue(quality.summary || generationMetadata.validationSummary)}</p>
     </section>
   );
 }
