@@ -71,6 +71,7 @@ class OpenAiProblemGeneratorValidationFallbackTests {
             .andExpect(jsonPath("$.id", startsWith("draft-")))
             .andExpect(jsonPath("$.problem.id", startsWith("fixed-openai-sum-")))
             .andExpect(jsonPath("$.generationMetadata.provider").value("openai"))
+            .andExpect(jsonPath("$.quality.repairUsed").value(true))
             .andReturn();
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());

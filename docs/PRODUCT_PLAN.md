@@ -244,6 +244,8 @@ Scope:
 
 ### Iteration 3: Draft Quality Panel
 
+Status: implemented in `codex/draft-quality-panel`.
+
 Goal: make generated-problem quality visible and trustworthy.
 
 Scope:
@@ -314,7 +316,6 @@ Scope:
 
 Use this list when choosing the next branch.
 
-- `codex/draft-quality-panel`
 - `codex/generation-variant-controls`
 - `codex/user-profiles`
 - `codex/adaptive-practice-dashboard`
@@ -334,6 +335,6 @@ When choosing what to build next:
 
 ## Current Best Next Step
 
-Build `codex/draft-quality-panel`.
+Build `codex/generation-variant-controls`.
 
-This supports the near-term demo goal: generate a strong problem live, show why the draft is trustworthy, then let the user solve it in the Monaco workspace without exposing private prompts, hidden tests, or reference solutions.
+This should make the generator controls materially affect problem content: company/interview style, constraints, target concepts, and variant regeneration should shape the draft rather than only being stored as metadata.

@@ -9,6 +9,7 @@ public class PublicProblemDraft {
     private final String validationStatus;
     private final Instant createdAt;
     private final PublicGenerationMetadata generationMetadata;
+    private final PublicDraftQuality quality;
     private final PublicProblem problem;
 
     public PublicProblemDraft(
@@ -18,6 +19,7 @@ public class PublicProblemDraft {
         String validationStatus,
         Instant createdAt,
         PublicGenerationMetadata generationMetadata,
+        PublicDraftQuality quality,
         PublicProblem problem
     ) {
         this.id = id;
@@ -26,6 +28,7 @@ public class PublicProblemDraft {
         this.validationStatus = validationStatus;
         this.createdAt = createdAt;
         this.generationMetadata = generationMetadata;
+        this.quality = quality;
         this.problem = problem;
     }
 
@@ -37,6 +40,7 @@ public class PublicProblemDraft {
             draft.getValidationStatus(),
             draft.getCreatedAt(),
             PublicGenerationMetadata.from(draft.getGenerationMetadata()),
+            PublicDraftQuality.from(draft),
             PublicProblem.from(draft.getProblem())
         );
     }
@@ -63,6 +67,10 @@ public class PublicProblemDraft {
 
     public PublicGenerationMetadata getGenerationMetadata() {
         return generationMetadata;
+    }
+
+    public PublicDraftQuality getQuality() {
+        return quality;
     }
 
     public PublicProblem getProblem() {

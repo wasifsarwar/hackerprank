@@ -356,6 +356,7 @@ class OpenAiProblemGenerator {
         parameters.put("model", properties.getModel());
         parameters.put("maxOutputTokens", properties.getMaxOutputTokens());
         parameters.put("responsesUrl", properties.getResponsesUrl());
+        parameters.put("repairUsed", userPrompt.contains("Repair context:"));
 
         return new GenerationMetadata(
             "openai",
