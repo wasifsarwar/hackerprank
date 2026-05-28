@@ -22,7 +22,18 @@ HackerPrank is a local LeetCode/HackerRank-style coding practice platform.
 
 The long-term goal is an agentic tutor that can generate original interview-style coding problems on demand, including statements, starter code, reference solutions, and test cases. The user wants this to be a learning project, especially for staying sharp with Spring Boot while still building a useful frontend.
 
-The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended next implementation branch is `codex/openai-tutor-hints`.
+The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended next implementation branch is `codex/draft-quality-panel`.
+
+## Product Discovery Snapshot
+
+- First user: Wasif, and people like him preparing for technical interviews.
+- Primary job: generate unique HackerRank-style practice problems that feel realistic for the target company or interview style; pattern teaching is secondary.
+- Topic flow: a topic such as "sliding window" should produce a 3 to 5 problem progression from easy to hard, with adaptive session behavior later.
+- Tutor tone: gentle and Socratic, like an interviewer judging technical problem-solving skill. Correctness matters, but the reasoning process matters more.
+- Quality bar: originality, realistic feel, clean examples, hidden edge cases, and great explanations.
+- Progress model: keep it lightweight and session-based for now.
+- Near-term demo: generate a good problem live, solve it in an autocomplete-enabled editor, and keep the UI polished.
+- Collaboration preference: explain Spring and React design decisions whenever practical so the project remains a learning experience.
 
 ## Current Stack
 
@@ -68,6 +79,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add a product plan and iteration roadmap for the agentic interview-practice end state
 - Current session - Add opt-in OpenAI-backed tutor hints with deterministic fallback and hidden-test privacy guards
 - Current session - Add persisted submission-scoped tutor follow-up chat with deterministic fallback and the same hidden-test privacy boundary
+- Current session - Record first product-discovery decisions in the product plan and handoff notes
 
 ## Current Application Shape
 
@@ -649,7 +661,7 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/generated-draft-quality-panel`.
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/draft-quality-panel`.
 
 1. Add a richer generated-draft quality panel.
 2. Add generation variant controls and deeper prompt behavior.

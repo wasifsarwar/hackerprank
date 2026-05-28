@@ -12,6 +12,19 @@ The user chooses a topic, difficulty, interview style, target concepts, and cons
 
 The end-state should be polished enough that practicing feels motivating, not like filling out a form around an API call.
 
+## Product Discovery Decisions
+
+These decisions came from the first product interview and should guide future PR scope.
+
+- First user: Wasif, and people like him preparing for technical interviews.
+- Primary job-to-be-done: generate practice problems that feel like real HackerRank-style interview prompts, ideally tuned to the company or interview style being targeted. Pattern teaching is secondary.
+- Topic sessions: a topic such as "sliding window" should generate a progression of 3 to 5 problems from easy to hard. Keep the architecture open to adaptive sessions that adjust based on attempts and failures.
+- Tutor stance: gentle guidance plus Socratic nudges. The tutor should act like an interviewer who judges technical problem-solving skill; a correct answer matters, but a clear and well-reasoned process matters more.
+- Problem quality bar: originality, realistic interview feel, clean examples, strong hidden edge cases, and high-quality explanations.
+- Progress model for now: lightweight and session-based. Avoid heavy accounts, dashboards, or mastery machinery until the core loop earns it.
+- Near-term demo moment: generate a good problem live, solve it in an autocomplete-enabled editor, and make the whole workspace feel polished.
+- Collaboration preference: explain Spring and React design decisions during implementation whenever practical so the build remains a learning experience.
+
 ## End-State Experience
 
 1. Pick a practice goal: topic, difficulty, company style, target concepts, time limit, and weak spots.
@@ -198,6 +211,8 @@ Operational direction:
 
 ### Iteration 1: OpenAI Tutor Hints
 
+Status: merged.
+
 Goal: make the tutor feel intelligent while keeping deterministic fallback.
 
 Scope:
@@ -215,6 +230,8 @@ Why next:
 The current deterministic hint API is the perfect place to add an AI tutor. This is the first feature that makes HackerPrank feel meaningfully agentic.
 
 ### Iteration 2: Tutor Follow-Up Chat
+
+Status: merged.
 
 Goal: let the user ask for clarification without leaving the failed submission context.
 
@@ -297,8 +314,6 @@ Scope:
 
 Use this list when choosing the next branch.
 
-- `codex/openai-tutor-hints`
-- `codex/tutor-follow-up-chat`
 - `codex/draft-quality-panel`
 - `codex/generation-variant-controls`
 - `codex/user-profiles`
@@ -319,6 +334,6 @@ When choosing what to build next:
 
 ## Current Best Next Step
 
-Build `codex/openai-tutor-hints`.
+Build `codex/draft-quality-panel`.
 
-This turns the current deterministic hint panel into the first truly agentic learning feature while preserving safety, fallback behavior, and the existing UI contract.
+This supports the near-term demo goal: generate a strong problem live, show why the draft is trustworthy, then let the user solve it in the Monaco workspace without exposing private prompts, hidden tests, or reference solutions.
