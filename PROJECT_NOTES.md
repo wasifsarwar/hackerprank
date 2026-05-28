@@ -52,6 +52,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
 - Current session - Render safe generated-draft metadata in the frontend problem statement
+- Current session - Remove raw generation parameters and validation errors from the public draft metadata DTO
 
 ## Current Application Shape
 

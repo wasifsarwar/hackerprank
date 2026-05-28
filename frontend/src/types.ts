@@ -34,9 +34,7 @@ export interface GenerationMetadata {
   provider: string;
   modelId: string;
   promptVersion: string;
-  parametersJson: string;
   validationStatus: string;
-  validationErrors: string;
   validationSummary: string;
   intendedTechnique: string;
 }
