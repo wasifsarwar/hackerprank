@@ -2,6 +2,7 @@ package com.hackerprank.problems;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,9 +66,13 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.topic").value("stacks"))
             .andExpect(jsonPath("$.difficulty").value("Medium"))
             .andExpect(jsonPath("$.validationStatus").value("VALIDATED"))
+            .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
+            .andExpect(jsonPath("$.generationMetadata.modelId").value("template-v1"))
+            .andExpect(jsonPath("$.generationMetadata.validationSummary", containsString("Python/Java")))
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())
+            .andExpect(jsonPath("$.referenceSolutions").doesNotExist())
             .andReturn();
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -75,6 +80,10 @@ class ProblemControllerTests {
         String problemId = body.get("problem").get("id").asText();
 
         assertTrue(draftRepository.findById(draftId).isPresent());
+        ProblemDraft persistedDraft = draftRepository.findById(draftId).orElseThrow();
+        assertEquals("deterministic", persistedDraft.getGenerationMetadata().provider());
+        assertTrue(persistedDraft.getReferenceSolutions().containsKey("python"));
+        assertTrue(persistedDraft.getReferenceSolutions().containsKey("java"));
         assertFalse(repository.findById(problemId).isPresent());
     }
 

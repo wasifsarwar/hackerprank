@@ -144,19 +144,41 @@ public class ProblemRepository {
     @Transactional
     void savePrivateArtifacts(
         String problemId,
-        String referenceSolution,
+        Map<String, String> referenceSolutions,
         String generatorTopic,
-        String validationStatus
+        String validationStatus,
+        GenerationMetadata generationMetadata
     ) {
+        GenerationMetadata metadata = generationMetadata == null ? GenerationMetadata.empty() : generationMetadata;
+        String pythonReferenceSolution = referenceSolutions == null ? "" : referenceSolutions.getOrDefault("python", "");
         int updated = jdbcTemplate.update(
             """
                 UPDATE problem_private_artifacts
-                SET reference_solution = ?, generator_topic = ?, validation_status = ?, updated_at = CURRENT_TIMESTAMP
+                SET reference_solution = ?,
+                    generator_topic = ?,
+                    validation_status = ?,
+                    generator_provider = ?,
+                    generator_model_id = ?,
+                    generator_prompt_version = ?,
+                    generator_prompt_text = ?,
+                    generator_parameters_json = ?,
+                    validation_errors = ?,
+                    validation_summary = ?,
+                    intended_technique = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE problem_id = ?
                 """,
-            referenceSolution,
+            pythonReferenceSolution,
             generatorTopic,
             validationStatus,
+            metadata.provider(),
+            metadata.modelId(),
+            metadata.promptVersion(),
+            metadata.promptText(),
+            metadata.parametersJson(),
+            metadata.validationErrors(),
+            metadata.validationSummary(),
+            metadata.intendedTechnique(),
             problemId
         );
 
@@ -167,28 +189,111 @@ public class ProblemRepository {
                         problem_id,
                         reference_solution,
                         generator_topic,
-                        validation_status
+                        validation_status,
+                        generator_provider,
+                        generator_model_id,
+                        generator_prompt_version,
+                        generator_prompt_text,
+                        generator_parameters_json,
+                        validation_errors,
+                        validation_summary,
+                        intended_technique
                     )
-                    VALUES (?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                 problemId,
-                referenceSolution,
+                pythonReferenceSolution,
                 generatorTopic,
-                validationStatus
+                validationStatus,
+                metadata.provider(),
+                metadata.modelId(),
+                metadata.promptVersion(),
+                metadata.promptText(),
+                metadata.parametersJson(),
+                metadata.validationErrors(),
+                metadata.validationSummary(),
+                metadata.intendedTechnique()
             );
         }
+
+        replaceReferenceSolutions(problemId, referenceSolutions);
     }
 
     Optional<String> findReferenceSolutionByProblemId(String problemId) {
+        return findReferenceSolutionsByProblemId(problemId).entrySet().stream()
+            .filter(entry -> entry.getKey().equals("python"))
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .or(() -> jdbcTemplate.query(
+                """
+                    SELECT reference_solution
+                    FROM problem_private_artifacts
+                    WHERE problem_id = ?
+                    """,
+                (rs, rowNum) -> rs.getString("reference_solution"),
+                problemId
+            ).stream().findFirst());
+    }
+
+    Map<String, String> findReferenceSolutionsByProblemId(String problemId) {
+        Map<String, String> solutions = new LinkedHashMap<>();
+        jdbcTemplate.query(
+            """
+                SELECT language, code
+                FROM problem_reference_solutions
+                WHERE problem_id = ?
+                ORDER BY language
+                """,
+            (RowCallbackHandler) rs -> solutions.put(rs.getString("language"), rs.getString("code")),
+            problemId
+        );
+        return solutions;
+    }
+
+    Optional<GenerationMetadata> findGenerationMetadataByProblemId(String problemId) {
         return jdbcTemplate.query(
             """
-                SELECT reference_solution
+                SELECT generator_provider,
+                       generator_model_id,
+                       generator_prompt_version,
+                       generator_prompt_text,
+                       generator_parameters_json,
+                       validation_status,
+                       validation_errors,
+                       validation_summary,
+                       intended_technique
                 FROM problem_private_artifacts
                 WHERE problem_id = ?
                 """,
-            (rs, rowNum) -> rs.getString("reference_solution"),
+            (rs, rowNum) -> new GenerationMetadata(
+                rs.getString("generator_provider"),
+                rs.getString("generator_model_id"),
+                rs.getString("generator_prompt_version"),
+                rs.getString("generator_prompt_text"),
+                rs.getString("generator_parameters_json"),
+                rs.getString("validation_status"),
+                rs.getString("validation_errors"),
+                rs.getString("validation_summary"),
+                rs.getString("intended_technique")
+            ),
             problemId
         ).stream().findFirst();
+    }
+
+    private void replaceReferenceSolutions(String problemId, Map<String, String> referenceSolutions) {
+        jdbcTemplate.update("DELETE FROM problem_reference_solutions WHERE problem_id = ?", problemId);
+        if (referenceSolutions == null || referenceSolutions.isEmpty()) {
+            return;
+        }
+
+        List<Object[]> batch = new ArrayList<>();
+        for (Map.Entry<String, String> entry : referenceSolutions.entrySet()) {
+            batch.add(new Object[] { problemId, entry.getKey(), entry.getValue() });
+        }
+        jdbcTemplate.batchUpdate(
+            "INSERT INTO problem_reference_solutions (problem_id, language, code) VALUES (?, ?, ?)",
+            batch
+        );
     }
 
     private Problem saveSeed(Problem problem, int sortOrder) {
