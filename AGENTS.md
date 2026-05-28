@@ -8,7 +8,7 @@ This file is for coding agents working on HackerPrank. Read it before making cha
 2. Read `README.md`.
 3. Read `SKILLS.md`.
 4. Run `git status --short --branch`.
-5. Confirm you are on `main` unless the user explicitly asks for another branch.
+5. If starting feature work, create or switch to a `codex/<short-feature-name>` branch from `main` before editing.
 6. Run `git log -5 --oneline` to see the latest committed milestones.
 7. Inspect the relevant code before proposing or editing.
 8. Before changing code, state the likely continuation point in plain language.
@@ -44,7 +44,9 @@ Keep the work educational. When useful, explain why a change is being made, name
 
 ## Working Rules
 
-- Keep changes on `main` unless the user says otherwise.
+- Do feature work on a branch named `codex/<short-feature-name>` unless the user explicitly names a different branch.
+- Treat `main` as the review target. Do not commit feature work directly to `main` unless the user explicitly asks for an emergency direct-main change.
+- At the end of a feature, leave the branch ready for the user to push or open a PR into `main`.
 - Do not rewrite, reset, or discard user changes.
 - Use `rg` or `rg --files` for searching.
 - Use `apply_patch` for manual file edits.
@@ -63,12 +65,13 @@ Before giving the final response for any non-trivial change:
 3. Update `AGENTS.md` or `SKILLS.md` if the development workflow changed.
 4. Run the relevant verification commands.
 5. Run `git status --short --branch`.
-6. Commit on `main` when the user has asked for final changes to land there or when prior project context requires committed checkpoints.
+6. Commit on the feature branch, not `main`.
 
 The final response should include:
 
 - Files changed at a high level.
 - Verification performed.
+- Current branch.
 - Commit hash if committed.
 - Any skipped checks or known follow-up.
 

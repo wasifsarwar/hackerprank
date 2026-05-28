@@ -29,7 +29,8 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Runner: Python and Java submissions executed through a sandbox abstraction
 - Default sandbox: Docker CLI, currently backed locally by Colima
 - Repository: Git repo at `/Users/wasifsiddique/Desktop/hackerprank`
-- Main branch: `main`
+- Main branch: `main`, used as the PR review target
+- Feature workflow: create `codex/<short-feature-name>` branches for feature work; do not commit features directly to `main`
 
 ## Commit Map
 
@@ -41,6 +42,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - `956d2c6` - Add agent workflow docs
 - `c5dc1bb` - Strengthen agent handoff rules
 - Current session - Add database-backed persistence and queryable submissions
+- Current session - Document feature-branch workflow for future work
 
 ## Current Application Shape
 
