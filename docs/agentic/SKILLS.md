@@ -10,7 +10,7 @@ Steps:
 
 1. Read `PROJECT_NOTES.md`.
 2. Read `README.md`.
-3. Read `AGENTS.md`.
+3. Read `docs/agentic/AGENTS.md`.
 4. Read the relevant workflow in this file.
 5. Run `git status --short --branch`.
 6. Run `git log -5 --oneline`.
@@ -160,7 +160,7 @@ Steps:
 1. Update `PROJECT_NOTES.md` for project memory.
 2. Record what changed, why it changed, how it was verified, and what should happen next.
 3. Update `README.md` for setup or usage changes.
-4. Update `AGENTS.md` or `SKILLS.md` for workflow changes.
+4. Update `docs/agentic/AGENTS.md` or `docs/agentic/SKILLS.md` for workflow changes.
 5. Run `git diff --check`.
 6. Check `git status --short --branch`.
 

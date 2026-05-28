@@ -6,13 +6,13 @@ This is the living handoff file for HackerPrank. Future chats should read this f
 
 Agentic development docs:
 
-- `AGENTS.md` - operating instructions for coding agents.
-- `SKILLS.md` - repeatable project workflows for agents.
+- `docs/agentic/AGENTS.md` - operating instructions for coding agents.
+- `docs/agentic/SKILLS.md` - repeatable project workflows for agents.
 
 Agent memory rule:
 
 - Agents must update this file after meaningful implementation or workflow changes so a future chat can reconstruct where the project left off from the repo alone.
-- Agents should start new sessions by reading `PROJECT_NOTES.md`, `AGENTS.md`, `SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
+- Agents should start new sessions by reading `PROJECT_NOTES.md`, `docs/agentic/AGENTS.md`, `docs/agentic/SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
 
 ## Project Goal
 
@@ -46,6 +46,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add frontend submission history and result detail views
 - Current session - Add container images, full-stack Compose, and GitHub Actions CI/CD
 - Current session - Guard frontend problem, run, and submission-history requests against stale responses after problem changes
+- Current session - Move agent workflow docs into `docs/agentic/` and begin componentizing the frontend
 
 ## Current Application Shape
 
@@ -69,9 +70,16 @@ The frontend is a Vite React app. It currently provides:
 
 Important files:
 
-- `frontend/src/App.tsx` - main UI and state orchestration
+- `frontend/src/App.tsx` - app-level state orchestration and API-driven workflows
+- `frontend/src/components/ProblemRail.tsx` - sidebar, generator controls, draft actions, and problem list
+- `frontend/src/components/ProblemStatement.tsx` - problem statement, formats, constraints, and examples
+- `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
+- `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
+- `frontend/src/components/TestResults.tsx` - per-test result rendering
 - `frontend/src/api.ts` - API client functions
 - `frontend/src/types.ts` - shared TypeScript API shapes
+- `frontend/src/ui.ts` - shared UI constants
+- `frontend/src/format.ts` - display formatting helpers
 - `frontend/src/styles.css` - current app styling
 - `frontend/vite.config.ts` - Vite dev server and `/api` proxy to backend
 

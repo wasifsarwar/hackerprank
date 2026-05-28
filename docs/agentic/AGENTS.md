@@ -6,7 +6,7 @@ This file is for coding agents working on HackerPrank. Read it before making cha
 
 1. Read `PROJECT_NOTES.md`.
 2. Read `README.md`.
-3. Read `SKILLS.md`.
+3. Read `docs/agentic/SKILLS.md`.
 4. Run `git status --short --branch`.
 5. If starting feature work, create or switch to a `codex/<short-feature-name>` branch from `main` before editing.
 6. Run `git log -5 --oneline` to see the latest committed milestones.
@@ -25,7 +25,7 @@ At the start of a session, reconstruct:
 - What checks are currently trusted.
 - What risks or limitations are already known.
 
-If the next step is unclear, recommend one concrete next action based on `PROJECT_NOTES.md`, `SKILLS.md`, and the current code.
+If the next step is unclear, recommend one concrete next action based on `PROJECT_NOTES.md`, `docs/agentic/SKILLS.md`, and the current code.
 
 ## Project Intent
 
@@ -63,7 +63,7 @@ Before giving the final response for any non-trivial change:
 
 1. Update `PROJECT_NOTES.md` with what changed, why it changed, and what should happen next.
 2. Update `README.md` if setup or usage changed.
-3. Update `AGENTS.md` or `SKILLS.md` if the development workflow changed.
+3. Update `docs/agentic/AGENTS.md` or `docs/agentic/SKILLS.md` if the development workflow changed.
 4. Run the relevant verification commands.
 5. Run `git status --short --branch`.
 6. Commit on the feature branch, not `main`.
@@ -128,7 +128,7 @@ Use the docs this way:
 
 - `README.md`: setup and ordinary usage.
 - `PROJECT_NOTES.md`: project memory, decisions, milestones, handoff context.
-- `AGENTS.md`: operating instructions for coding agents.
-- `SKILLS.md`: repeatable workflows for common project tasks.
+- `docs/agentic/AGENTS.md`: operating instructions for coding agents.
+- `docs/agentic/SKILLS.md`: repeatable workflows for common project tasks.
 
-When adding a major feature, update `PROJECT_NOTES.md`. When changing agent workflow, update this file or `SKILLS.md`.
+When adding a major feature, update `PROJECT_NOTES.md`. When changing agent workflow, update this file or `docs/agentic/SKILLS.md`.
