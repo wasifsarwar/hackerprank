@@ -29,9 +29,6 @@ services:
       HACKERPRANK_DATABASE_URL: jdbc:postgresql://postgres:5432/hackerprank
       HACKERPRANK_DATABASE_USERNAME: hackerprank
       HACKERPRANK_DATABASE_PASSWORD: hackerprank
-      # Full-stack Compose is for smoke testing the app container, not production sandboxing.
-      HACKERPRANK_RUNNER_MODE: local
-      HACKERPRANK_RUNNER_WORKSPACE_ROOT: /app/.hackerprank-submissions
     ports:
       - "8080:8080"
 

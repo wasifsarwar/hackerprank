@@ -274,7 +274,7 @@ Current container files:
 Important tradeoff:
 
 - Host-based backend development still defaults to the Docker sandbox runner.
-- Full-stack Compose sets `HACKERPRANK_RUNNER_MODE=local` for the backend container so CI and local smoke tests do not need to mount the host Docker socket or solve nested workspace mounts.
+- The backend container image sets `HACKERPRANK_RUNNER_MODE=local` so published images, CI, and local smoke tests do not need to mount the host Docker socket or solve nested workspace mounts.
 - This is acceptable for proof-of-concept smoke testing, but production-grade execution should move to a dedicated worker/sandbox service.
 
 GitHub Actions workflow:

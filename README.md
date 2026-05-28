@@ -66,7 +66,7 @@ docker compose up -d --build postgres backend frontend
 
 The containerized frontend is available at `http://127.0.0.1:5173`, and it proxies `/api` requests to the backend service. The backend is also exposed directly at `http://127.0.0.1:8080`.
 
-The full-stack Compose setup runs the backend with `hackerprank.runner.mode=local` inside the backend container. That keeps the stack self-contained for local smoke tests and CI without mounting the host Docker socket. Host-based backend development still uses the Docker submission runner by default.
+The backend container image defaults to `hackerprank.runner.mode=local`. That keeps the published image, local smoke tests, and CI self-contained without mounting the host Docker socket. Host-based backend development still uses the Docker submission runner by default through `backend/src/main/resources/application.properties`.
 
 Backend:
 
@@ -108,7 +108,7 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 ## Current Limitations
 
 - Docker isolation is local-dev grade, not production hardened.
-- Full-stack Compose uses the local runner inside the backend container; production-grade execution should move to a dedicated sandbox worker.
+- Backend containers use the local runner by default; production-grade execution should move to a dedicated sandbox worker.
 - Output matching is exact after trimming trailing whitespace.
 - There is no auth or user account model yet.
 - Submission history is global per problem, not user-scoped.

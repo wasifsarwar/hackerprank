@@ -18,6 +18,9 @@ RUN addgroup -S hackerprank \
     && mkdir -p /app/.hackerprank-submissions \
     && chown -R hackerprank:hackerprank /app
 
+ENV HACKERPRANK_RUNNER_MODE=local \
+    HACKERPRANK_RUNNER_WORKSPACE_ROOT=/app/.hackerprank-submissions
+
 COPY --from=build /workspace/target/hackerprank-backend-0.1.0-SNAPSHOT.jar /app/app.jar
 
 USER hackerprank
