@@ -1,6 +1,6 @@
 # HackerPrank Project Notes
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 This is the living handoff file for HackerPrank. Future chats should read this first, then run `git status --short --branch`, then check `README.md` for setup commands.
 
@@ -44,6 +44,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add database-backed persistence and queryable submissions
 - Current session - Document feature-branch workflow for future work
 - Current session - Add frontend submission history and result detail views
+- Current session - Add container images, full-stack Compose, and GitHub Actions CI/CD
 
 ## Current Application Shape
 
@@ -258,6 +259,31 @@ Seed problems:
 - `most-frequent-word`
 
 Problems, generated drafts, private reference solutions, validation metadata, submissions, and submission test results are stored in PostgreSQL. Published generated problems and submitted runs survive backend restarts.
+
+### Containerization And CI/CD
+
+Current container files:
+
+- `backend/Dockerfile` builds the Spring Boot app with Maven on Java 21, then runs it on Eclipse Temurin 21 Alpine with Python 3 installed for local runner support.
+- `frontend/Dockerfile` builds the Vite app with Node.js 22 and serves it through unprivileged Nginx on port `8080`.
+- `frontend/nginx.conf` serves the frontend SPA and proxies `/api/` to the backend container.
+- `.dockerignore` keeps build output, dependencies, logs, and local submission workspaces out of Docker build contexts.
+- `docker-compose.yml` can run PostgreSQL alone or the full PostgreSQL/backend/frontend stack.
+- Dockerfiles intentionally avoid BuildKit-only features so they can build with a plain Docker CLI even when the local `buildx` component is missing.
+
+Important tradeoff:
+
+- Host-based backend development still defaults to the Docker sandbox runner.
+- Full-stack Compose sets `HACKERPRANK_RUNNER_MODE=local` for the backend container so CI and local smoke tests do not need to mount the host Docker socket or solve nested workspace mounts.
+- This is acceptable for proof-of-concept smoke testing, but production-grade execution should move to a dedicated worker/sandbox service.
+
+GitHub Actions workflow:
+
+- `.github/workflows/ci-cd.yml` runs on pull requests and pushes to `main`.
+- `backend-test` runs `mvn -B test` with Java 21.
+- `frontend-build` runs `npm ci` and `npm run build` with Node.js 22.
+- `compose-smoke` builds and starts the Compose stack, then curls backend and frontend endpoints.
+- `publish-images` runs only on pushes to `main` and publishes backend/frontend images to GHCR.
 
 ## Persistence And Query Notes
 

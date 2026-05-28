@@ -46,7 +46,8 @@ Keep the work educational. When useful, explain why a change is being made, name
 
 - Do feature work on a branch named `codex/<short-feature-name>` unless the user explicitly names a different branch.
 - Treat `main` as the review target. Do not commit feature work directly to `main` unless the user explicitly asks for an emergency direct-main change.
-- At the end of a feature, leave the branch ready for the user to push or open a PR into `main`.
+- At the end of a feature, commit on the feature branch and push/open a PR into `main` when the user asks for PR review.
+- After opening a PR for review, inspect unresolved Codex/GitHub review comments and address actionable feedback before handing off when practical.
 - Do not rewrite, reset, or discard user changes.
 - Use `rg` or `rg --files` for searching.
 - Use `apply_patch` for manual file edits.
@@ -83,6 +84,7 @@ Run the smallest useful checks for the change:
 - Frontend change: `cd frontend && npm run build`
 - API change: add or update a focused backend test
 - Runner/sandbox change: verify timeout and cleanup behavior when practical
+- Container/CI change: build images or run the Docker Compose smoke path when local Docker tooling supports it
 - Docs-only change: `git diff --check`
 
 If a check is skipped, say why.
