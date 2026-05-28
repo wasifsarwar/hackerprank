@@ -69,6 +69,8 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
             .andExpect(jsonPath("$.generationMetadata.modelId").value("template-v1"))
             .andExpect(jsonPath("$.generationMetadata.validationSummary", containsString("Python/Java")))
+            .andExpect(jsonPath("$.generationMetadata.parametersJson").doesNotExist())
+            .andExpect(jsonPath("$.generationMetadata.validationErrors").doesNotExist())
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())

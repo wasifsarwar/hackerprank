@@ -414,7 +414,11 @@ function App() {
 
         {activeProblem ? (
           <>
-            <ProblemStatement isDraftPreview={isDraftPreview} problem={activeProblem} />
+            <ProblemStatement
+              generationMetadata={draft?.generationMetadata}
+              isDraftPreview={isDraftPreview}
+              problem={activeProblem}
+            />
             <CodingPanel
               activeProblem={activeProblem}
               code={code}
