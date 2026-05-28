@@ -86,6 +86,21 @@ mvn spring-boot:run
 
 The backend is configured for Spring Boot 3 and Java 21. It uses PostgreSQL by default with Flyway migrations and HikariCP pooling. Tests use H2 in PostgreSQL compatibility mode.
 
+Local secrets can live in a root `.env` file, which is ignored by git. Start from the checked-in example:
+
+```sh
+cp .env.example .env
+```
+
+Paste your real API key into `.env`, then load it before starting the backend:
+
+```sh
+set -a
+source ../.env
+set +a
+mvn spring-boot:run
+```
+
 OpenAI-backed generation is opt-in. The backend keeps deterministic templates as the default and fallback so local development and tests never require network access:
 
 ```sh

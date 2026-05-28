@@ -84,6 +84,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Make local dev CORS origins and Vite API proxy target configurable for parallel branch smoke tests
 - Current session - Add opt-in Anthropic/Claude support for generated problem drafts, tutor hints, and tutor follow-up chat
 - Current session - Restore natural page scrolling by removing desktop-only internal statement/results scroll traps
+- Current session - Add ignored local `.env` support plus a committed `.env.example` for Claude/OpenAI provider setup
 
 ## Current Application Shape
 
@@ -487,6 +488,15 @@ docker compose up -d postgres
 
 ```sh
 cd backend
+mvn spring-boot:run
+```
+
+When using `.env`, load it from the backend terminal before starting Spring Boot:
+
+```sh
+set -a
+source ../.env
+set +a
 mvn spring-boot:run
 ```
 
