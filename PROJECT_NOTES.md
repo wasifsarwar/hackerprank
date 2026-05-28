@@ -6,13 +6,14 @@ This is the living handoff file for HackerPrank. Future chats should read this f
 
 Agentic development docs:
 
+- `AGENTS.md` - repo-scoped entry point so agent instructions apply to the full repository.
 - `docs/agentic/AGENTS.md` - operating instructions for coding agents.
 - `docs/agentic/SKILLS.md` - repeatable project workflows for agents.
 
 Agent memory rule:
 
 - Agents must update this file after meaningful implementation or workflow changes so a future chat can reconstruct where the project left off from the repo alone.
-- Agents should start new sessions by reading `PROJECT_NOTES.md`, `docs/agentic/AGENTS.md`, `docs/agentic/SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
+- Agents should start new sessions by reading `PROJECT_NOTES.md`, `AGENTS.md`, `docs/agentic/AGENTS.md`, `docs/agentic/SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
 
 ## Project Goal
 
@@ -47,6 +48,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add container images, full-stack Compose, and GitHub Actions CI/CD
 - Current session - Guard frontend problem, run, and submission-history requests against stale responses after problem changes
 - Current session - Move agent workflow docs into `docs/agentic/` and begin componentizing the frontend
+- Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
 
 ## Current Application Shape
 

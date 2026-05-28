@@ -1,6 +1,6 @@
 # HackerPrank Agent Guide
 
-This file is for coding agents working on HackerPrank. Read it before making changes.
+This file is for coding agents working on HackerPrank. The repo root `AGENTS.md` delegates here so these instructions remain scoped to the whole repository.
 
 ## Startup Checklist
 
