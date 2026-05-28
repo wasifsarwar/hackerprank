@@ -52,6 +52,8 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
 - Current session - Add richer frontend generator controls for target concepts, constraints/notes, and interview style, and preserve them in draft generation metadata
+- Current session - Render safe generated-draft metadata in the frontend problem statement
+- Current session - Remove raw generation parameters and validation errors from the public draft metadata DTO
 
 ## Current Application Shape
 
@@ -69,6 +71,7 @@ The frontend is a Vite React app. It currently provides:
 - Results panel with per-test output
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
+- Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
 - Submission history tab for the selected published problem
 - Persisted submission detail view with saved code, compile output, and per-test results
 - Load-code action for restoring a saved submission into Monaco
@@ -78,6 +81,7 @@ Important files:
 - `frontend/src/App.tsx` - app-level state orchestration and API-driven workflows
 - `frontend/src/components/ProblemRail.tsx` - sidebar, generator controls, draft actions, and problem list
 - `frontend/src/components/ProblemStatement.tsx` - problem statement, formats, constraints, and examples
+- `frontend/src/components/DraftMetadata.tsx` - safe generated draft metadata display for draft previews
 - `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
 - `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
 - `frontend/src/components/TestResults.tsx` - per-test result rendering
@@ -91,6 +95,7 @@ Important files:
 Current frontend limitation:
 
 - The generator controls are persisted in draft metadata, but deterministic templates do not yet use them to alter the generated problem.
+- Draft previews show safe generation metadata, but intentionally omit prompt text, reference solutions, hidden tests, raw validation errors, and raw parameter JSON.
 - Submission history is global per problem because there are no user accounts yet.
 - Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
 
@@ -590,10 +595,9 @@ PostgreSQL + Flyway + JDBC persistence:
 
 1. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
 2. Add richer generator controls for concepts, constraints, and interview style.
-3. Render generation metadata and intended technique details in the draft UI.
-4. Add user accounts and user-scoped submission history.
-5. Move execution to a worker queue.
-6. Harden sandboxing before any remote or multi-user deployment.
+3. Add user accounts and user-scoped submission history.
+4. Move execution to a worker queue.
+5. Harden sandboxing before any remote or multi-user deployment.
 
 ## Future OpenAI Generator Notes
 

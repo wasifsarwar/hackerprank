@@ -16,6 +16,8 @@ The first version intentionally uses stdin/stdout problems. That keeps the runne
 
 The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. Until the OpenAI-backed generator lands, the deterministic templates keep using topic and difficulty for selection while preserving the richer controls in draft generation metadata.
 
+Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
+
 ## Local Commands
 
 Prerequisites:
