@@ -7,23 +7,35 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProblemGeneratorService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProblemGeneratorService.class);
+    private static final Pattern NON_SLUG_CHARACTERS = Pattern.compile("[^a-z0-9]+");
+
     private final ProblemRepository problemRepository;
     private final ProblemDraftRepository draftRepository;
     private final GeneratedProblemValidator generatedProblemValidator;
+    private final ProblemGenerationProperties generationProperties;
+    private final OpenAiProblemGenerator openAiProblemGenerator;
 
     public ProblemGeneratorService(
         ProblemRepository problemRepository,
         ProblemDraftRepository draftRepository,
-        GeneratedProblemValidator generatedProblemValidator
+        GeneratedProblemValidator generatedProblemValidator,
+        ProblemGenerationProperties generationProperties,
+        OpenAiProblemGenerator openAiProblemGenerator
     ) {
         this.problemRepository = problemRepository;
         this.draftRepository = draftRepository;
         this.generatedProblemValidator = generatedProblemValidator;
+        this.generationProperties = generationProperties;
+        this.openAiProblemGenerator = openAiProblemGenerator;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
@@ -80,6 +92,31 @@ public class ProblemGeneratorService {
         String topic = normalizeTopic(request == null ? null : request.getTopic());
         String difficulty = normalizeDifficulty(request == null ? null : request.getDifficulty());
 
+        if (generationProperties.useOpenAi()) {
+            Optional<GeneratedProblemSpec> generated = tryOpenAiDraft(topic, difficulty);
+            if (generated.isPresent()) {
+                return generated.get();
+            }
+        }
+
+        return deterministicDraftFor(topic, difficulty);
+    }
+
+    private Optional<GeneratedProblemSpec> tryOpenAiDraft(String topic, String difficulty) {
+        if (!openAiProblemGenerator.isConfigured()) {
+            LOGGER.info("OpenAI problem generation requested without an API key; using deterministic fallback");
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(withUniqueProblemId(openAiProblemGenerator.generate(topic, difficulty)));
+        } catch (OpenAiProblemGenerationException exception) {
+            LOGGER.warn("OpenAI problem generation failed; using deterministic fallback", exception);
+            return Optional.empty();
+        }
+    }
+
+    private GeneratedProblemSpec deterministicDraftFor(String topic, String difficulty) {
         if (containsAny(topic, "stack", "bracket", "parentheses")) {
             return bracketBalanceProblem(topic, difficulty);
         }
@@ -89,6 +126,31 @@ public class ProblemGeneratorService {
         }
 
         return signalPeaksProblem(topic, difficulty);
+    }
+
+    private GeneratedProblemSpec withUniqueProblemId(GeneratedProblemSpec spec) {
+        Problem current = spec.problem();
+        Problem problem = new Problem(
+            uniqueId(slugBase(current.getId(), current.getTitle())),
+            current.getTitle(),
+            current.getDifficulty(),
+            current.getTags(),
+            current.getDescription(),
+            current.getInputFormat(),
+            current.getOutputFormat(),
+            current.getConstraints(),
+            current.getExamples(),
+            current.getTestCases(),
+            current.getStarterCode()
+        );
+
+        return new GeneratedProblemSpec(
+            spec.topic(),
+            spec.difficulty(),
+            problem,
+            spec.referenceSolutions(),
+            spec.generationMetadata()
+        );
     }
 
     private GeneratedProblemSpec signalPeaksProblem(String topic, String difficulty) {
@@ -435,8 +497,9 @@ public class ProblemGeneratorService {
     }
 
     private String uniqueId(String base) {
+        String slug = slugBase(base, "generated-problem");
         for (int attempt = 0; attempt < 5; attempt++) {
-            String id = base + "-" + UUID.randomUUID().toString().substring(0, 8);
+            String id = slug + "-" + UUID.randomUUID().toString().substring(0, 8);
             if (!problemRepository.existsAnyById(id) && !draftRepository.existsByProblemId(id)) {
                 return id;
             }
@@ -454,5 +517,12 @@ public class ProblemGeneratorService {
         }
 
         throw new IllegalStateException("Could not allocate a generated draft id");
+    }
+
+    private String slugBase(String preferred, String fallback) {
+        String source = preferred == null || preferred.isBlank() ? fallback : preferred;
+        String slug = NON_SLUG_CHARACTERS.matcher(source.trim().toLowerCase(Locale.ROOT)).replaceAll("-");
+        slug = slug.replaceAll("^-+", "").replaceAll("-+$", "");
+        return slug.isBlank() ? "generated-problem" : slug;
     }
 }

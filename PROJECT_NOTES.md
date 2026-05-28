@@ -51,6 +51,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
+- Current session - Add an opt-in OpenAI-backed backend generator behind the generated-problem contract, with deterministic fallback
 
 ## Current Application Shape
 
@@ -115,7 +116,10 @@ Important files:
 - `GeneratedProblemValidator.java` - validates generated draft shape and runs Python/Java reference solutions
 - `GenerationMetadata.java` - provider/model/prompt/validation metadata for generated drafts
 - `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
-- `ProblemGeneratorService.java` - deterministic generated-problem templates and validation
+- `ProblemGeneratorService.java` - generated-problem orchestration, OpenAI opt-in routing, deterministic fallback, and validation
+- `OpenAiProblemGenerator.java` - Responses API request builder, structured JSON schema, response parser, and generated-problem mapper
+- `OpenAiProblemGeneratorProperties.java` - OpenAI model, endpoint, timeout, token, and API key config
+- `JdkOpenAiTransport.java` - JDK `HttpClient` transport for OpenAI calls
 - `SubmissionController.java` - submission endpoint
 - `SubmissionRepository.java` - JDBC submission and test-result persistence
 - `SubmissionService.java` - prepares code, runs test cases, computes status
@@ -155,6 +159,9 @@ Current behavior:
 - Creates a database-backed draft, not a public problem.
 - Validates the generated draft schema before persistence.
 - Validates both private Python and Java reference solutions through `SubmissionService`.
+- Uses deterministic templates by default.
+- Can use the OpenAI Responses API when `HACKERPRANK_GENERATOR_PROVIDER=openai` and `OPENAI_API_KEY` are configured.
+- Falls back to deterministic templates if OpenAI is disabled, missing an API key, or generation fails.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
 - Public draft responses do not expose hidden test cases, prompt text, or reference solutions.
@@ -195,7 +202,7 @@ Current behavior:
   - string/map/hash/count -> `First Solo Word`
   - stack/bracket/parentheses -> `Bracket Balance`
 
-This endpoint is intentionally deterministic for now. The API shape is ready to become OpenAI-backed later.
+When OpenAI generation is enabled, the backend requests structured JSON from the Responses API, maps it into the same `GeneratedProblemSpec`, validates Python and Java reference solutions, then publishes the validated draft.
 
 ### Submissions
 
@@ -553,11 +560,11 @@ Docker/Colima execution:
 - Gives a reasonable local sandbox story.
 - Keeps the same `docker` CLI contract if the runtime changes later.
 
-Deterministic generator first:
+Deterministic generator first, OpenAI second:
 
 - Gives us a stable endpoint and validation flow.
 - Lets us test problem creation without spending tokens or debugging LLM variability.
-- Provides a clear service boundary for adding OpenAI generation later.
+- Provides a safe fallback when OpenAI is not configured or generation fails validation/parsing.
 
 PostgreSQL + Flyway + JDBC persistence:
 
@@ -568,7 +575,8 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Known Limitations
 
-- Generated-problem templates are deterministic and limited.
+- OpenAI generation is backend-only and opt-in; the frontend still exposes only topic and difficulty.
+- OpenAI prompt/eval quality is not tuned yet.
 - Generator controls only cover topic and difficulty.
 - No user accounts or sessions.
 - Submission history is not user-scoped yet.
@@ -576,22 +584,21 @@ PostgreSQL + Flyway + JDBC persistence:
 - Output matching only trims trailing whitespace.
 - Docker sandbox is local-dev grade, not production hardened.
 - No rate limiting or abuse controls.
-- No OpenAI integration yet.
 
 ## Recommended Next Milestones
 
-1. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
-2. Add richer generator controls for concepts, constraints, and interview style.
-3. Render generation metadata and intended technique details in the draft UI.
+1. Add richer generator controls for concepts, constraints, and interview style.
+2. Render generation metadata and intended technique details in the draft UI.
+3. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
 4. Add user accounts and user-scoped submission history.
 5. Move execution to a worker queue.
 6. Harden sandboxing before any remote or multi-user deployment.
 
-## Future OpenAI Generator Notes
+## OpenAI Generator Notes
 
-The generator should eventually produce structured data, not free-form markdown.
+The OpenAI generator produces structured data, not free-form markdown. It uses the Responses API with a strict JSON schema and stores the full prompt text and request parameters privately in generation metadata.
 
-Likely generated draft shape:
+Generated draft shape:
 
 - title
 - difficulty
@@ -610,7 +617,7 @@ Likely generated draft shape:
 - explanation of intended technique
 - topic/concept metadata
 
-The backend should validate generated drafts before publishing:
+The backend validates generated drafts before publishing:
 
 - Schema validation
 - Reference solution passes all generated tests
