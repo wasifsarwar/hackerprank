@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vscode
+.DS_Store
+tmp/
+*.log
+
+backend/target/
+backend/.hackerprank-submissions/
+frontend/node_modules/
+frontend/dist/

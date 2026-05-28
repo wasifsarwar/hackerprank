@@ -16,6 +16,32 @@ services:
       timeout: 3s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: hackerprank-backend:local
+    container_name: hackerprank-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HACKERPRANK_DATABASE_URL: jdbc:postgresql://postgres:5432/hackerprank
+      HACKERPRANK_DATABASE_USERNAME: hackerprank
+      HACKERPRANK_DATABASE_PASSWORD: hackerprank
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: hackerprank-frontend:local
+    container_name: hackerprank-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:8080"
+
 volumes:
   hackerprank-postgres-data:
-

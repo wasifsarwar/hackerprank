@@ -3,13 +3,14 @@
 A local proof of concept for a LeetCode/HackerRank-style coding practice platform.
 
 For project memory, design decisions, and future-chat handoff context, see `PROJECT_NOTES.md`.
-For coding-agent operating instructions and repeatable workflows, see `AGENTS.md` and `SKILLS.md`.
+For coding-agent operating instructions and repeatable workflows, start with the repo-scoped `AGENTS.md`, then see `docs/agentic/AGENTS.md` and `docs/agentic/SKILLS.md`.
 
 ## Shape of the App
 
 - `frontend/`: React + TypeScript + Vite
 - `backend/`: Spring Boot API that serves problems, creates generated drafts, publishes problems, runs submissions, and persists platform data
-- `docker-compose.yml`: local PostgreSQL database for persisted problems, drafts, and submissions
+- `docker-compose.yml`: local PostgreSQL database plus an optional full-stack container setup
+- `.github/workflows/ci-cd.yml`: GitHub Actions checks and image publishing
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
@@ -20,7 +21,7 @@ Prerequisites:
 - Java 21
 - Maven
 - Node.js 20+
-- Docker Desktop, or another Docker-compatible runtime with the `docker` CLI
+- Docker Desktop, or another Docker-compatible runtime with the `docker` CLI and Compose v2
 - PostgreSQL through the included Docker setup
 
 This machine is set up with Colima:
@@ -57,6 +58,18 @@ docker run -d \
   postgres:16-alpine
 ```
 
+Full stack in containers:
+
+```sh
+docker compose up -d --build postgres backend frontend
+```
+
+The containerized frontend is available at `http://127.0.0.1:5173`, and it proxies `/api` requests to the backend service. The backend is also exposed directly at `http://127.0.0.1:8080`.
+
+The backend container image defaults to `hackerprank.runner.mode=local`. That keeps the published image, local smoke tests, and CI self-contained without mounting the host Docker socket. Host-based backend development still uses the Docker submission runner by default through `backend/src/main/resources/application.properties`.
+
+The backend container still supports both submission languages: Java submissions use the Temurin 21 JDK in the image, and Python submissions use the installed `python3` runtime.
+
 Backend:
 
 ```sh
@@ -81,9 +94,23 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--hackerprank.runner.mode=local
 
 Docker submissions run with no container network, memory/CPU/pid limits, dropped Linux capabilities, `no-new-privileges`, a read-only root filesystem, and a per-submission temporary workspace mounted at `/workspace`.
 
+## CI/CD
+
+Pull requests run GitHub Actions checks for:
+
+- Backend tests with Java 21 and Maven
+- Frontend TypeScript/Vite build with Node.js 22
+- A Docker Compose smoke test that builds and starts PostgreSQL, backend, and frontend containers
+
+Pushes to `main` run the same checks and then publish backend and frontend images to GitHub Container Registry:
+
+- `ghcr.io/wasifsarwar/hackerprank/backend`
+- `ghcr.io/wasifsarwar/hackerprank/frontend`
+
 ## Current Limitations
 
 - Docker isolation is local-dev grade, not production hardened.
+- Backend containers use the local runner by default; production-grade execution should move to a dedicated sandbox worker.
 - Output matching is exact after trimming trailing whitespace.
 - There is no auth or user account model yet.
 - Submission history is global per problem, not user-scoped.

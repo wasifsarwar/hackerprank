@@ -10,7 +10,7 @@ Steps:
 
 1. Read `PROJECT_NOTES.md`.
 2. Read `README.md`.
-3. Read `AGENTS.md`.
+3. Read `docs/agentic/AGENTS.md`.
 4. Read the relevant workflow in this file.
 5. Run `git status --short --branch`.
 6. Run `git log -5 --oneline`.
@@ -114,6 +114,25 @@ Done when:
 
 - Restarting the backend no longer loses the persisted data covered by the change.
 
+## Skill: Container And CI Change
+
+Use when changing Dockerfiles, Compose services, GitHub Actions, image publishing, or deployment-adjacent setup.
+
+Steps:
+
+1. Inspect `docker-compose.yml`, relevant Dockerfiles, and `.github/workflows/`.
+2. Keep host development and containerized smoke testing behavior explicit.
+3. Avoid mounting the host Docker socket into app containers unless the user deliberately chooses that tradeoff.
+4. Keep CI jobs split by concern: backend tests, frontend build, container smoke, and publish/deploy.
+5. Make image publishing run only after tests and smoke checks pass.
+6. Update `README.md` with any setup or usage changes.
+7. Update `PROJECT_NOTES.md` with the container/runtime tradeoffs.
+8. Run `cd backend && mvn test`, `cd frontend && npm run build`, and the most practical Docker build or Compose smoke command available locally.
+
+Done when:
+
+- The branch documents how to run the stack, CI can validate the stack, and any skipped local Docker checks are explicitly called out.
+
 ## Skill: OpenAI Tutor Integration
 
 Use when adding OpenAI-backed problem generation or agentic tutoring.
@@ -141,7 +160,7 @@ Steps:
 1. Update `PROJECT_NOTES.md` for project memory.
 2. Record what changed, why it changed, how it was verified, and what should happen next.
 3. Update `README.md` for setup or usage changes.
-4. Update `AGENTS.md` or `SKILLS.md` for workflow changes.
+4. Update `docs/agentic/AGENTS.md` or `docs/agentic/SKILLS.md` for workflow changes.
 5. Run `git diff --check`.
 6. Check `git status --short --branch`.
 

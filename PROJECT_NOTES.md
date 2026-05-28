@@ -1,18 +1,19 @@
 # HackerPrank Project Notes
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 This is the living handoff file for HackerPrank. Future chats should read this first, then run `git status --short --branch`, then check `README.md` for setup commands.
 
 Agentic development docs:
 
-- `AGENTS.md` - operating instructions for coding agents.
-- `SKILLS.md` - repeatable project workflows for agents.
+- `AGENTS.md` - repo-scoped entry point so agent instructions apply to the full repository.
+- `docs/agentic/AGENTS.md` - operating instructions for coding agents.
+- `docs/agentic/SKILLS.md` - repeatable project workflows for agents.
 
 Agent memory rule:
 
 - Agents must update this file after meaningful implementation or workflow changes so a future chat can reconstruct where the project left off from the repo alone.
-- Agents should start new sessions by reading `PROJECT_NOTES.md`, `AGENTS.md`, `SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
+- Agents should start new sessions by reading `PROJECT_NOTES.md`, `AGENTS.md`, `docs/agentic/AGENTS.md`, `docs/agentic/SKILLS.md`, and `README.md`, then checking `git status --short --branch` and `git log -5 --oneline`.
 
 ## Project Goal
 
@@ -44,6 +45,11 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add database-backed persistence and queryable submissions
 - Current session - Document feature-branch workflow for future work
 - Current session - Add frontend submission history and result detail views
+- Current session - Add container images, full-stack Compose, and GitHub Actions CI/CD
+- Current session - Guard frontend problem, run, and submission-history requests against stale responses after problem changes
+- Current session - Move agent workflow docs into `docs/agentic/` and begin componentizing the frontend
+- Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
+- Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 
 ## Current Application Shape
 
@@ -67,9 +73,16 @@ The frontend is a Vite React app. It currently provides:
 
 Important files:
 
-- `frontend/src/App.tsx` - main UI and state orchestration
+- `frontend/src/App.tsx` - app-level state orchestration and API-driven workflows
+- `frontend/src/components/ProblemRail.tsx` - sidebar, generator controls, draft actions, and problem list
+- `frontend/src/components/ProblemStatement.tsx` - problem statement, formats, constraints, and examples
+- `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
+- `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
+- `frontend/src/components/TestResults.tsx` - per-test result rendering
 - `frontend/src/api.ts` - API client functions
 - `frontend/src/types.ts` - shared TypeScript API shapes
+- `frontend/src/ui.ts` - shared UI constants
+- `frontend/src/format.ts` - display formatting helpers
 - `frontend/src/styles.css` - current app styling
 - `frontend/vite.config.ts` - Vite dev server and `/api` proxy to backend
 
@@ -77,6 +90,7 @@ Current frontend limitation:
 
 - The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
 - Submission history is global per problem because there are no user accounts yet.
+- Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
 
 ### Backend
 
@@ -258,6 +272,32 @@ Seed problems:
 - `most-frequent-word`
 
 Problems, generated drafts, private reference solutions, validation metadata, submissions, and submission test results are stored in PostgreSQL. Published generated problems and submitted runs survive backend restarts.
+
+### Containerization And CI/CD
+
+Current container files:
+
+- `backend/Dockerfile` builds the Spring Boot app with Maven on Java 21, then runs it on Eclipse Temurin 21 Alpine with Python 3 installed for local runner support.
+- `frontend/Dockerfile` builds the Vite app with Node.js 22 and serves it through unprivileged Nginx on port `8080`.
+- `frontend/nginx.conf` serves the frontend SPA and proxies `/api/` to the backend container.
+- `.dockerignore` keeps build output, dependencies, logs, and local submission workspaces out of Docker build contexts.
+- `docker-compose.yml` can run PostgreSQL alone or the full PostgreSQL/backend/frontend stack.
+- Dockerfiles intentionally avoid BuildKit-only features so they can build with a plain Docker CLI even when the local `buildx` component is missing.
+
+Important tradeoff:
+
+- Host-based backend development still defaults to the Docker sandbox runner.
+- The backend container image sets `HACKERPRANK_RUNNER_MODE=local` so published images, CI, and local smoke tests do not need to mount the host Docker socket or solve nested workspace mounts.
+- The backend container still supports both submission languages in local-runner mode: Java uses the Temurin 21 JDK in the image, and Python uses the installed `python3` runtime.
+- This is acceptable for proof-of-concept smoke testing, but production-grade execution should move to a dedicated worker/sandbox service.
+
+GitHub Actions workflow:
+
+- `.github/workflows/ci-cd.yml` runs on pull requests and pushes to `main`.
+- `backend-test` runs `mvn -B test` with Java 21.
+- `frontend-build` runs `npm ci` and `npm run build` with Node.js 22.
+- `compose-smoke` builds and starts the Compose stack, then curls backend and frontend endpoints.
+- `publish-images` runs only on pushes to `main` and publishes backend/frontend images to GHCR.
 
 ## Persistence And Query Notes
 
