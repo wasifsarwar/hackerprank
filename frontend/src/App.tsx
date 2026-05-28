@@ -47,14 +47,17 @@ function App() {
   const codeOverrideRef = useRef<string | null>(null);
   const selectedSubmissionRequestRef = useRef<string>("");
   const selectedProblemIdRef = useRef<string>("");
+  const currentDraftIdRef = useRef<string>("");
   const isDraftPreviewRef = useRef(false);
   const problemRequestRef = useRef(0);
   const submissionHistoryRequestRef = useRef(0);
   const runRequestRef = useRef(0);
+  const draftRequestRef = useRef(0);
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
   selectedProblemIdRef.current = selectedId;
+  currentDraftIdRef.current = draft?.id ?? "";
   isDraftPreviewRef.current = isDraftPreview;
 
   function clearSelectedSubmission() {
@@ -77,6 +80,10 @@ function App() {
 
   function isCurrentHistoryRequest(problemId: string, requestId: number) {
     return submissionHistoryRequestRef.current === requestId && isCurrentPublishedProblem(problemId);
+  }
+
+  function isCurrentDraftAction(draftId: string, requestId: number) {
+    return draftRequestRef.current === requestId && currentDraftIdRef.current === draftId;
   }
 
   useEffect(() => {
@@ -216,6 +223,8 @@ function App() {
 
   async function handleGenerate() {
     const previousDraftId = draft?.id;
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
 
     setIsGenerating(true);
     setError(null);
@@ -226,7 +235,13 @@ function App() {
         topic: generatorTopic.trim() || undefined,
         difficulty: generatorDifficulty
       });
+      if (draftRequestRef.current !== requestId) {
+        deleteProblemDraft(nextDraft.id).catch(() => {});
+        return;
+      }
+
       isDraftPreviewRef.current = true;
+      currentDraftIdRef.current = nextDraft.id;
       setDraft(nextDraft);
       resetSubmissionHistory();
       setCode(nextDraft.problem.starterCode[language]);
@@ -234,9 +249,13 @@ function App() {
         deleteProblemDraft(previousDraftId).catch(() => {});
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (draftRequestRef.current === requestId) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setIsGenerating(false);
+      if (draftRequestRef.current === requestId) {
+        setIsGenerating(false);
+      }
     }
   }
 
@@ -245,13 +264,22 @@ function App() {
       return;
     }
 
+    const draftId = draft.id;
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
+
     setIsPublishing(true);
     setError(null);
 
     try {
-      const published = await publishProblemDraft(draft.id);
+      const published = await publishProblemDraft(draftId);
+      if (!isCurrentDraftAction(draftId, requestId)) {
+        return;
+      }
+
       selectedProblemIdRef.current = published.id;
       isDraftPreviewRef.current = false;
+      currentDraftIdRef.current = "";
       const publishedSummary: ProblemSummary = {
         id: published.id,
         title: published.title,
@@ -267,9 +295,13 @@ function App() {
       setResultView("current");
       await refreshSubmissionHistory(published.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setIsPublishing(false);
+      if (draftRequestRef.current === requestId) {
+        setIsPublishing(false);
+      }
     }
   }
 
@@ -278,17 +310,28 @@ function App() {
       return;
     }
 
+    const draftId = draft.id;
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
+
     setError(null);
 
     try {
-      await deleteProblemDraft(draft.id);
+      await deleteProblemDraft(draftId);
+      if (!isCurrentDraftAction(draftId, requestId)) {
+        return;
+      }
+
       isDraftPreviewRef.current = false;
+      currentDraftIdRef.current = "";
       setDraft(null);
       if (problem) {
         setCode(problem.starterCode[language]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     }
   }
 
@@ -296,12 +339,16 @@ function App() {
     if (draft) {
       deleteProblemDraft(draft.id).catch(() => {});
     }
+    draftRequestRef.current += 1;
     selectedProblemIdRef.current = id;
+    currentDraftIdRef.current = "";
     isDraftPreviewRef.current = false;
     problemRequestRef.current += 1;
     resetSubmissionHistory();
     runRequestRef.current += 1;
     setIsRunning(false);
+    setIsGenerating(false);
+    setIsPublishing(false);
     setDraft(null);
     setSelectedId(id);
   }

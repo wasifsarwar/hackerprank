@@ -49,6 +49,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Guard frontend problem, run, and submission-history requests against stale responses after problem changes
 - Current session - Move agent workflow docs into `docs/agentic/` and begin componentizing the frontend
 - Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
+- Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 
 ## Current Application Shape
 
@@ -89,7 +90,7 @@ Current frontend limitation:
 
 - The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
 - Submission history is global per problem because there are no user accounts yet.
-- Async problem, run, and history requests now use request guards so stale responses cannot overwrite the currently selected problem's result or history state.
+- Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
 
 ### Backend
 
