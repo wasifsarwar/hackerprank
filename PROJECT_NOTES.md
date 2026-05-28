@@ -43,6 +43,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - `c5dc1bb` - Strengthen agent handoff rules
 - Current session - Add database-backed persistence and queryable submissions
 - Current session - Document feature-branch workflow for future work
+- Current session - Add frontend submission history and result detail views
 
 ## Current Application Shape
 
@@ -60,6 +61,9 @@ The frontend is a Vite React app. It currently provides:
 - Results panel with per-test output
 - Generator panel with topic input and difficulty selector
 - Generated draft preview with publish and discard actions
+- Submission history tab for the selected published problem
+- Persisted submission detail view with saved code, compile output, and per-test results
+- Load-code action for restoring a saved submission into Monaco
 
 Important files:
 
@@ -72,7 +76,7 @@ Important files:
 Current frontend limitation:
 
 - The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
-- Submission history and stored result detail APIs exist on the backend, but the frontend does not have a history screen yet.
+- Submission history is global per problem because there are no user accounts yet.
 
 ### Backend
 
@@ -471,6 +475,13 @@ Healthy state from automation:
 
 Latest UI verification used the browser connector to confirm the generator controls render, a `stacks`/`Medium` draft previews as `Bracket Balance`, and publishing adds the problem to the problem list.
 
+Latest UI verification on 2026-05-28 confirmed the submission history flow in the in-app browser:
+
+- Submit creates a persisted result.
+- The History tab refreshes and shows the saved run.
+- Clicking the saved run loads persisted code and per-test details.
+- Load Code switches back to the current editor view with the saved code.
+
 ## Design Decisions So Far
 
 Spring Boot backend:
@@ -513,7 +524,7 @@ PostgreSQL + Flyway + JDBC persistence:
 - Generated-problem templates are deterministic and limited.
 - Generator controls only cover topic and difficulty.
 - No user accounts or sessions.
-- Submission history exists as backend APIs, but not yet in the frontend.
+- Submission history is not user-scoped yet.
 - No worker queue.
 - No full generated-prompt/model audit trail yet beyond topic, validation status, and reference solution storage.
 - Output matching only trims trailing whitespace.
@@ -523,12 +534,12 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-1. Build the frontend submission history and result detail views on top of the new backend APIs.
-2. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
-3. Define a strict JSON schema for generated problem drafts.
-4. Store prompt text, model id, generation parameters, and validation diagnostics.
-5. Add Java reference-solution validation in addition to Python.
-6. Add richer generator controls for concepts, constraints, and interview style.
+1. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
+2. Define a strict JSON schema for generated problem drafts.
+3. Store prompt text, model id, generation parameters, and validation diagnostics.
+4. Add Java reference-solution validation in addition to Python.
+5. Add richer generator controls for concepts, constraints, and interview style.
+6. Add user accounts and user-scoped submission history.
 7. Move execution to a worker queue.
 8. Harden sandboxing before any remote or multi-user deployment.
 

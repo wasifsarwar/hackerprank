@@ -4,7 +4,9 @@ import type {
   ProblemDraft,
   ProblemSummary,
   SubmissionRequest,
-  SubmissionResult
+  SubmissionDetail,
+  SubmissionResult,
+  SubmissionSummary
 } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -67,4 +69,16 @@ export function runSubmission(payload: SubmissionRequest): Promise<SubmissionRes
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export function fetchSubmissionHistory(problemId: string, limit = 20): Promise<SubmissionSummary[]> {
+  const params = new URLSearchParams({
+    problemId,
+    limit: String(limit)
+  });
+  return request<SubmissionSummary[]>(`/api/submissions?${params.toString()}`);
+}
+
+export function fetchSubmissionDetail(id: string): Promise<SubmissionDetail> {
+  return request<SubmissionDetail>(`/api/submissions/${id}`);
 }

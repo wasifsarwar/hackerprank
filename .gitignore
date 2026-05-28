@@ -6,3 +6,5 @@ backend/.hackerprank-submissions/
 .DS_Store
 tmp/
 *.log
+.vscode/
+.idea/

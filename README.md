@@ -86,12 +86,12 @@ Docker submissions run with no container network, memory/CPU/pid limits, dropped
 - Docker isolation is local-dev grade, not production hardened.
 - Output matching is exact after trimming trailing whitespace.
 - There is no auth or user account model yet.
-- Submission history has backend APIs, but no frontend history screen yet.
+- Submission history is global per problem, not user-scoped.
 - Execution is synchronous; there is no worker queue yet.
 
 ## Next Milestones
 
 1. Add an OpenAI-backed generator behind the current draft flow.
-2. Add frontend submission history and result detail views.
-3. Add richer generator controls and stored generation metadata.
+2. Add richer generator controls and stored generation metadata.
+3. Add user accounts so submission history can be user-scoped.
 4. Move execution to a worker queue.
