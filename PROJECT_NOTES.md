@@ -66,6 +66,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add a one-shot OpenAI repair loop before deterministic fallback when validation fails
 - Current session - Add deterministic tutor hints for failed submissions, exposed through backend API and frontend result/history panels
 - Current session - Add a product plan and iteration roadmap for the agentic interview-practice end state
+- Current session - Add opt-in OpenAI-backed tutor hints with deterministic fallback and hidden-test privacy guards
 
 ## Current Application Shape
 
@@ -82,6 +83,7 @@ The frontend is a Vite React app. It currently provides:
 - Run samples and submit buttons
 - Results panel with per-test output
 - Tutor hint panel for failed current runs and saved submission-history details
+- Opt-in OpenAI-backed tutor hints that send only public problem context, user code, compile output, visible failures, and hidden-test counts
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
@@ -144,7 +146,10 @@ Important files:
 - `SubmissionController.java` - submission endpoint
 - `SubmissionRepository.java` - JDBC submission and test-result persistence
 - `SubmissionService.java` - prepares code, runs test cases, computes status
-- `TutorHintService.java` - deterministic, privacy-safe tutor hint generation from persisted submission details
+- `TutorHintService.java` - provider selection, deterministic fallback, and privacy-safe tutor hint generation from persisted submission details
+- `OpenAiTutorHintGenerator.java` - Responses API request builder, structured JSON schema, response parser, and safe tutor hint mapper
+- `TutorHintContext.java` - safe context model that strips hidden test detail down to counts before model calls
+- `OpenAiTutorProperties.java` - OpenAI tutor model, endpoint, timeout, token, prompt version, and API key config
 - `TutorHintResponse.java` - public tutor hint DTO for failed-run nudges
 - `DockerSandboxRunner.java` - Docker-based sandbox implementation
 - `LocalSandboxRunner.java` - local process runner for tests/dev
@@ -610,9 +615,9 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Known Limitations
 
-- OpenAI generation is backend-only and opt-in; the frontend still exposes only topic and difficulty.
-- OpenAI prompt/eval quality is not tuned yet.
-- Generator controls only cover topic and difficulty.
+- OpenAI generation is backend-only and opt-in.
+- OpenAI prompt/eval quality still needs ongoing tuning.
+- OpenAI tutor hints are one-shot nudges; there is no follow-up tutor chat yet.
 - No user accounts or sessions.
 - Submission history is not user-scoped yet.
 - No worker queue.
@@ -622,12 +627,32 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/openai-tutor-hints`.
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/tutor-follow-up-chat`.
 
-1. Add OpenAI-backed tutor hints with deterministic fallback and a strict no-hidden-test contract.
-2. Add tutor follow-up chat attached to failed submissions.
-3. Add a richer generated-draft quality panel.
-4. Add user accounts and user-scoped submission history.
+1. Add tutor follow-up chat attached to failed submissions.
+2. Add a richer generated-draft quality panel.
+3. Add user accounts and user-scoped submission history.
+4. Move execution to a worker queue.
+
+## OpenAI Tutor Notes
+
+The OpenAI tutor is opt-in through `HACKERPRANK_TUTOR_PROVIDER=openai` and `OPENAI_API_KEY`. It uses the Responses API with a strict JSON schema and falls back to deterministic hints if the model call fails, returns unusable data, or is not configured.
+
+The safe tutor context can include:
+
+- public problem title, statement, formats, constraints, tags, and examples
+- submission language, status, code, compile output, and pass counts
+- visible failing test names, expected output, actual output, stderr, timeout flag, and exit code
+- hidden test total, failed count, and timeout count
+
+The safe tutor context must not include:
+
+- hidden test names
+- hidden inputs
+- hidden expected outputs
+- hidden actual outputs
+- hidden stderr
+- reference solutions
 
 ## OpenAI Generator Notes
 

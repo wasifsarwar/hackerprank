@@ -13,15 +13,17 @@ export function TutorHintCard({ hint, isLoading, onRequest, status, submissionId
     return null;
   }
 
+  const label = hint ? `${hint.provider} ${hint.level}` : "nudge";
+
   return (
     <div className="tutor-hint">
       <div className="tutor-hint-header">
         <div>
-          <span>{hint?.level ?? "nudge"}</span>
+          <span>{label}</span>
           <strong>Tutor Hint</strong>
         </div>
         <button disabled={isLoading} onClick={onRequest} type="button">
-          {isLoading ? "Loading..." : hint ? "Refresh" : "Hint"}
+          {isLoading ? "Loading..." : hint ? "Another Hint" : "Hint"}
         </button>
       </div>
 

@@ -15,7 +15,7 @@ For coding-agent operating instructions and repeatable workflows, start with the
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
-Failed submissions can request a focused tutor hint from the saved run. The current implementation is deterministic and intentionally nudge-oriented: visible sample failures can mention visible expected vs actual output, while hidden-only failures stay generic.
+Failed submissions can request a focused tutor hint from the saved run. The default implementation is deterministic and intentionally nudge-oriented: visible sample failures can mention visible expected vs actual output, while hidden-only failures stay generic. OpenAI-backed tutor hints can be enabled behind the same API with a strict safe-context boundary.
 
 The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. The OpenAI-backed generator uses those controls in the prompt, while deterministic fallback templates keep using topic and difficulty for selection and preserve the richer controls in draft generation metadata.
 
@@ -104,6 +104,25 @@ export HACKERPRANK_OPENAI_MAX_OUTPUT_TOKENS=6000
 
 The OpenAI path uses the Responses API with structured JSON output, then passes the generated draft through the same Python/Java reference-solution validator before persistence. If a schema-valid draft fails validation, the backend attempts one repair call with the validation error before falling back. If OpenAI is disabled, missing `OPENAI_API_KEY`, generation fails, or repair fails, the backend falls back to deterministic templates.
 
+OpenAI-backed tutor hints are also opt-in. They reuse `OPENAI_API_KEY`, but require the tutor provider flag so local development stays deterministic by default:
+
+```sh
+export HACKERPRANK_TUTOR_PROVIDER=openai
+export OPENAI_API_KEY=...
+```
+
+Optional tutor settings:
+
+```sh
+export HACKERPRANK_TUTOR_OPENAI_MODEL=gpt-5-mini
+export HACKERPRANK_TUTOR_OPENAI_RESPONSES_URL=https://api.openai.com/v1/responses
+export HACKERPRANK_TUTOR_OPENAI_TIMEOUT_SECONDS=30
+export HACKERPRANK_TUTOR_OPENAI_MAX_OUTPUT_TOKENS=900
+export HACKERPRANK_TUTOR_OPENAI_PROMPT_VERSION=openai-tutor-v1
+```
+
+The tutor sends only public problem data, user code, compile output, visible failure details, and hidden-test counts. Hidden test names, inputs, expected outputs, actual outputs, and stderr stay server-side and are never placed in the OpenAI tutor request. If the OpenAI call fails or returns an unusable hint, the deterministic tutor response is used instead.
+
 Generated-problem eval fixtures live in `backend/src/test/resources/generated-problems/`. Add `valid-*.json` and `invalid-*.json` fixtures there when changing prompt versions, mapping, or validation rules so the backend test suite automatically captures generation quality regressions.
 
 The submission runner uses Docker by default. Pull the runtime images once before running submissions:
@@ -139,7 +158,7 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 - Docker isolation is local-dev grade, not production hardened.
 - Backend containers use the local runner by default; production-grade execution should move to a dedicated sandbox worker.
 - Output matching is exact after trimming trailing whitespace.
-- Tutor hints are deterministic for now; OpenAI-backed coaching can be layered behind the same API later.
+- Tutor hints are one-shot nudges for now; follow-up chat and hint-level controls are not implemented yet.
 - There is no auth or user account model yet.
 - Submission history is global per problem, not user-scoped.
 - Execution is synchronous; there is no worker queue yet.
@@ -147,7 +166,9 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 
 ## Next Milestones
 
-1. Add OpenAI-backed tutor hints with a strict no-solution/no-hidden-test contract.
-2. Add tutor follow-up chat attached to failed submissions.
-3. Add a richer generated-draft quality panel.
-4. Add generation variant controls and deeper prompt behavior.
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap.
+
+1. Add tutor follow-up chat attached to failed submissions.
+2. Add a richer generated-draft quality panel.
+3. Add user accounts so submission history can be user-scoped.
+4. Move execution to a worker queue.

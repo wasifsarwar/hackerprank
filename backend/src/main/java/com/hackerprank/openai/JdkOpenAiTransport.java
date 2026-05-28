@@ -1,4 +1,4 @@
-package com.hackerprank.problems;
+package com.hackerprank.openai;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,10 +11,10 @@ import java.time.Duration;
 import org.springframework.stereotype.Component;
 
 @Component
-class JdkOpenAiTransport implements OpenAiTransport {
+public class JdkOpenAiTransport implements OpenAiTransport {
     private final HttpClient httpClient;
 
-    JdkOpenAiTransport() {
+    public JdkOpenAiTransport() {
         this(HttpClient.newHttpClient());
     }
 

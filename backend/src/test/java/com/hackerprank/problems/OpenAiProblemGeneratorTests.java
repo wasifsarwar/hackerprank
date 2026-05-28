@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.hackerprank.openai.OpenAiHttpResponse;
+import com.hackerprank.openai.OpenAiTransport;
 
 import java.net.URI;
 import java.time.Duration;

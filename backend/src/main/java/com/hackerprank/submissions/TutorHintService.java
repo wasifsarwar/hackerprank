@@ -1,9 +1,13 @@
 package com.hackerprank.submissions;
 
+import com.hackerprank.problems.ProblemRepository;
+import com.hackerprank.problems.PublicProblem;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,7 +16,55 @@ public class TutorHintService {
     private static final String LEVEL = "nudge";
     private static final int MAX_SNIPPET_LENGTH = 240;
 
+    private final TutorProperties properties;
+    private final ProblemRepository problemRepository;
+    private final OpenAiTutorHintGenerator openAiTutorHintGenerator;
+
+    TutorHintService() {
+        this(new TutorProperties(), null, null);
+    }
+
+    @Autowired
+    public TutorHintService(
+        TutorProperties properties,
+        ProblemRepository problemRepository,
+        OpenAiTutorHintGenerator openAiTutorHintGenerator
+    ) {
+        this.properties = properties;
+        this.problemRepository = problemRepository;
+        this.openAiTutorHintGenerator = openAiTutorHintGenerator;
+    }
+
     public TutorHintResponse createHint(SubmissionDetail submission) {
+        if (shouldUseOpenAi(submission)) {
+            try {
+                return openAiTutorHintGenerator.createHint(createContext(submission));
+            } catch (OpenAiTutorHintException exception) {
+                return createDeterministicHint(submission);
+            }
+        }
+
+        return createDeterministicHint(submission);
+    }
+
+    private boolean shouldUseOpenAi(SubmissionDetail submission) {
+        return properties.prefersOpenAi()
+            && openAiTutorHintGenerator != null
+            && openAiTutorHintGenerator.isConfigured()
+            && !"ACCEPTED".equals(normalizeStatus(submission.getStatus()));
+    }
+
+    private TutorHintContext createContext(SubmissionDetail submission) {
+        PublicProblem problem = null;
+        if (problemRepository != null && submission.getProblemId() != null && !submission.getProblemId().isBlank()) {
+            problem = problemRepository.findById(submission.getProblemId())
+                .map(PublicProblem::from)
+                .orElse(null);
+        }
+        return TutorHintContext.from(submission, problem);
+    }
+
+    private TutorHintResponse createDeterministicHint(SubmissionDetail submission) {
         String status = normalizeStatus(submission.getStatus());
         return switch (status) {
             case "ACCEPTED" -> acceptedHint(submission);
