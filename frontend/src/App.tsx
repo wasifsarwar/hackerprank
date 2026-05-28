@@ -7,8 +7,10 @@ import {
   fetchSubmissionDetail,
   fetchSubmissionHint,
   fetchSubmissionHistory,
+  fetchTutorMessages,
   publishProblemDraft,
-  runSubmission
+  runSubmission,
+  sendTutorMessage
 } from "./api";
 import { CodingPanel } from "./components/CodingPanel";
 import { ProblemRail } from "./components/ProblemRail";
@@ -23,7 +25,8 @@ import type {
   SubmissionDetail,
   SubmissionResult,
   SubmissionSummary,
-  TutorHint
+  TutorHint,
+  TutorMessage
 } from "./types";
 import type { ResultView } from "./ui";
 
@@ -53,12 +56,16 @@ function App() {
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetail | null>(null);
   const [tutorHint, setTutorHint] = useState<TutorHint | null>(null);
   const [tutorHintSubmissionId, setTutorHintSubmissionId] = useState<string>("");
+  const [tutorMessages, setTutorMessages] = useState<TutorMessage[]>([]);
+  const [tutorMessagesSubmissionId, setTutorMessagesSubmissionId] = useState<string>("");
   const [isRunning, setIsRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
   const [isLoadingTutorHint, setIsLoadingTutorHint] = useState(false);
+  const [isLoadingTutorMessages, setIsLoadingTutorMessages] = useState(false);
+  const [isSendingTutorMessage, setIsSendingTutorMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const codeOverrideRef = useRef<string | null>(null);
   const selectedSubmissionRequestRef = useRef<string>("");
@@ -72,6 +79,7 @@ function App() {
   const runRequestRef = useRef(0);
   const draftRequestRef = useRef(0);
   const tutorHintRequestRef = useRef(0);
+  const tutorChatRequestRef = useRef(0);
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
@@ -83,9 +91,14 @@ function App() {
 
   function resetTutorHint() {
     tutorHintRequestRef.current += 1;
+    tutorChatRequestRef.current += 1;
     setTutorHint(null);
     setTutorHintSubmissionId("");
     setIsLoadingTutorHint(false);
+    setTutorMessages([]);
+    setTutorMessagesSubmissionId("");
+    setIsLoadingTutorMessages(false);
+    setIsSendingTutorMessage(false);
   }
 
   function clearSelectedSubmission() {
@@ -118,6 +131,13 @@ function App() {
   function isCurrentTutorHintRequest(submissionId: string, requestId: number) {
     return (
       tutorHintRequestRef.current === requestId &&
+      (resultSubmissionIdRef.current === submissionId || selectedSubmissionIdRef.current === submissionId)
+    );
+  }
+
+  function isCurrentTutorConversationRequest(submissionId: string, requestId: number) {
+    return (
+      tutorChatRequestRef.current === requestId &&
       (resultSubmissionIdRef.current === submissionId || selectedSubmissionIdRef.current === submissionId)
     );
   }
@@ -406,6 +426,7 @@ function App() {
       const detail = await fetchSubmissionDetail(summary.id);
       if (selectedSubmissionRequestRef.current === summary.id) {
         setSelectedSubmission(detail);
+        void loadTutorMessages(summary.id);
       }
     } catch (err) {
       if (selectedSubmissionRequestRef.current === summary.id) {
@@ -460,6 +481,56 @@ function App() {
     }
   }
 
+  async function loadTutorMessages(submissionId: string) {
+    const requestId = tutorChatRequestRef.current + 1;
+    tutorChatRequestRef.current = requestId;
+    setTutorMessages([]);
+    setTutorMessagesSubmissionId(submissionId);
+    setIsLoadingTutorMessages(true);
+
+    try {
+      const messages = await fetchTutorMessages(submissionId);
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setTutorMessages(messages);
+      }
+    } catch (err) {
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setIsLoadingTutorMessages(false);
+      }
+    }
+  }
+
+  async function handleSendTutorMessage(submissionId: string, message: string) {
+    if (!submissionId || !message.trim()) {
+      return;
+    }
+
+    const requestId = tutorChatRequestRef.current + 1;
+    tutorChatRequestRef.current = requestId;
+    setTutorMessagesSubmissionId(submissionId);
+    setIsSendingTutorMessage(true);
+    setError(null);
+
+    try {
+      const response = await sendTutorMessage(submissionId, message);
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setTutorMessages(response.messages);
+      }
+    } catch (err) {
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
+      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
+        setIsSendingTutorMessage(false);
+      }
+    }
+  }
+
   return (
     <main className="app-shell">
       <ProblemRail
@@ -502,8 +573,10 @@ function App() {
               isLoadingHistory={isLoadingHistory}
               isLoadingSubmission={isLoadingSubmission}
               isLoadingTutorHint={isLoadingTutorHint}
+              isLoadingTutorMessages={isLoadingTutorMessages}
               isPublishing={isPublishing}
               isRunning={isRunning}
+              isSendingTutorMessage={isSendingTutorMessage}
               language={language}
               onCodeChange={setCode}
               onDiscardDraft={handleDiscardDraft}
@@ -514,6 +587,7 @@ function App() {
               onRequestTutorHint={handleRequestTutorHint}
               onRun={handleRun}
               onSelectSubmission={handleSelectSubmission}
+              onSendTutorMessage={handleSendTutorMessage}
               result={result}
               resultView={resultView}
               resultsTone={resultsTone}
@@ -522,6 +596,8 @@ function App() {
               submissions={submissions}
               tutorHint={tutorHint}
               tutorHintSubmissionId={tutorHintSubmissionId}
+              tutorMessages={tutorMessages}
+              tutorMessagesSubmissionId={tutorMessagesSubmissionId}
             />
           </>
         ) : (
