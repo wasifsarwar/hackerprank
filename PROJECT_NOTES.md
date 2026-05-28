@@ -59,6 +59,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Add generated-problem eval fixtures and parameterized validation tests for prompt and validator tuning
 - Current session - Auto-discover generated-problem eval fixtures and validate generated examples against reference solutions
 - Current session - Keep auto-discovered valid fixture assertions generic so non-array topics can join the eval corpus
+- Current session - Let invalid generated-problem fixtures omit top-level sections so validator contract errors are asserted
 
 ## Current Application Shape
 

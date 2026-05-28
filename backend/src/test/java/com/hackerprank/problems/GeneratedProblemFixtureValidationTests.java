@@ -100,9 +100,9 @@ class GeneratedProblemFixtureValidationTests {
             return new GeneratedProblemSpec(
                 topic,
                 difficulty,
-                problem.toProblem(),
+                problem == null ? null : problem.toProblem(),
                 referenceSolutions,
-                generationMetadata.toMetadata()
+                generationMetadata == null ? null : generationMetadata.toMetadata()
             );
         }
     }
@@ -130,8 +130,8 @@ class GeneratedProblemFixtureValidationTests {
                 inputFormat,
                 outputFormat,
                 constraints,
-                examples.stream().map(ExampleFixture::toExample).toList(),
-                testCases.stream().map(TestCaseFixture::toTestCase).toList(),
+                examples == null ? null : examples.stream().map(ExampleFixture::toExample).toList(),
+                testCases == null ? null : testCases.stream().map(TestCaseFixture::toTestCase).toList(),
                 starterCode
             );
         }
