@@ -275,6 +275,7 @@ Important tradeoff:
 
 - Host-based backend development still defaults to the Docker sandbox runner.
 - The backend container image sets `HACKERPRANK_RUNNER_MODE=local` so published images, CI, and local smoke tests do not need to mount the host Docker socket or solve nested workspace mounts.
+- The backend container still supports both submission languages in local-runner mode: Java uses the Temurin 21 JDK in the image, and Python uses the installed `python3` runtime.
 - This is acceptable for proof-of-concept smoke testing, but production-grade execution should move to a dedicated worker/sandbox service.
 
 GitHub Actions workflow:

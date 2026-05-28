@@ -68,6 +68,8 @@ The containerized frontend is available at `http://127.0.0.1:5173`, and it proxi
 
 The backend container image defaults to `hackerprank.runner.mode=local`. That keeps the published image, local smoke tests, and CI self-contained without mounting the host Docker socket. Host-based backend development still uses the Docker submission runner by default through `backend/src/main/resources/application.properties`.
 
+The backend container still supports both submission languages: Java submissions use the Temurin 21 JDK in the image, and Python submissions use the installed `python3` runtime.
+
 Backend:
 
 ```sh
