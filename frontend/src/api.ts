@@ -6,7 +6,8 @@ import type {
   SubmissionRequest,
   SubmissionDetail,
   SubmissionResult,
-  SubmissionSummary
+  SubmissionSummary,
+  TutorHint
 } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -81,4 +82,10 @@ export function fetchSubmissionHistory(problemId: string, limit = 20): Promise<S
 
 export function fetchSubmissionDetail(id: string): Promise<SubmissionDetail> {
   return request<SubmissionDetail>(`/api/submissions/${id}`);
+}
+
+export function fetchSubmissionHint(id: string): Promise<TutorHint> {
+  return request<TutorHint>(`/api/submissions/${id}/hint`, {
+    method: "POST"
+  });
 }

@@ -14,6 +14,8 @@ For coding-agent operating instructions and repeatable workflows, start with the
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
+Failed submissions can request a focused tutor hint from the saved run. The current implementation is deterministic and intentionally nudge-oriented: visible sample failures can mention visible expected vs actual output, while hidden-only failures stay generic.
+
 The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. The OpenAI-backed generator uses those controls in the prompt, while deterministic fallback templates keep using topic and difficulty for selection and preserve the richer controls in draft generation metadata.
 
 Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
@@ -136,6 +138,7 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 - Docker isolation is local-dev grade, not production hardened.
 - Backend containers use the local runner by default; production-grade execution should move to a dedicated sandbox worker.
 - Output matching is exact after trimming trailing whitespace.
+- Tutor hints are deterministic for now; OpenAI-backed coaching can be layered behind the same API later.
 - There is no auth or user account model yet.
 - Submission history is global per problem, not user-scoped.
 - Execution is synchronous; there is no worker queue yet.
@@ -144,5 +147,6 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 ## Next Milestones
 
 1. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
-2. Add user accounts so submission history can be user-scoped.
-3. Move execution to a worker queue.
+2. Add OpenAI-backed tutor hints with a strict no-solution/no-hidden-test contract.
+3. Add user accounts so submission history can be user-scoped.
+4. Move execution to a worker queue.

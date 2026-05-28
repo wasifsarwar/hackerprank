@@ -82,6 +82,16 @@ export interface SubmissionResult {
   results: TestCaseResult[];
 }
 
+export interface TutorHint {
+  submissionId: string;
+  status: SubmissionResult["status"];
+  provider: string;
+  level: string;
+  summary: string;
+  hints: string[];
+  nextStep: string;
+}
+
 export interface SubmissionSummary {
   id: string;
   problemId: string | null;

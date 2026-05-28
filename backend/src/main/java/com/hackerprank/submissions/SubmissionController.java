@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/submissions")
 public class SubmissionController {
     private final SubmissionService submissionService;
+    private final TutorHintService tutorHintService;
 
-    public SubmissionController(SubmissionService submissionService) {
+    public SubmissionController(SubmissionService submissionService, TutorHintService tutorHintService) {
         this.submissionService = submissionService;
+        this.tutorHintService = tutorHintService;
     }
 
     @GetMapping
@@ -33,6 +35,13 @@ public class SubmissionController {
     public ResponseEntity<SubmissionDetail> get(@PathVariable String id) {
         return submissionService.findById(id)
             .map(submission -> ResponseEntity.ok(submission))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/hint")
+    public ResponseEntity<TutorHintResponse> hint(@PathVariable String id) {
+        return submissionService.findById(id)
+            .map(submission -> ResponseEntity.ok(tutorHintService.createHint(submission)))
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
