@@ -9,23 +9,35 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProblemGeneratorService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProblemGeneratorService.class);
+    private static final Pattern NON_SLUG_CHARACTERS = Pattern.compile("[^a-z0-9]+");
+
     private final ProblemRepository problemRepository;
     private final ProblemDraftRepository draftRepository;
     private final GeneratedProblemValidator generatedProblemValidator;
+    private final ProblemGenerationProperties generationProperties;
+    private final OpenAiProblemGenerator openAiProblemGenerator;
 
     public ProblemGeneratorService(
         ProblemRepository problemRepository,
         ProblemDraftRepository draftRepository,
-        GeneratedProblemValidator generatedProblemValidator
+        GeneratedProblemValidator generatedProblemValidator,
+        ProblemGenerationProperties generationProperties,
+        OpenAiProblemGenerator openAiProblemGenerator
     ) {
         this.problemRepository = problemRepository;
         this.draftRepository = draftRepository;
         this.generatedProblemValidator = generatedProblemValidator;
+        this.generationProperties = generationProperties;
+        this.openAiProblemGenerator = openAiProblemGenerator;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
@@ -60,16 +72,17 @@ public class ProblemGeneratorService {
     }
 
     private ProblemDraft createDraftEntity(GenerateProblemRequest request) {
-        GeneratedProblemSpec generated = draftFor(request);
-        GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
-        GenerationMetadata generationMetadata = generated.generationMetadata().withValidation(validationReport);
+        ValidatedGeneratedProblem generated = draftFor(request);
+        GeneratedProblemSpec spec = generated.spec();
+        GeneratedProblemValidationReport validationReport = generated.validationReport();
+        GenerationMetadata generationMetadata = spec.generationMetadata().withValidation(validationReport);
 
         ProblemDraft draft = new ProblemDraft(
             uniqueDraftId(),
-            generated.topic(),
-            generated.problem().getDifficulty(),
-            generated.problem(),
-            generated.referenceSolutions(),
+            spec.topic(),
+            spec.problem().getDifficulty(),
+            spec.problem(),
+            spec.referenceSolutions(),
             validationReport.status(),
             generationMetadata,
             Instant.now()
@@ -78,9 +91,49 @@ public class ProblemGeneratorService {
         return draftRepository.save(draft);
     }
 
-    private GeneratedProblemSpec draftFor(GenerateProblemRequest request) {
+    private ValidatedGeneratedProblem draftFor(GenerateProblemRequest request) {
         NormalizedGenerationRequest normalizedRequest = normalizeRequest(request);
 
+        if (generationProperties.useOpenAi()) {
+            Optional<ValidatedGeneratedProblem> generated = tryOpenAiDraft(normalizedRequest);
+            if (generated.isPresent()) {
+                return generated.get();
+            }
+        }
+
+        GeneratedProblemSpec deterministic = deterministicDraftFor(normalizedRequest);
+        return new ValidatedGeneratedProblem(deterministic, generatedProblemValidator.validate(deterministic));
+    }
+
+    private Optional<ValidatedGeneratedProblem> tryOpenAiDraft(NormalizedGenerationRequest request) {
+        if (!openAiProblemGenerator.isConfigured()) {
+            LOGGER.info("OpenAI problem generation requested without an API key; using deterministic fallback");
+            return Optional.empty();
+        }
+
+        try {
+            GeneratedProblemSpec generated = withUniqueProblemId(openAiProblemGenerator.generate(
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle()
+            ));
+            GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
+            return Optional.of(new ValidatedGeneratedProblem(generated, validationReport));
+        } catch (OpenAiProblemGenerationException exception) {
+            LOGGER.warn("OpenAI problem generation failed; using deterministic fallback", exception);
+            return Optional.empty();
+        } catch (IllegalStateException exception) {
+            LOGGER.warn(
+                "OpenAI problem generation did not pass validation; using deterministic fallback: {}",
+                exception.getMessage()
+            );
+            return Optional.empty();
+        }
+    }
+
+    private GeneratedProblemSpec deterministicDraftFor(NormalizedGenerationRequest normalizedRequest) {
         if (containsAny(normalizedRequest.topic(), "stack", "bracket", "parentheses")) {
             return bracketBalanceProblem(normalizedRequest);
         }
@@ -90,6 +143,37 @@ public class ProblemGeneratorService {
         }
 
         return signalPeaksProblem(normalizedRequest);
+    }
+
+    private GeneratedProblemSpec withUniqueProblemId(GeneratedProblemSpec spec) {
+        Problem current = spec.problem();
+        Problem problem = new Problem(
+            uniqueId(slugBase(current.getId(), current.getTitle())),
+            current.getTitle(),
+            current.getDifficulty(),
+            current.getTags(),
+            current.getDescription(),
+            current.getInputFormat(),
+            current.getOutputFormat(),
+            current.getConstraints(),
+            current.getExamples(),
+            current.getTestCases(),
+            current.getStarterCode()
+        );
+
+        return new GeneratedProblemSpec(
+            spec.topic(),
+            spec.difficulty(),
+            problem,
+            spec.referenceSolutions(),
+            spec.generationMetadata()
+        );
+    }
+
+    private record ValidatedGeneratedProblem(
+        GeneratedProblemSpec spec,
+        GeneratedProblemValidationReport validationReport
+    ) {
     }
 
     private GeneratedProblemSpec signalPeaksProblem(NormalizedGenerationRequest request) {
@@ -484,8 +568,9 @@ public class ProblemGeneratorService {
     }
 
     private String uniqueId(String base) {
+        String slug = slugBase(base, "generated-problem");
         for (int attempt = 0; attempt < 5; attempt++) {
-            String id = base + "-" + UUID.randomUUID().toString().substring(0, 8);
+            String id = slug + "-" + UUID.randomUUID().toString().substring(0, 8);
             if (!problemRepository.existsAnyById(id) && !draftRepository.existsByProblemId(id)) {
                 return id;
             }
@@ -503,6 +588,13 @@ public class ProblemGeneratorService {
         }
 
         throw new IllegalStateException("Could not allocate a generated draft id");
+    }
+
+    private String slugBase(String preferred, String fallback) {
+        String source = preferred == null || preferred.isBlank() ? fallback : preferred;
+        String slug = NON_SLUG_CHARACTERS.matcher(source.trim().toLowerCase(Locale.ROOT)).replaceAll("-");
+        slug = slug.replaceAll("^-+", "").replaceAll("-+$", "");
+        return slug.isBlank() ? "generated-problem" : slug;
     }
 
     private record NormalizedGenerationRequest(

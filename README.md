@@ -14,7 +14,7 @@ For coding-agent operating instructions and repeatable workflows, start with the
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
-The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. Until the OpenAI-backed generator lands, the deterministic templates keep using topic and difficulty for selection while preserving the richer controls in draft generation metadata.
+The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. The OpenAI-backed generator uses those controls in the prompt, while deterministic fallback templates keep using topic and difficulty for selection and preserve the richer controls in draft generation metadata.
 
 Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
 
@@ -83,6 +83,24 @@ mvn spring-boot:run
 
 The backend is configured for Spring Boot 3 and Java 21. It uses PostgreSQL by default with Flyway migrations and HikariCP pooling. Tests use H2 in PostgreSQL compatibility mode.
 
+OpenAI-backed generation is opt-in. The backend keeps deterministic templates as the default and fallback so local development and tests never require network access:
+
+```sh
+export HACKERPRANK_GENERATOR_PROVIDER=openai
+export OPENAI_API_KEY=...
+```
+
+Optional OpenAI generator settings:
+
+```sh
+export HACKERPRANK_OPENAI_MODEL=gpt-5-mini
+export HACKERPRANK_OPENAI_RESPONSES_URL=https://api.openai.com/v1/responses
+export HACKERPRANK_OPENAI_TIMEOUT_SECONDS=45
+export HACKERPRANK_OPENAI_MAX_OUTPUT_TOKENS=6000
+```
+
+The OpenAI path uses the Responses API with structured JSON output, then passes the generated draft through the same Python/Java reference-solution validator before persistence. If OpenAI is disabled, missing `OPENAI_API_KEY`, or generation fails, the backend falls back to deterministic templates.
+
 The submission runner uses Docker by default. Pull the runtime images once before running submissions:
 
 ```sh
@@ -123,6 +141,6 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 
 ## Next Milestones
 
-1. Add an OpenAI-backed generator behind the current draft flow.
+1. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
 2. Add user accounts so submission history can be user-scoped.
 3. Move execution to a worker queue.
