@@ -52,6 +52,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
 - Current session - Add an opt-in OpenAI-backed backend generator behind the generated-problem contract, with deterministic fallback
+- Current session - Keep OpenAI validation inside the fallback boundary so schema-valid but incorrect model drafts fall back instead of returning 500s
 
 ## Current Application Shape
 
@@ -161,7 +162,7 @@ Current behavior:
 - Validates both private Python and Java reference solutions through `SubmissionService`.
 - Uses deterministic templates by default.
 - Can use the OpenAI Responses API when `HACKERPRANK_GENERATOR_PROVIDER=openai` and `OPENAI_API_KEY` are configured.
-- Falls back to deterministic templates if OpenAI is disabled, missing an API key, or generation fails.
+- Falls back to deterministic templates if OpenAI is disabled, missing an API key, generation fails, or the returned draft fails generated-problem validation.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
 - Public draft responses do not expose hidden test cases, prompt text, or reference solutions.
@@ -202,7 +203,7 @@ Current behavior:
   - string/map/hash/count -> `First Solo Word`
   - stack/bracket/parentheses -> `Bracket Balance`
 
-When OpenAI generation is enabled, the backend requests structured JSON from the Responses API, maps it into the same `GeneratedProblemSpec`, validates Python and Java reference solutions, then publishes the validated draft.
+When OpenAI generation is enabled, the backend requests structured JSON from the Responses API, maps it into the same `GeneratedProblemSpec`, validates Python and Java reference solutions, then publishes the validated draft. If validation fails, the backend logs the validation failure and uses the deterministic generator instead of surfacing a 500 to the user.
 
 ### Submissions
 

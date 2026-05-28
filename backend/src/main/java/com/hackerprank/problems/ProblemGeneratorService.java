@@ -70,16 +70,17 @@ public class ProblemGeneratorService {
     }
 
     private ProblemDraft createDraftEntity(GenerateProblemRequest request) {
-        GeneratedProblemSpec generated = draftFor(request);
-        GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
-        GenerationMetadata generationMetadata = generated.generationMetadata().withValidation(validationReport);
+        ValidatedGeneratedProblem generated = draftFor(request);
+        GeneratedProblemSpec spec = generated.spec();
+        GeneratedProblemValidationReport validationReport = generated.validationReport();
+        GenerationMetadata generationMetadata = spec.generationMetadata().withValidation(validationReport);
 
         ProblemDraft draft = new ProblemDraft(
             uniqueDraftId(),
-            generated.topic(),
-            generated.problem().getDifficulty(),
-            generated.problem(),
-            generated.referenceSolutions(),
+            spec.topic(),
+            spec.problem().getDifficulty(),
+            spec.problem(),
+            spec.referenceSolutions(),
             validationReport.status(),
             generationMetadata,
             Instant.now()
@@ -88,30 +89,39 @@ public class ProblemGeneratorService {
         return draftRepository.save(draft);
     }
 
-    private GeneratedProblemSpec draftFor(GenerateProblemRequest request) {
+    private ValidatedGeneratedProblem draftFor(GenerateProblemRequest request) {
         String topic = normalizeTopic(request == null ? null : request.getTopic());
         String difficulty = normalizeDifficulty(request == null ? null : request.getDifficulty());
 
         if (generationProperties.useOpenAi()) {
-            Optional<GeneratedProblemSpec> generated = tryOpenAiDraft(topic, difficulty);
+            Optional<ValidatedGeneratedProblem> generated = tryOpenAiDraft(topic, difficulty);
             if (generated.isPresent()) {
                 return generated.get();
             }
         }
 
-        return deterministicDraftFor(topic, difficulty);
+        GeneratedProblemSpec deterministic = deterministicDraftFor(topic, difficulty);
+        return new ValidatedGeneratedProblem(deterministic, generatedProblemValidator.validate(deterministic));
     }
 
-    private Optional<GeneratedProblemSpec> tryOpenAiDraft(String topic, String difficulty) {
+    private Optional<ValidatedGeneratedProblem> tryOpenAiDraft(String topic, String difficulty) {
         if (!openAiProblemGenerator.isConfigured()) {
             LOGGER.info("OpenAI problem generation requested without an API key; using deterministic fallback");
             return Optional.empty();
         }
 
         try {
-            return Optional.of(withUniqueProblemId(openAiProblemGenerator.generate(topic, difficulty)));
+            GeneratedProblemSpec generated = withUniqueProblemId(openAiProblemGenerator.generate(topic, difficulty));
+            GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
+            return Optional.of(new ValidatedGeneratedProblem(generated, validationReport));
         } catch (OpenAiProblemGenerationException exception) {
             LOGGER.warn("OpenAI problem generation failed; using deterministic fallback", exception);
+            return Optional.empty();
+        } catch (IllegalStateException exception) {
+            LOGGER.warn(
+                "OpenAI problem generation did not pass validation; using deterministic fallback: {}",
+                exception.getMessage()
+            );
             return Optional.empty();
         }
     }
@@ -151,6 +161,12 @@ public class ProblemGeneratorService {
             spec.referenceSolutions(),
             spec.generationMetadata()
         );
+    }
+
+    private record ValidatedGeneratedProblem(
+        GeneratedProblemSpec spec,
+        GeneratedProblemValidationReport validationReport
+    ) {
     }
 
     private GeneratedProblemSpec signalPeaksProblem(String topic, String difficulty) {
