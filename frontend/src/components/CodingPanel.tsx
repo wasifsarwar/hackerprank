@@ -5,7 +5,8 @@ import type {
   ProblemDraft,
   SubmissionDetail,
   SubmissionResult,
-  SubmissionSummary
+  SubmissionSummary,
+  TutorHint
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
@@ -18,6 +19,7 @@ interface CodingPanelProps {
   isDraftPreview: boolean;
   isLoadingHistory: boolean;
   isLoadingSubmission: boolean;
+  isLoadingTutorHint: boolean;
   isPublishing: boolean;
   isRunning: boolean;
   language: Language;
@@ -28,6 +30,7 @@ interface CodingPanelProps {
   onPublishDraft: () => void;
   onResultViewChange: (view: ResultView) => void;
   onRun: (runHiddenTests: boolean) => void;
+  onRequestTutorHint: (submissionId: string) => void;
   onSelectSubmission: (summary: SubmissionSummary) => void;
   result: SubmissionResult | null;
   resultView: ResultView;
@@ -35,6 +38,8 @@ interface CodingPanelProps {
   selectedSubmission: SubmissionDetail | null;
   selectedSubmissionId: string;
   submissions: SubmissionSummary[];
+  tutorHint: TutorHint | null;
+  tutorHintSubmissionId: string;
 }
 
 export function CodingPanel({
@@ -44,6 +49,7 @@ export function CodingPanel({
   isDraftPreview,
   isLoadingHistory,
   isLoadingSubmission,
+  isLoadingTutorHint,
   isPublishing,
   isRunning,
   language,
@@ -54,13 +60,16 @@ export function CodingPanel({
   onPublishDraft,
   onResultViewChange,
   onRun,
+  onRequestTutorHint,
   onSelectSubmission,
   result,
   resultView,
   resultsTone,
   selectedSubmission,
   selectedSubmissionId,
-  submissions
+  submissions,
+  tutorHint,
+  tutorHintSubmissionId
 }: CodingPanelProps) {
   return (
     <section className="coding-panel">
@@ -130,9 +139,11 @@ export function CodingPanel({
         isDraftPreview={isDraftPreview}
         isLoadingHistory={isLoadingHistory}
         isLoadingSubmission={isLoadingSubmission}
+        isLoadingTutorHint={isLoadingTutorHint}
         isRunning={isRunning}
         onLoadSubmissionCode={onLoadSubmissionCode}
         onResultViewChange={onResultViewChange}
+        onRequestTutorHint={onRequestTutorHint}
         onSelectSubmission={onSelectSubmission}
         result={result}
         resultView={resultView}
@@ -140,6 +151,8 @@ export function CodingPanel({
         selectedSubmission={selectedSubmission}
         selectedSubmissionId={selectedSubmissionId}
         submissions={submissions}
+        tutorHint={tutorHint}
+        tutorHintSubmissionId={tutorHintSubmissionId}
       />
     </section>
   );

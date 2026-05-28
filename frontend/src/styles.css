@@ -702,6 +702,70 @@ pre {
   background: #101917;
 }
 
+.tutor-hint {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #d8dcc4;
+  border-radius: 8px;
+  background: #fbf4df;
+}
+
+.tutor-hint-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tutor-hint-header div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.tutor-hint-header span {
+  color: #846022;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tutor-hint-header strong {
+  color: #172421;
+}
+
+.tutor-hint-header button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  color: #172421;
+  background: #f6c85f;
+  font-weight: 800;
+}
+
+.tutor-hint p {
+  margin: 0;
+  color: #3f4c48;
+}
+
+.tutor-hint ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tutor-hint li {
+  color: #32413d;
+}
+
+.tutor-next-step {
+  font-weight: 800;
+}
+
 .test-results {
   display: grid;
   gap: 10px;

@@ -61,6 +61,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Keep auto-discovered valid fixture assertions generic so non-array topics can join the eval corpus
 - Current session - Let invalid generated-problem fixtures omit top-level sections so validator contract errors are asserted
 - Current session - Add a one-shot OpenAI repair loop before deterministic fallback when validation fails
+- Current session - Add deterministic tutor hints for failed submissions, exposed through backend API and frontend result/history panels
 
 ## Current Application Shape
 
@@ -76,6 +77,7 @@ The frontend is a Vite React app. It currently provides:
 - Monaco code editor
 - Run samples and submit buttons
 - Results panel with per-test output
+- Tutor hint panel for failed current runs and saved submission-history details
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
@@ -92,6 +94,7 @@ Important files:
 - `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
 - `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
 - `frontend/src/components/TestResults.tsx` - per-test result rendering
+- `frontend/src/components/TutorHintCard.tsx` - focused tutor nudges for failed submissions
 - `frontend/src/api.ts` - API client functions
 - `frontend/src/types.ts` - shared TypeScript API shapes
 - `frontend/src/ui.ts` - shared UI constants
@@ -137,6 +140,8 @@ Important files:
 - `SubmissionController.java` - submission endpoint
 - `SubmissionRepository.java` - JDBC submission and test-result persistence
 - `SubmissionService.java` - prepares code, runs test cases, computes status
+- `TutorHintService.java` - deterministic, privacy-safe tutor hint generation from persisted submission details
+- `TutorHintResponse.java` - public tutor hint DTO for failed-run nudges
 - `DockerSandboxRunner.java` - Docker-based sandbox implementation
 - `LocalSandboxRunner.java` - local process runner for tests/dev
 - `application.properties` - default database, Flyway, pool, and runner config
@@ -271,6 +276,10 @@ Returns recent `SubmissionSummary` rows without loading source code or per-test 
 `GET /api/submissions/{id}`
 
 Returns a persisted `SubmissionDetail` with code, compile output, and per-test results.
+
+`POST /api/submissions/{id}/hint`
+
+Returns a deterministic tutor nudge for a persisted submission. Visible failed tests may include visible expected vs actual output. Hidden-only failures stay generic and do not reveal hidden expected output, hidden actual output, or hidden test names.
 
 ## Problem Model
 

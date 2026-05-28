@@ -1,17 +1,20 @@
-import type { ProblemDraft, SubmissionDetail, SubmissionResult, SubmissionSummary } from "../types";
+import type { ProblemDraft, SubmissionDetail, SubmissionResult, SubmissionSummary, TutorHint } from "../types";
 import type { ResultView } from "../ui";
 import { languageLabels } from "../ui";
 import { formatStatus, formatTimestamp } from "../format";
 import { TestResults } from "./TestResults";
+import { TutorHintCard } from "./TutorHintCard";
 
 interface ResultsPanelProps {
   draft: ProblemDraft | null;
   isDraftPreview: boolean;
   isLoadingHistory: boolean;
   isLoadingSubmission: boolean;
+  isLoadingTutorHint: boolean;
   isRunning: boolean;
   onLoadSubmissionCode: () => void;
   onResultViewChange: (view: ResultView) => void;
+  onRequestTutorHint: (submissionId: string) => void;
   onSelectSubmission: (summary: SubmissionSummary) => void;
   result: SubmissionResult | null;
   resultView: ResultView;
@@ -19,6 +22,8 @@ interface ResultsPanelProps {
   selectedSubmission: SubmissionDetail | null;
   selectedSubmissionId: string;
   submissions: SubmissionSummary[];
+  tutorHint: TutorHint | null;
+  tutorHintSubmissionId: string;
 }
 
 export function ResultsPanel({
@@ -26,17 +31,25 @@ export function ResultsPanel({
   isDraftPreview,
   isLoadingHistory,
   isLoadingSubmission,
+  isLoadingTutorHint,
   isRunning,
   onLoadSubmissionCode,
   onResultViewChange,
+  onRequestTutorHint,
   onSelectSubmission,
   result,
   resultView,
   resultsTone,
   selectedSubmission,
   selectedSubmissionId,
-  submissions
+  submissions,
+  tutorHint,
+  tutorHintSubmissionId
 }: ResultsPanelProps) {
+  const currentSubmissionId = result?.submissionId ?? "";
+  const currentHint = currentSubmissionId === tutorHintSubmissionId ? tutorHint : null;
+  const historyHint = selectedSubmissionId === tutorHintSubmissionId ? tutorHint : null;
+
   return (
     <section className={`results ${resultsTone}`}>
       {!isDraftPreview && (
@@ -85,6 +98,16 @@ export function ResultsPanel({
           {result?.compileOutput && <pre className="compile-output">{result.compileOutput}</pre>}
 
           {!result && !isRunning && <p className="empty-state">No result yet.</p>}
+
+          {result && (
+            <TutorHintCard
+              hint={currentHint}
+              isLoading={isLoadingTutorHint && currentSubmissionId === tutorHintSubmissionId}
+              onRequest={() => onRequestTutorHint(currentSubmissionId)}
+              status={result.status}
+              submissionId={currentSubmissionId}
+            />
+          )}
 
           {result && <TestResults results={result.results} />}
         </>
@@ -144,6 +167,14 @@ export function ResultsPanel({
                   {selectedSubmission.compileOutput && (
                     <pre className="compile-output">{selectedSubmission.compileOutput}</pre>
                   )}
+
+                  <TutorHintCard
+                    hint={historyHint}
+                    isLoading={isLoadingTutorHint && selectedSubmission.id === tutorHintSubmissionId}
+                    onRequest={() => onRequestTutorHint(selectedSubmission.id)}
+                    status={selectedSubmission.status}
+                    submissionId={selectedSubmission.id}
+                  />
 
                   <TestResults results={selectedSubmission.results} />
                 </>

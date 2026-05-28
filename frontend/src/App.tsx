@@ -5,6 +5,7 @@ import {
   fetchProblem,
   fetchProblems,
   fetchSubmissionDetail,
+  fetchSubmissionHint,
   fetchSubmissionHistory,
   publishProblemDraft,
   runSubmission
@@ -21,7 +22,8 @@ import type {
   ProblemSummary,
   SubmissionDetail,
   SubmissionResult,
-  SubmissionSummary
+  SubmissionSummary,
+  TutorHint
 } from "./types";
 import type { ResultView } from "./ui";
 
@@ -49,14 +51,19 @@ function App() {
   const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string>("");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetail | null>(null);
+  const [tutorHint, setTutorHint] = useState<TutorHint | null>(null);
+  const [tutorHintSubmissionId, setTutorHintSubmissionId] = useState<string>("");
   const [isRunning, setIsRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
+  const [isLoadingTutorHint, setIsLoadingTutorHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const codeOverrideRef = useRef<string | null>(null);
   const selectedSubmissionRequestRef = useRef<string>("");
+  const selectedSubmissionIdRef = useRef<string>("");
+  const resultSubmissionIdRef = useRef<string>("");
   const selectedProblemIdRef = useRef<string>("");
   const currentDraftIdRef = useRef<string>("");
   const isDraftPreviewRef = useRef(false);
@@ -64,12 +71,22 @@ function App() {
   const submissionHistoryRequestRef = useRef(0);
   const runRequestRef = useRef(0);
   const draftRequestRef = useRef(0);
+  const tutorHintRequestRef = useRef(0);
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
   selectedProblemIdRef.current = selectedId;
+  selectedSubmissionIdRef.current = selectedSubmissionId;
+  resultSubmissionIdRef.current = result?.submissionId ?? "";
   currentDraftIdRef.current = draft?.id ?? "";
   isDraftPreviewRef.current = isDraftPreview;
+
+  function resetTutorHint() {
+    tutorHintRequestRef.current += 1;
+    setTutorHint(null);
+    setTutorHintSubmissionId("");
+    setIsLoadingTutorHint(false);
+  }
 
   function clearSelectedSubmission() {
     setSelectedSubmission(null);
@@ -83,6 +100,7 @@ function App() {
     setIsLoadingHistory(false);
     setSubmissions([]);
     clearSelectedSubmission();
+    resetTutorHint();
   }
 
   function isCurrentPublishedProblem(problemId: string) {
@@ -95,6 +113,13 @@ function App() {
 
   function isCurrentDraftAction(draftId: string, requestId: number) {
     return draftRequestRef.current === requestId && currentDraftIdRef.current === draftId;
+  }
+
+  function isCurrentTutorHintRequest(submissionId: string, requestId: number) {
+    return (
+      tutorHintRequestRef.current === requestId &&
+      (resultSubmissionIdRef.current === submissionId || selectedSubmissionIdRef.current === submissionId)
+    );
   }
 
   useEffect(() => {
@@ -208,6 +233,7 @@ function App() {
     setIsRunning(true);
     setError(null);
     setResult(null);
+    resetTutorHint();
 
     try {
       const nextResult = await runSubmission({
@@ -374,6 +400,7 @@ function App() {
     setSelectedSubmission(null);
     setIsLoadingSubmission(true);
     setError(null);
+    resetTutorHint();
 
     try {
       const detail = await fetchSubmissionDetail(summary.id);
@@ -403,6 +430,34 @@ function App() {
       setCode(selectedSubmission.code);
     }
     setResultView("current");
+  }
+
+  async function handleRequestTutorHint(submissionId: string) {
+    if (!submissionId) {
+      return;
+    }
+
+    const requestId = tutorHintRequestRef.current + 1;
+    tutorHintRequestRef.current = requestId;
+    setTutorHint(null);
+    setTutorHintSubmissionId(submissionId);
+    setIsLoadingTutorHint(true);
+    setError(null);
+
+    try {
+      const hint = await fetchSubmissionHint(submissionId);
+      if (isCurrentTutorHintRequest(submissionId, requestId)) {
+        setTutorHint(hint);
+      }
+    } catch (err) {
+      if (isCurrentTutorHintRequest(submissionId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
+      if (isCurrentTutorHintRequest(submissionId, requestId)) {
+        setIsLoadingTutorHint(false);
+      }
+    }
   }
 
   return (
@@ -446,6 +501,7 @@ function App() {
               isDraftPreview={isDraftPreview}
               isLoadingHistory={isLoadingHistory}
               isLoadingSubmission={isLoadingSubmission}
+              isLoadingTutorHint={isLoadingTutorHint}
               isPublishing={isPublishing}
               isRunning={isRunning}
               language={language}
@@ -455,6 +511,7 @@ function App() {
               onLoadSubmissionCode={handleLoadSubmissionCode}
               onPublishDraft={handlePublishDraft}
               onResultViewChange={setResultView}
+              onRequestTutorHint={handleRequestTutorHint}
               onRun={handleRun}
               onSelectSubmission={handleSelectSubmission}
               result={result}
@@ -463,6 +520,8 @@ function App() {
               selectedSubmission={selectedSubmission}
               selectedSubmissionId={selectedSubmissionId}
               submissions={submissions}
+              tutorHint={tutorHint}
+              tutorHintSubmissionId={tutorHintSubmissionId}
             />
           </>
         ) : (
