@@ -70,13 +70,43 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const codeOverrideRef = useRef<string | null>(null);
   const selectedSubmissionRequestRef = useRef<string>("");
+  const selectedProblemIdRef = useRef<string>("");
+  const isDraftPreviewRef = useRef(false);
+  const problemRequestRef = useRef(0);
+  const submissionHistoryRequestRef = useRef(0);
+  const runRequestRef = useRef(0);
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
+  selectedProblemIdRef.current = selectedId;
+  isDraftPreviewRef.current = isDraftPreview;
+
+  function clearSelectedSubmission() {
+    setSelectedSubmission(null);
+    setSelectedSubmissionId("");
+    setIsLoadingSubmission(false);
+    selectedSubmissionRequestRef.current = "";
+  }
+
+  function resetSubmissionHistory() {
+    submissionHistoryRequestRef.current += 1;
+    setIsLoadingHistory(false);
+    setSubmissions([]);
+    clearSelectedSubmission();
+  }
+
+  function isCurrentPublishedProblem(problemId: string) {
+    return selectedProblemIdRef.current === problemId && !isDraftPreviewRef.current;
+  }
+
+  function isCurrentHistoryRequest(problemId: string, requestId: number) {
+    return submissionHistoryRequestRef.current === requestId && isCurrentPublishedProblem(problemId);
+  }
 
   useEffect(() => {
     fetchProblems()
       .then((items) => {
+        selectedProblemIdRef.current = items[0]?.id ?? "";
         setProblems(items);
         setSelectedId(items[0]?.id ?? "");
       })
@@ -91,15 +121,23 @@ function App() {
     setProblem(null);
     setResult(null);
     setResultView("current");
-    setSelectedSubmission(null);
-    setSelectedSubmissionId("");
-    selectedSubmissionRequestRef.current = "";
+    resetSubmissionHistory();
+    runRequestRef.current += 1;
+    setIsRunning(false);
+    const requestId = problemRequestRef.current + 1;
+    problemRequestRef.current = requestId;
     fetchProblem(selectedId)
       .then((loaded) => {
-        setProblem(loaded);
-        setCode(loaded.starterCode[language]);
+        if (problemRequestRef.current === requestId && selectedProblemIdRef.current === selectedId) {
+          setProblem(loaded);
+          setCode(loaded.starterCode[language]);
+        }
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (problemRequestRef.current === requestId && selectedProblemIdRef.current === selectedId) {
+          setError(err.message);
+        }
+      });
   }, [selectedId]);
 
   useEffect(() => {
@@ -116,35 +154,11 @@ function App() {
 
   useEffect(() => {
     if (!problem || isDraftPreview) {
-      setSubmissions([]);
-      setSelectedSubmission(null);
-      setSelectedSubmissionId("");
-      selectedSubmissionRequestRef.current = "";
+      resetSubmissionHistory();
       return;
     }
 
-    let isCancelled = false;
-    setIsLoadingHistory(true);
-    fetchSubmissionHistory(problem.id)
-      .then((items) => {
-        if (!isCancelled) {
-          setSubmissions(items);
-        }
-      })
-      .catch((err: Error) => {
-        if (!isCancelled) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (!isCancelled) {
-          setIsLoadingHistory(false);
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
+    refreshSubmissionHistory(problem.id);
   }, [problem?.id, isDraftPreview]);
 
   const statusTone = useMemo(() => {
@@ -166,14 +180,26 @@ function App() {
   const resultsTone = resultView === "history" ? historyTone : statusTone;
 
   async function refreshSubmissionHistory(problemId: string) {
+    if (!isCurrentPublishedProblem(problemId)) {
+      return;
+    }
+
+    const requestId = submissionHistoryRequestRef.current + 1;
+    submissionHistoryRequestRef.current = requestId;
     setIsLoadingHistory(true);
     try {
       const items = await fetchSubmissionHistory(problemId);
-      setSubmissions(items);
+      if (isCurrentHistoryRequest(problemId, requestId)) {
+        setSubmissions(items);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (isCurrentHistoryRequest(problemId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setIsLoadingHistory(false);
+      if (isCurrentHistoryRequest(problemId, requestId)) {
+        setIsLoadingHistory(false);
+      }
     }
   }
 
@@ -182,24 +208,33 @@ function App() {
       return;
     }
 
+    const runProblemId = problem.id;
+    const runRequestId = runRequestRef.current + 1;
+    runRequestRef.current = runRequestId;
     setIsRunning(true);
     setError(null);
     setResult(null);
 
     try {
       const nextResult = await runSubmission({
-        problemId: problem.id,
+        problemId: runProblemId,
         language,
         code,
         runHiddenTests
       });
-      setResult(nextResult);
-      setResultView("current");
-      await refreshSubmissionHistory(problem.id);
+      if (runRequestRef.current === runRequestId && isCurrentPublishedProblem(runProblemId)) {
+        setResult(nextResult);
+        setResultView("current");
+      }
+      await refreshSubmissionHistory(runProblemId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (runRequestRef.current === runRequestId && isCurrentPublishedProblem(runProblemId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setIsRunning(false);
+      if (runRequestRef.current === runRequestId) {
+        setIsRunning(false);
+      }
     }
   }
 
@@ -215,11 +250,9 @@ function App() {
         topic: generatorTopic.trim() || undefined,
         difficulty: generatorDifficulty
       });
+      isDraftPreviewRef.current = true;
       setDraft(nextDraft);
-      setSubmissions([]);
-      setSelectedSubmission(null);
-      setSelectedSubmissionId("");
-      selectedSubmissionRequestRef.current = "";
+      resetSubmissionHistory();
       setCode(nextDraft.problem.starterCode[language]);
       if (previousDraftId && previousDraftId !== nextDraft.id) {
         deleteProblemDraft(previousDraftId).catch(() => {});
@@ -241,6 +274,8 @@ function App() {
 
     try {
       const published = await publishProblemDraft(draft.id);
+      selectedProblemIdRef.current = published.id;
+      isDraftPreviewRef.current = false;
       const publishedSummary: ProblemSummary = {
         id: published.id,
         title: published.title,
@@ -271,6 +306,7 @@ function App() {
 
     try {
       await deleteProblemDraft(draft.id);
+      isDraftPreviewRef.current = false;
       setDraft(null);
       if (problem) {
         setCode(problem.starterCode[language]);
@@ -284,10 +320,13 @@ function App() {
     if (draft) {
       deleteProblemDraft(draft.id).catch(() => {});
     }
+    selectedProblemIdRef.current = id;
+    isDraftPreviewRef.current = false;
+    problemRequestRef.current += 1;
+    resetSubmissionHistory();
+    runRequestRef.current += 1;
+    setIsRunning(false);
     setDraft(null);
-    setSelectedSubmission(null);
-    setSelectedSubmissionId("");
-    selectedSubmissionRequestRef.current = "";
     setSelectedId(id);
   }
 

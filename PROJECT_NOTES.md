@@ -45,6 +45,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Document feature-branch workflow for future work
 - Current session - Add frontend submission history and result detail views
 - Current session - Add container images, full-stack Compose, and GitHub Actions CI/CD
+- Current session - Guard frontend problem, run, and submission-history requests against stale responses after problem changes
 
 ## Current Application Shape
 
@@ -78,6 +79,7 @@ Current frontend limitation:
 
 - The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
 - Submission history is global per problem because there are no user accounts yet.
+- Async problem, run, and history requests now use request guards so stale responses cannot overwrite the currently selected problem's result or history state.
 
 ### Backend
 
