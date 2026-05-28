@@ -14,6 +14,8 @@ For coding-agent operating instructions and repeatable workflows, start with the
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
+The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. Until the OpenAI-backed generator lands, the deterministic templates keep using topic and difficulty for selection while preserving the richer controls in draft generation metadata.
+
 Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
 
 ## Local Commands
@@ -117,10 +119,10 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 - There is no auth or user account model yet.
 - Submission history is global per problem, not user-scoped.
 - Execution is synchronous; there is no worker queue yet.
+- Deterministic problem templates record richer generator controls but do not yet vary problem content from them.
 
 ## Next Milestones
 
 1. Add an OpenAI-backed generator behind the current draft flow.
-2. Add richer generator controls for concepts, constraints, and interview style.
-3. Add user accounts so submission history can be user-scoped.
-4. Move execution to a worker queue.
+2. Add user accounts so submission history can be user-scoped.
+3. Move execution to a worker queue.

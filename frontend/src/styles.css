@@ -109,9 +109,9 @@ button:disabled {
 }
 
 .generator-panel input,
-.generator-panel select {
+.generator-panel select,
+.generator-panel textarea {
   min-width: 0;
-  min-height: 40px;
   width: 100%;
   border: 1px solid #315850;
   border-radius: 8px;
@@ -121,12 +121,23 @@ button:disabled {
   font-weight: 700;
 }
 
+.generator-panel input,
+.generator-panel select {
+  min-height: 40px;
+}
+
 .generator-panel input {
   padding: 0 11px;
 }
 
 .generator-panel select {
   padding: 0 8px;
+}
+
+.generator-panel textarea {
+  min-height: 76px;
+  padding: 10px 11px;
+  resize: vertical;
 }
 
 .draft-card {

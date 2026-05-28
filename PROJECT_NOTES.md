@@ -51,6 +51,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
 - Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
+- Current session - Add richer frontend generator controls for target concepts, constraints/notes, and interview style, and preserve them in draft generation metadata
 - Current session - Render safe generated-draft metadata in the frontend problem statement
 - Current session - Remove raw generation parameters and validation errors from the public draft metadata DTO
 
@@ -68,7 +69,7 @@ The frontend is a Vite React app. It currently provides:
 - Monaco code editor
 - Run samples and submit buttons
 - Results panel with per-test output
-- Generator panel with topic input and difficulty selector
+- Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
 - Submission history tab for the selected published problem
@@ -93,7 +94,7 @@ Important files:
 
 Current frontend limitation:
 
-- The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
+- The generator controls are persisted in draft metadata, but deterministic templates do not yet use them to alter the generated problem.
 - Draft previews show safe generation metadata, but intentionally omit prompt text, reference solutions, hidden tests, raw validation errors, and raw parameter JSON.
 - Submission history is global per problem because there are no user accounts yet.
 - Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
@@ -149,7 +150,10 @@ Request body:
 ```json
 {
   "topic": "stacks",
-  "difficulty": "Medium"
+  "difficulty": "Medium",
+  "targetConcepts": ["monotonic stack", "edge cases"],
+  "constraintsNotes": "Avoid graph traversal. Include a boundary-heavy hidden test.",
+  "interviewStyle": "Edge-case heavy"
 }
 ```
 
@@ -160,6 +164,7 @@ Current behavior:
 - Creates a database-backed draft, not a public problem.
 - Validates the generated draft schema before persistence.
 - Validates both private Python and Java reference solutions through `SubmissionService`.
+- Preserves requested target concepts, constraints/notes, and interview style in generation metadata parameters JSON.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
 - Public draft responses do not expose hidden test cases, prompt text, or reference solutions.
@@ -183,7 +188,10 @@ Request body:
 ```json
 {
   "topic": "arrays",
-  "difficulty": "Easy"
+  "difficulty": "Easy",
+  "targetConcepts": ["two pointers"],
+  "constraintsNotes": "Prefer exact-input/output interview format.",
+  "interviewStyle": "Classic"
 }
 ```
 

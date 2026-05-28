@@ -1,5 +1,6 @@
 export type Language = "python" | "java";
 export type Difficulty = "Easy" | "Medium" | "Hard";
+export type InterviewStyle = "Classic" | "Edge-case heavy" | "Performance" | "Practical";
 
 export type StarterCode = Record<Language, string>;
 
@@ -28,6 +29,9 @@ export interface Problem extends ProblemSummary {
 export interface GenerateProblemRequest {
   topic?: string;
   difficulty?: Difficulty;
+  targetConcepts?: string[];
+  constraintsNotes?: string;
+  interviewStyle?: InterviewStyle;
 }
 
 export interface GenerationMetadata {

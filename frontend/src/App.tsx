@@ -14,6 +14,7 @@ import { ProblemRail } from "./components/ProblemRail";
 import { ProblemStatement } from "./components/ProblemStatement";
 import type {
   Difficulty,
+  InterviewStyle,
   Language,
   Problem,
   ProblemDraft,
@@ -24,6 +25,13 @@ import type {
 } from "./types";
 import type { ResultView } from "./ui";
 
+function parseTargetConcepts(value: string) {
+  return value
+    .split(",")
+    .map((concept) => concept.trim())
+    .filter(Boolean);
+}
+
 function App() {
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -31,6 +39,9 @@ function App() {
   const [draft, setDraft] = useState<ProblemDraft | null>(null);
   const [generatorTopic, setGeneratorTopic] = useState("arrays");
   const [generatorDifficulty, setGeneratorDifficulty] = useState<Difficulty>("Easy");
+  const [generatorTargetConcepts, setGeneratorTargetConcepts] = useState("");
+  const [generatorConstraintsNotes, setGeneratorConstraintsNotes] = useState("");
+  const [generatorInterviewStyle, setGeneratorInterviewStyle] = useState<InterviewStyle>("Classic");
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
@@ -233,7 +244,10 @@ function App() {
     try {
       const nextDraft = await createProblemDraft({
         topic: generatorTopic.trim() || undefined,
-        difficulty: generatorDifficulty
+        difficulty: generatorDifficulty,
+        targetConcepts: parseTargetConcepts(generatorTargetConcepts),
+        constraintsNotes: generatorConstraintsNotes.trim() || undefined,
+        interviewStyle: generatorInterviewStyle
       });
       if (draftRequestRef.current !== requestId) {
         deleteProblemDraft(nextDraft.id).catch(() => {});
@@ -395,13 +409,19 @@ function App() {
     <main className="app-shell">
       <ProblemRail
         draft={draft}
+        generatorConstraintsNotes={generatorConstraintsNotes}
         generatorDifficulty={generatorDifficulty}
+        generatorInterviewStyle={generatorInterviewStyle}
+        generatorTargetConcepts={generatorTargetConcepts}
         generatorTopic={generatorTopic}
         isGenerating={isGenerating}
         isPublishing={isPublishing}
         onDiscardDraft={handleDiscardDraft}
         onGenerate={handleGenerate}
+        onGeneratorConstraintsNotesChange={setGeneratorConstraintsNotes}
         onGeneratorDifficultyChange={setGeneratorDifficulty}
+        onGeneratorInterviewStyleChange={setGeneratorInterviewStyle}
+        onGeneratorTargetConceptsChange={setGeneratorTargetConcepts}
         onGeneratorTopicChange={setGeneratorTopic}
         onPublishDraft={handlePublishDraft}
         onSelectProblem={handleSelectProblem}
