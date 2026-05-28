@@ -1,8 +1,5 @@
 package com.hackerprank.submissions;
 
-import com.hackerprank.problems.ProblemRepository;
-import com.hackerprank.problems.PublicProblem;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,7 +14,7 @@ public class TutorHintService {
     private static final int MAX_SNIPPET_LENGTH = 240;
 
     private final TutorProperties properties;
-    private final ProblemRepository problemRepository;
+    private final TutorSubmissionContextFactory contextFactory;
     private final OpenAiTutorHintGenerator openAiTutorHintGenerator;
 
     TutorHintService() {
@@ -27,11 +24,11 @@ public class TutorHintService {
     @Autowired
     public TutorHintService(
         TutorProperties properties,
-        ProblemRepository problemRepository,
+        TutorSubmissionContextFactory contextFactory,
         OpenAiTutorHintGenerator openAiTutorHintGenerator
     ) {
         this.properties = properties;
-        this.problemRepository = problemRepository;
+        this.contextFactory = contextFactory;
         this.openAiTutorHintGenerator = openAiTutorHintGenerator;
     }
 
@@ -55,13 +52,10 @@ public class TutorHintService {
     }
 
     private TutorHintContext createContext(SubmissionDetail submission) {
-        PublicProblem problem = null;
-        if (problemRepository != null && submission.getProblemId() != null && !submission.getProblemId().isBlank()) {
-            problem = problemRepository.findById(submission.getProblemId())
-                .map(PublicProblem::from)
-                .orElse(null);
+        if (contextFactory == null) {
+            return TutorHintContext.from(submission, null);
         }
-        return TutorHintContext.from(submission, problem);
+        return contextFactory.create(submission);
     }
 
     private TutorHintResponse createDeterministicHint(SubmissionDetail submission) {

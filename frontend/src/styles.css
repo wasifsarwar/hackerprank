@@ -766,6 +766,59 @@ pre {
   font-weight: 800;
 }
 
+.tutor-thread {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.tutor-message {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid #e0d5b7;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+
+.tutor-message.user {
+  background: #eef7f2;
+}
+
+.tutor-message span {
+  color: #65736f;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tutor-follow-up {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.tutor-follow-up input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #d8dcc4;
+  border-radius: 7px;
+  color: #172421;
+  background: #ffffff;
+  font: inherit;
+}
+
+.tutor-follow-up button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 7px;
+  color: #fafffb;
+  background: #275448;
+  font-weight: 800;
+}
+
 .test-results {
   display: grid;
   gap: 10px;

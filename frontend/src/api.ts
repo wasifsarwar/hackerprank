@@ -7,7 +7,9 @@ import type {
   SubmissionDetail,
   SubmissionResult,
   SubmissionSummary,
-  TutorHint
+  TutorChatResponse,
+  TutorHint,
+  TutorMessage
 } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -87,5 +89,16 @@ export function fetchSubmissionDetail(id: string): Promise<SubmissionDetail> {
 export function fetchSubmissionHint(id: string): Promise<TutorHint> {
   return request<TutorHint>(`/api/submissions/${id}/hint`, {
     method: "POST"
+  });
+}
+
+export function fetchTutorMessages(id: string): Promise<TutorMessage[]> {
+  return request<TutorMessage[]>(`/api/submissions/${id}/tutor/messages`);
+}
+
+export function sendTutorMessage(id: string, message: string): Promise<TutorChatResponse> {
+  return request<TutorChatResponse>(`/api/submissions/${id}/tutor/messages`, {
+    method: "POST",
+    body: JSON.stringify({ message })
   });
 }

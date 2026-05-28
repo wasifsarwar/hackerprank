@@ -6,7 +6,8 @@ import type {
   SubmissionDetail,
   SubmissionResult,
   SubmissionSummary,
-  TutorHint
+  TutorHint,
+  TutorMessage
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
@@ -20,8 +21,10 @@ interface CodingPanelProps {
   isLoadingHistory: boolean;
   isLoadingSubmission: boolean;
   isLoadingTutorHint: boolean;
+  isLoadingTutorMessages: boolean;
   isPublishing: boolean;
   isRunning: boolean;
+  isSendingTutorMessage: boolean;
   language: Language;
   onCodeChange: (code: string) => void;
   onDiscardDraft: () => void;
@@ -32,6 +35,7 @@ interface CodingPanelProps {
   onRun: (runHiddenTests: boolean) => void;
   onRequestTutorHint: (submissionId: string) => void;
   onSelectSubmission: (summary: SubmissionSummary) => void;
+  onSendTutorMessage: (submissionId: string, message: string) => Promise<void>;
   result: SubmissionResult | null;
   resultView: ResultView;
   resultsTone: string;
@@ -40,6 +44,8 @@ interface CodingPanelProps {
   submissions: SubmissionSummary[];
   tutorHint: TutorHint | null;
   tutorHintSubmissionId: string;
+  tutorMessages: TutorMessage[];
+  tutorMessagesSubmissionId: string;
 }
 
 export function CodingPanel({
@@ -50,8 +56,10 @@ export function CodingPanel({
   isLoadingHistory,
   isLoadingSubmission,
   isLoadingTutorHint,
+  isLoadingTutorMessages,
   isPublishing,
   isRunning,
+  isSendingTutorMessage,
   language,
   onCodeChange,
   onDiscardDraft,
@@ -62,6 +70,7 @@ export function CodingPanel({
   onRun,
   onRequestTutorHint,
   onSelectSubmission,
+  onSendTutorMessage,
   result,
   resultView,
   resultsTone,
@@ -69,7 +78,9 @@ export function CodingPanel({
   selectedSubmissionId,
   submissions,
   tutorHint,
-  tutorHintSubmissionId
+  tutorHintSubmissionId,
+  tutorMessages,
+  tutorMessagesSubmissionId
 }: CodingPanelProps) {
   return (
     <section className="coding-panel">
@@ -140,11 +151,14 @@ export function CodingPanel({
         isLoadingHistory={isLoadingHistory}
         isLoadingSubmission={isLoadingSubmission}
         isLoadingTutorHint={isLoadingTutorHint}
+        isLoadingTutorMessages={isLoadingTutorMessages}
         isRunning={isRunning}
+        isSendingTutorMessage={isSendingTutorMessage}
         onLoadSubmissionCode={onLoadSubmissionCode}
         onResultViewChange={onResultViewChange}
         onRequestTutorHint={onRequestTutorHint}
         onSelectSubmission={onSelectSubmission}
+        onSendTutorMessage={onSendTutorMessage}
         result={result}
         resultView={resultView}
         resultsTone={resultsTone}
@@ -153,6 +167,8 @@ export function CodingPanel({
         submissions={submissions}
         tutorHint={tutorHint}
         tutorHintSubmissionId={tutorHintSubmissionId}
+        tutorMessages={tutorMessages}
+        tutorMessagesSubmissionId={tutorMessagesSubmissionId}
       />
     </section>
   );

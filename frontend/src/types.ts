@@ -92,6 +92,20 @@ export interface TutorHint {
   nextStep: string;
 }
 
+export interface TutorMessage {
+  id: string;
+  submissionId: string;
+  role: "user" | "assistant";
+  provider: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface TutorChatResponse {
+  submissionId: string;
+  messages: TutorMessage[];
+}
+
 export interface SubmissionSummary {
   id: string;
   problemId: string | null;

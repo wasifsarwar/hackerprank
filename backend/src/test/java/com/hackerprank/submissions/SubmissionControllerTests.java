@@ -1,7 +1,9 @@
 package com.hackerprank.submissions;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,5 +62,65 @@ class SubmissionControllerTests {
     void returnsNotFoundForMissingSubmissionHint() throws Exception {
         mockMvc.perform(post("/api/submissions/missing-submission/hint"))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void storesTutorFollowUpMessagesForPersistedSubmission() throws Exception {
+        String submissionId = wrongAnswerSubmissionId();
+
+        mockMvc.perform(post("/api/submissions/" + submissionId + "/tutor/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Can you explain the mismatch?\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.submissionId").value(submissionId))
+            .andExpect(jsonPath("$.messages", hasSize(2)))
+            .andExpect(jsonPath("$.messages[0].role").value("user"))
+            .andExpect(jsonPath("$.messages[0].content").value("Can you explain the mismatch?"))
+            .andExpect(jsonPath("$.messages[1].role").value("assistant"))
+            .andExpect(jsonPath("$.messages[1].provider").value("deterministic"))
+            .andExpect(jsonPath("$.messages[1].content", containsString("visible mismatch")));
+
+        mockMvc.perform(get("/api/submissions/" + submissionId + "/tutor/messages"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(2)))
+            .andExpect(jsonPath("$[0].role").value("user"))
+            .andExpect(jsonPath("$[1].role").value("assistant"));
+    }
+
+    @Test
+    void rejectsBlankTutorFollowUpMessage() throws Exception {
+        String submissionId = wrongAnswerSubmissionId();
+
+        mockMvc.perform(post("/api/submissions/" + submissionId + "/tutor/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"   \"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void returnsNotFoundForMissingTutorFollowUpSubmission() throws Exception {
+        mockMvc.perform(post("/api/submissions/missing-submission/tutor/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Can you help?\"}"))
+            .andExpect(status().isNotFound());
+    }
+
+    private String wrongAnswerSubmissionId() throws Exception {
+        MvcResult runResult = mockMvc.perform(post("/api/submissions/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "problemId": "add-a-pair",
+                      "language": "python",
+                      "code": "print(0)\\n",
+                      "runHiddenTests": false
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.submissionId").exists())
+            .andReturn();
+
+        JsonNode runBody = objectMapper.readTree(runResult.getResponse().getContentAsString());
+        return runBody.get("submissionId").asText();
     }
 }

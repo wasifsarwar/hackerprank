@@ -17,10 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class SubmissionController {
     private final SubmissionService submissionService;
     private final TutorHintService tutorHintService;
+    private final TutorChatService tutorChatService;
 
-    public SubmissionController(SubmissionService submissionService, TutorHintService tutorHintService) {
+    public SubmissionController(
+        SubmissionService submissionService,
+        TutorHintService tutorHintService,
+        TutorChatService tutorChatService
+    ) {
         this.submissionService = submissionService;
         this.tutorHintService = tutorHintService;
+        this.tutorChatService = tutorChatService;
     }
 
     @GetMapping
@@ -42,6 +48,23 @@ public class SubmissionController {
     public ResponseEntity<TutorHintResponse> hint(@PathVariable String id) {
         return submissionService.findById(id)
             .map(submission -> ResponseEntity.ok(tutorHintService.createHint(submission)))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/tutor/messages")
+    public ResponseEntity<List<TutorMessage>> tutorMessages(@PathVariable String id) {
+        return submissionService.findById(id)
+            .map(submission -> ResponseEntity.ok(tutorChatService.findMessages(submission.getId())))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/tutor/messages")
+    public ResponseEntity<TutorChatResponse> tutorMessage(
+        @PathVariable String id,
+        @RequestBody TutorMessageRequest request
+    ) {
+        return submissionService.findById(id)
+            .map(submission -> ResponseEntity.ok(tutorChatService.createReply(submission, request)))
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

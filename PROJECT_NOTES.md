@@ -67,6 +67,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add deterministic tutor hints for failed submissions, exposed through backend API and frontend result/history panels
 - Current session - Add a product plan and iteration roadmap for the agentic interview-practice end state
 - Current session - Add opt-in OpenAI-backed tutor hints with deterministic fallback and hidden-test privacy guards
+- Current session - Add persisted submission-scoped tutor follow-up chat with deterministic fallback and the same hidden-test privacy boundary
 
 ## Current Application Shape
 
@@ -84,6 +85,7 @@ The frontend is a Vite React app. It currently provides:
 - Results panel with per-test output
 - Tutor hint panel for failed current runs and saved submission-history details
 - Opt-in OpenAI-backed tutor hints that send only public problem context, user code, compile output, visible failures, and hidden-test counts
+- Submission-scoped tutor follow-up chat with persisted user/assistant messages
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft metadata panel with provider, model, prompt version, validation summary, and intended technique
@@ -100,7 +102,7 @@ Important files:
 - `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
 - `frontend/src/components/ResultsPanel.tsx` - current run results and persisted submission history
 - `frontend/src/components/TestResults.tsx` - per-test result rendering
-- `frontend/src/components/TutorHintCard.tsx` - focused tutor nudges for failed submissions
+- `frontend/src/components/TutorHintCard.tsx` - focused tutor nudges and follow-up chat for failed submissions
 - `frontend/src/api.ts` - API client functions
 - `frontend/src/types.ts` - shared TypeScript API shapes
 - `frontend/src/ui.ts` - shared UI constants
@@ -140,7 +142,7 @@ Important files:
 - `ProblemGeneratorService.java` - generated-problem orchestration, OpenAI opt-in routing, deterministic fallback, and validation
 - `OpenAiProblemGenerator.java` - Responses API request builder, structured JSON schema, response parser, and generated-problem mapper
 - `OpenAiProblemGeneratorProperties.java` - OpenAI model, endpoint, timeout, token, and API key config
-- `JdkOpenAiTransport.java` - JDK `HttpClient` transport for OpenAI calls
+- `com.hackerprank.openai.JdkOpenAiTransport.java` - shared JDK `HttpClient` transport for OpenAI calls
 - `GeneratedProblemFixtureValidationTests.java` - fixture-driven generated-problem eval tests for valid drafts and expected contract failures
 - `backend/src/test/resources/generated-problems/` - JSON fixture corpus for generated-problem validation evals
 - `SubmissionController.java` - submission endpoint
@@ -148,6 +150,9 @@ Important files:
 - `SubmissionService.java` - prepares code, runs test cases, computes status
 - `TutorHintService.java` - provider selection, deterministic fallback, and privacy-safe tutor hint generation from persisted submission details
 - `OpenAiTutorHintGenerator.java` - Responses API request builder, structured JSON schema, response parser, and safe tutor hint mapper
+- `TutorChatService.java` - persisted submission-scoped tutor follow-up orchestration
+- `OpenAiTutorChatGenerator.java` - Responses API request builder and parser for follow-up tutor replies
+- `TutorMessageRepository.java` - JDBC persistence for tutor chat messages
 - `TutorHintContext.java` - safe context model that strips hidden test detail down to counts before model calls
 - `OpenAiTutorProperties.java` - OpenAI tutor model, endpoint, timeout, token, prompt version, and API key config
 - `TutorHintResponse.java` - public tutor hint DTO for failed-run nudges
@@ -156,6 +161,7 @@ Important files:
 - `application.properties` - default database, Flyway, pool, and runner config
 - `db/migration/V1__initial_persistence.sql` - normalized persistence schema and indexes
 - `db/migration/V2__generation_metadata.sql` - per-language reference solutions and generation audit metadata
+- `db/migration/V3__tutor_messages.sql` - submission-scoped tutor message persistence and indexes
 
 ## API Surface
 
@@ -289,6 +295,22 @@ Returns a persisted `SubmissionDetail` with code, compile output, and per-test r
 `POST /api/submissions/{id}/hint`
 
 Returns a deterministic tutor nudge for a persisted submission. Visible failed tests may include visible expected vs actual output. Hidden-only failures stay generic and do not reveal hidden expected output, hidden actual output, or hidden test names.
+
+`GET /api/submissions/{id}/tutor/messages`
+
+Returns persisted tutor chat messages for the submission, ordered oldest to newest.
+
+`POST /api/submissions/{id}/tutor/messages`
+
+Request body:
+
+```json
+{
+  "message": "Can you explain the visible mismatch?"
+}
+```
+
+Stores the user message, creates an assistant reply, persists it, and returns the current submission-scoped tutor conversation. The OpenAI path receives only the same safe context used for tutor hints plus recent tutor messages.
 
 ## Problem Model
 
@@ -617,7 +639,7 @@ PostgreSQL + Flyway + JDBC persistence:
 
 - OpenAI generation is backend-only and opt-in.
 - OpenAI prompt/eval quality still needs ongoing tuning.
-- OpenAI tutor hints are one-shot nudges; there is no follow-up tutor chat yet.
+- Tutor chat is submission-scoped, but explicit hint-level controls and solution unlocks are not implemented yet.
 - No user accounts or sessions.
 - Submission history is not user-scoped yet.
 - No worker queue.
@@ -627,10 +649,10 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/tutor-follow-up-chat`.
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/generated-draft-quality-panel`.
 
-1. Add tutor follow-up chat attached to failed submissions.
-2. Add a richer generated-draft quality panel.
+1. Add a richer generated-draft quality panel.
+2. Add generation variant controls and deeper prompt behavior.
 3. Add user accounts and user-scoped submission history.
 4. Move execution to a worker queue.
 
@@ -643,6 +665,7 @@ The safe tutor context can include:
 - public problem title, statement, formats, constraints, tags, and examples
 - submission language, status, code, compile output, and pass counts
 - visible failing test names, expected output, actual output, stderr, timeout flag, and exit code
+- recent tutor chat messages for the same submission
 - hidden test total, failed count, and timeout count
 
 The safe tutor context must not include:

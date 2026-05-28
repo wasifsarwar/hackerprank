@@ -1,4 +1,4 @@
-import type { ProblemDraft, SubmissionDetail, SubmissionResult, SubmissionSummary, TutorHint } from "../types";
+import type { ProblemDraft, SubmissionDetail, SubmissionResult, SubmissionSummary, TutorHint, TutorMessage } from "../types";
 import type { ResultView } from "../ui";
 import { languageLabels } from "../ui";
 import { formatStatus, formatTimestamp } from "../format";
@@ -11,11 +11,14 @@ interface ResultsPanelProps {
   isLoadingHistory: boolean;
   isLoadingSubmission: boolean;
   isLoadingTutorHint: boolean;
+  isLoadingTutorMessages: boolean;
   isRunning: boolean;
+  isSendingTutorMessage: boolean;
   onLoadSubmissionCode: () => void;
   onResultViewChange: (view: ResultView) => void;
   onRequestTutorHint: (submissionId: string) => void;
   onSelectSubmission: (summary: SubmissionSummary) => void;
+  onSendTutorMessage: (submissionId: string, message: string) => Promise<void>;
   result: SubmissionResult | null;
   resultView: ResultView;
   resultsTone: string;
@@ -24,6 +27,8 @@ interface ResultsPanelProps {
   submissions: SubmissionSummary[];
   tutorHint: TutorHint | null;
   tutorHintSubmissionId: string;
+  tutorMessages: TutorMessage[];
+  tutorMessagesSubmissionId: string;
 }
 
 export function ResultsPanel({
@@ -32,11 +37,14 @@ export function ResultsPanel({
   isLoadingHistory,
   isLoadingSubmission,
   isLoadingTutorHint,
+  isLoadingTutorMessages,
   isRunning,
+  isSendingTutorMessage,
   onLoadSubmissionCode,
   onResultViewChange,
   onRequestTutorHint,
   onSelectSubmission,
+  onSendTutorMessage,
   result,
   resultView,
   resultsTone,
@@ -44,11 +52,15 @@ export function ResultsPanel({
   selectedSubmissionId,
   submissions,
   tutorHint,
-  tutorHintSubmissionId
+  tutorHintSubmissionId,
+  tutorMessages,
+  tutorMessagesSubmissionId
 }: ResultsPanelProps) {
   const currentSubmissionId = result?.submissionId ?? "";
   const currentHint = currentSubmissionId === tutorHintSubmissionId ? tutorHint : null;
   const historyHint = selectedSubmissionId === tutorHintSubmissionId ? tutorHint : null;
+  const currentMessages = currentSubmissionId === tutorMessagesSubmissionId ? tutorMessages : [];
+  const historyMessages = selectedSubmissionId === tutorMessagesSubmissionId ? tutorMessages : [];
 
   return (
     <section className={`results ${resultsTone}`}>
@@ -103,7 +115,11 @@ export function ResultsPanel({
             <TutorHintCard
               hint={currentHint}
               isLoading={isLoadingTutorHint && currentSubmissionId === tutorHintSubmissionId}
+              isLoadingMessages={isLoadingTutorMessages && currentSubmissionId === tutorMessagesSubmissionId}
+              isSendingMessage={isSendingTutorMessage && currentSubmissionId === tutorMessagesSubmissionId}
+              messages={currentMessages}
               onRequest={() => onRequestTutorHint(currentSubmissionId)}
+              onSendMessage={(message) => onSendTutorMessage(currentSubmissionId, message)}
               status={result.status}
               submissionId={currentSubmissionId}
             />
@@ -171,7 +187,11 @@ export function ResultsPanel({
                   <TutorHintCard
                     hint={historyHint}
                     isLoading={isLoadingTutorHint && selectedSubmission.id === tutorHintSubmissionId}
+                    isLoadingMessages={isLoadingTutorMessages && selectedSubmission.id === tutorMessagesSubmissionId}
+                    isSendingMessage={isSendingTutorMessage && selectedSubmission.id === tutorMessagesSubmissionId}
+                    messages={historyMessages}
                     onRequest={() => onRequestTutorHint(selectedSubmission.id)}
+                    onSendMessage={(message) => onSendTutorMessage(selectedSubmission.id, message)}
                     status={selectedSubmission.status}
                     submissionId={selectedSubmission.id}
                   />
