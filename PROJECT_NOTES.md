@@ -6,6 +6,7 @@ This is the living handoff file for HackerPrank. Future chats should read this f
 
 Agentic development docs:
 
+- `docs/PRODUCT_PLAN.md` - product north star, end-state feature plan, iteration roadmap, and near-term PR backlog.
 - `AGENTS.md` - repo-scoped entry point so agent instructions apply to the full repository.
 - `docs/agentic/AGENTS.md` - operating instructions for coding agents.
 - `docs/agentic/SKILLS.md` - repeatable project workflows for agents.
@@ -20,6 +21,8 @@ Agent memory rule:
 HackerPrank is a local LeetCode/HackerRank-style coding practice platform.
 
 The long-term goal is an agentic tutor that can generate original interview-style coding problems on demand, including statements, starter code, reference solutions, and test cases. The user wants this to be a learning project, especially for staying sharp with Spring Boot while still building a useful frontend.
+
+The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended next implementation branch is `codex/openai-tutor-hints`.
 
 ## Current Stack
 
@@ -62,6 +65,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Let invalid generated-problem fixtures omit top-level sections so validator contract errors are asserted
 - Current session - Add a one-shot OpenAI repair loop before deterministic fallback when validation fails
 - Current session - Add deterministic tutor hints for failed submissions, exposed through backend API and frontend result/history panels
+- Current session - Add a product plan and iteration roadmap for the agentic interview-practice end state
 - Current session - Add opt-in OpenAI-backed tutor hints with deterministic fallback and hidden-test privacy guards
 - Current session - Add persisted submission-scoped tutor follow-up chat with deterministic fallback and the same hidden-test privacy boundary
 
@@ -644,6 +648,8 @@ PostgreSQL + Flyway + JDBC persistence:
 - No rate limiting or abuse controls.
 
 ## Recommended Next Milestones
+
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/generated-draft-quality-panel`.
 
 1. Add a richer generated-draft quality panel.
 2. Add generation variant controls and deeper prompt behavior.
