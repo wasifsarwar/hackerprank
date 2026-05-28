@@ -88,6 +88,40 @@ class ProblemControllerTests {
     }
 
     @Test
+    void preservesGeneratorControlsInDraftMetadata() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "topic": "arrays",
+                      "difficulty": "Medium",
+                      "targetConcepts": ["two pointers", "prefix sums"],
+                      "constraintsNotes": "Include at least one boundary-heavy case.",
+                      "interviewStyle": "Edge-case heavy"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
+            .andReturn();
+
+        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode parameters = objectMapper.readTree(
+            body.get("generationMetadata").get("parametersJson").asText()
+        );
+
+        assertEquals("arrays", parameters.get("topic").asText());
+        assertEquals("Medium", parameters.get("difficulty").asText());
+        assertEquals("two pointers", parameters.get("targetConcepts").get(0).asText());
+        assertEquals("prefix sums", parameters.get("targetConcepts").get(1).asText());
+        assertEquals("Include at least one boundary-heavy case.", parameters.get("constraintsNotes").asText());
+        assertEquals("Edge-case heavy", parameters.get("interviewStyle").asText());
+
+        ProblemDraft persistedDraft = draftRepository.findById(body.get("id").asText()).orElseThrow();
+        JsonNode persistedParameters = objectMapper.readTree(persistedDraft.getGenerationMetadata().parametersJson());
+        assertEquals("Edge-case heavy", persistedParameters.get("interviewStyle").asText());
+    }
+
+    @Test
     void publishesDraftAndRemovesItFromDraftStore() throws Exception {
         MvcResult draftResult = mockMvc.perform(post("/api/problems/drafts")
                 .contentType(MediaType.APPLICATION_JSON)
