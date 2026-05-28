@@ -14,8 +14,9 @@ Steps:
 4. Read the relevant workflow in this file.
 5. Run `git status --short --branch`.
 6. Run `git log -5 --oneline`.
-7. Identify the current milestone, latest commit, and any dirty worktree changes.
-8. Summarize only the context needed for the next action.
+7. For feature work, create or switch to a `codex/<short-feature-name>` branch from `main` before editing.
+8. Identify the current milestone, latest commit, and any dirty worktree changes.
+9. Summarize only the context needed for the next action.
 
 Done when:
 
@@ -158,8 +159,8 @@ Steps:
 2. Confirm the latest commits with `git log -5 --oneline`.
 3. Make sure `PROJECT_NOTES.md` reflects the latest implementation state.
 4. Make sure the next recommended task is written down.
-5. Commit final changes on `main` when appropriate for the project flow.
-6. In the final response, mention the verification performed and the latest commit hash.
+5. Commit final changes on the feature branch.
+6. In the final response, mention the branch, verification performed, and latest commit hash.
 
 Done when:
 
