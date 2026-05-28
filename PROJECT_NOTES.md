@@ -24,6 +24,8 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 
 - Frontend: React, TypeScript, Vite, Monaco editor
 - Backend: Spring Boot 3.4.6, Java 21 target
+- Persistence: PostgreSQL 16, Flyway migrations, Spring JDBC, HikariCP
+- Backend tests: H2 in PostgreSQL compatibility mode
 - Runner: Python and Java submissions executed through a sandbox abstraction
 - Default sandbox: Docker CLI, currently backed locally by Colima
 - Repository: Git repo at `/Users/wasifsiddique/Desktop/hackerprank`
@@ -38,7 +40,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - `0e44f06` - Add project handoff notes
 - `956d2c6` - Add agent workflow docs
 - `c5dc1bb` - Strengthen agent handoff rules
-- Current session - Add generated problem draft flow
+- Current session - Add database-backed persistence and queryable submissions
 
 ## Current Application Shape
 
@@ -68,7 +70,7 @@ Important files:
 Current frontend limitation:
 
 - The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
-- Draft preview is in-memory only because backend drafts are in-memory only.
+- Submission history and stored result detail APIs exist on the backend, but the frontend does not have a history screen yet.
 
 ### Backend
 
@@ -85,16 +87,18 @@ Important packages:
 Important files:
 
 - `ProblemController.java` - problem list/detail/generate endpoints
-- `ProblemRepository.java` - in-memory problem store
+- `ProblemRepository.java` - JDBC problem repository with optimized summary projections
 - `ProblemDraft.java` - private generated draft model with reference solution
-- `ProblemDraftRepository.java` - in-memory generated draft store
+- `ProblemDraftRepository.java` - JDBC generated draft store
 - `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
 - `ProblemGeneratorService.java` - deterministic generated-problem templates and validation
 - `SubmissionController.java` - submission endpoint
+- `SubmissionRepository.java` - JDBC submission and test-result persistence
 - `SubmissionService.java` - prepares code, runs test cases, computes status
 - `DockerSandboxRunner.java` - Docker-based sandbox implementation
 - `LocalSandboxRunner.java` - local process runner for tests/dev
-- `application.properties` - default runner config
+- `application.properties` - default database, Flyway, pool, and runner config
+- `db/migration/V1__initial_persistence.sql` - normalized persistence schema and indexes
 
 ## API Surface
 
@@ -123,7 +127,7 @@ Returns a validated `PublicProblemDraft`.
 
 Current behavior:
 
-- Creates an in-memory draft, not a public problem.
+- Creates a database-backed draft, not a public problem.
 - Validates the generated draft by running its private Python reference solution through `SubmissionService`.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, and `problem`.
 - Public draft responses do not expose hidden test cases or reference solutions.
@@ -134,7 +138,7 @@ Returns a public draft preview if the draft still exists.
 
 `POST /api/problems/drafts/{id}/publish`
 
-Moves a draft into the public in-memory problem repository and deletes the draft.
+Marks the draft problem as `PUBLISHED` and removes only the draft metadata.
 
 `DELETE /api/problems/drafts/{id}`
 
@@ -156,7 +160,7 @@ Returns a generated `PublicProblem`.
 Current behavior:
 
 - Kept as a compatibility shortcut.
-- Internally creates a validated draft, publishes it immediately, then deletes the draft.
+- Internally creates a validated draft, publishes it immediately, then removes draft metadata.
 - Defaults to topic `arrays` and difficulty `Easy` if omitted.
 - Accepts difficulty `Easy`, `Medium`, or `Hard`.
 - Routes topic text to deterministic templates:
@@ -194,6 +198,24 @@ Statuses:
 - `COMPILE_ERROR`
 - `TIME_LIMIT_EXCEEDED`
 
+Run responses now also include:
+
+- `submissionId`
+- `createdAt`
+
+`GET /api/submissions`
+
+Optional query params:
+
+- `problemId`
+- `limit` (bounded to `1..100`; default `25`)
+
+Returns recent `SubmissionSummary` rows without loading source code or per-test output.
+
+`GET /api/submissions/{id}`
+
+Returns a persisted `SubmissionDetail` with code, compile output, and per-test results.
+
 ## Problem Model
 
 `Problem` includes:
@@ -229,7 +251,33 @@ Seed problems:
 - `add-a-pair`
 - `most-frequent-word`
 
-Generated drafts and generated problems are currently stored in memory only. They disappear when the backend restarts.
+Problems, generated drafts, private reference solutions, validation metadata, submissions, and submission test results are stored in PostgreSQL. Published generated problems and submitted runs survive backend restarts.
+
+## Persistence And Query Notes
+
+The first persistence implementation intentionally uses Spring JDBC rather than JPA so the SQL shape stays visible while the data model is still small and educational.
+
+Tables are normalized around the main read/write paths:
+
+- `problems`
+- `problem_tags`
+- `problem_constraints`
+- `problem_examples`
+- `problem_test_cases`
+- `problem_starter_code`
+- `problem_private_artifacts`
+- `problem_drafts`
+- `submissions`
+- `submission_test_results`
+
+Performance choices made so far:
+
+- Problem list uses `ProblemRepository.findAllSummaries()` and does not hydrate descriptions, examples, test cases, or starter code.
+- Problem list tags are loaded with one batched `IN` query, not one query per problem.
+- Submission list endpoints return summaries and avoid loading code or per-test output.
+- Submission detail loads per-test results only for one submission.
+- Indexes cover problem listing/filtering, tags, hidden-test lookup, draft lookup, recent submissions, per-problem submissions, status/language submission filters, and submission test-result lookup.
+- HikariCP pool defaults are configurable through `HACKERPRANK_DATABASE_*` environment variables.
 
 ## Runner And Sandbox Notes
 
@@ -275,9 +323,21 @@ docker pull python:3.12-alpine
 docker pull eclipse-temurin:21-jdk-alpine
 ```
 
+Database startup:
+
+```sh
+docker compose up -d postgres
+```
+
+If the local Docker CLI does not have Compose v2, use the fallback command in `README.md`. On 2026-05-27, this machine's `docker` binary did not expose `docker compose`; a real PostgreSQL smoke test was run with a temporary `postgres:16-alpine` container on port `55432`.
+
 The repo has `.java-version` set to `21`, and Maven targets Java 21 through `backend/pom.xml`.
 
 Common local commands:
+
+```sh
+docker compose up -d postgres
+```
 
 ```sh
 cd backend
@@ -383,6 +443,15 @@ Expected:
 
 - No output
 
+Real PostgreSQL smoke result from 2026-05-27:
+
+- Flyway migration applied successfully to PostgreSQL 16.
+- Seed problem summaries loaded from PostgreSQL.
+- A generated draft stayed hidden until publish.
+- Published generated problem survived a backend restart.
+- A submission returned `submissionId` and `createdAt`.
+- The same submission detail was fetchable after backend restart with all 4 test results.
+
 ## Browser Automation Note
 
 The in-app browser automation connector is currently available.
@@ -430,17 +499,21 @@ Deterministic generator first:
 - Lets us test problem creation without spending tokens or debugging LLM variability.
 - Provides a clear service boundary for adding OpenAI generation later.
 
+PostgreSQL + Flyway + JDBC persistence:
+
+- PostgreSQL matches the likely production database direction better than an embedded-only store.
+- Flyway gives explicit, reviewable schema history.
+- Spring JDBC keeps query shape transparent while the user learns Spring persistence and while performance matters are still easy to reason about.
+- Read projections are preferred for list endpoints so large text/code/test-output fields stay off hot paths.
+
 ## Known Limitations
 
-- Problem storage is in memory only.
-- Generated drafts and generated problems disappear on backend restart.
 - Generated-problem templates are deterministic and limited.
 - Generator controls only cover topic and difficulty.
 - No user accounts or sessions.
-- No submission history.
-- No database.
+- Submission history exists as backend APIs, but not yet in the frontend.
 - No worker queue.
-- No persisted audit trail of generated problem prompts, reference solutions, or validation results.
+- No full generated-prompt/model audit trail yet beyond topic, validation status, and reference solution storage.
 - Output matching only trims trailing whitespace.
 - Docker sandbox is local-dev grade, not production hardened.
 - No rate limiting or abuse controls.
@@ -448,15 +521,14 @@ Deterministic generator first:
 
 ## Recommended Next Milestones
 
-1. Add persistence for problems, drafts, reference solutions, and submissions.
+1. Build the frontend submission history and result detail views on top of the new backend APIs.
 2. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
 3. Define a strict JSON schema for generated problem drafts.
-4. Store reference solutions separately from public problem data in persistent storage.
+4. Store prompt text, model id, generation parameters, and validation diagnostics.
 5. Add Java reference-solution validation in addition to Python.
 6. Add richer generator controls for concepts, constraints, and interview style.
-7. Add submission history and result detail pages.
-8. Move execution to a worker queue.
-9. Harden sandboxing before any remote or multi-user deployment.
+7. Move execution to a worker queue.
+8. Harden sandboxing before any remote or multi-user deployment.
 
 ## Future OpenAI Generator Notes
 

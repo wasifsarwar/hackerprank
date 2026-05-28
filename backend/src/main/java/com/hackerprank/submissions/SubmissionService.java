@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -25,15 +26,18 @@ public class SubmissionService {
 
     private final ProblemRepository problemRepository;
     private final SandboxRunner sandboxRunner;
+    private final SubmissionRepository submissionRepository;
     private final Path workspaceRoot;
 
     public SubmissionService(
         ProblemRepository problemRepository,
         SandboxRunner sandboxRunner,
+        SubmissionRepository submissionRepository,
         @Value("${hackerprank.runner.workspace-root:.hackerprank-submissions}") String workspaceRoot
     ) {
         this.problemRepository = problemRepository;
         this.sandboxRunner = sandboxRunner;
+        this.submissionRepository = submissionRepository;
         this.workspaceRoot = Paths.get(workspaceRoot).toAbsolutePath().normalize();
     }
 
@@ -41,7 +45,22 @@ public class SubmissionService {
         Problem problem = problemRepository.findById(request.getProblemId())
             .orElseThrow(() -> new IllegalArgumentException("Problem not found: " + request.getProblemId()));
 
-        return run(problem, request.getLanguage(), request.getCode(), request.isRunHiddenTests());
+        SubmissionResult result = run(problem, request.getLanguage(), request.getCode(), request.isRunHiddenTests());
+        return submissionRepository.save(
+            problem,
+            normalizeLanguage(request.getLanguage()),
+            request.getCode(),
+            request.isRunHiddenTests(),
+            result
+        );
+    }
+
+    public List<SubmissionSummary> findRecent(String problemId, Integer limit) {
+        return submissionRepository.findRecent(problemId, limit);
+    }
+
+    public Optional<SubmissionDetail> findById(String id) {
+        return submissionRepository.findById(id);
     }
 
     public SubmissionResult run(Problem problem, String requestedLanguage, String code, boolean runHiddenTests) {

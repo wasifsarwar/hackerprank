@@ -37,6 +37,7 @@ Keep the work educational. When useful, explain why a change is being made, name
 
 - Frontend: React, TypeScript, Vite, Monaco editor
 - Backend: Spring Boot 3.4.6, Java 21
+- Persistence: PostgreSQL, Flyway, Spring JDBC, HikariCP
 - Runner: Docker by default, with a local runner for tests/dev
 - Local Docker runtime: Colima with the Docker CLI
 - Supported submission languages: Python and Java
@@ -95,6 +96,7 @@ npm run dev
 Backend:
 
 ```sh
+docker compose up -d postgres
 cd backend
 mvn spring-boot:run
 ```

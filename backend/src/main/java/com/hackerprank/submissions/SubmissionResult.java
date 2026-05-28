@@ -1,8 +1,11 @@
 package com.hackerprank.submissions;
 
+import java.time.Instant;
 import java.util.List;
 
 public class SubmissionResult {
+    private final String submissionId;
+    private final Instant createdAt;
     private final String status;
     private final int passedCount;
     private final int totalCount;
@@ -16,11 +19,45 @@ public class SubmissionResult {
         String compileOutput,
         List<TestCaseResult> results
     ) {
+        this(null, null, status, passedCount, totalCount, compileOutput, results);
+    }
+
+    public SubmissionResult(
+        String submissionId,
+        Instant createdAt,
+        String status,
+        int passedCount,
+        int totalCount,
+        String compileOutput,
+        List<TestCaseResult> results
+    ) {
+        this.submissionId = submissionId;
+        this.createdAt = createdAt;
         this.status = status;
         this.passedCount = passedCount;
         this.totalCount = totalCount;
         this.compileOutput = compileOutput;
         this.results = results;
+    }
+
+    public SubmissionResult withPersistence(String nextSubmissionId, Instant nextCreatedAt) {
+        return new SubmissionResult(
+            nextSubmissionId,
+            nextCreatedAt,
+            status,
+            passedCount,
+            totalCount,
+            compileOutput,
+            results
+        );
+    }
+
+    public String getSubmissionId() {
+        return submissionId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     public String getStatus() {

@@ -1,7 +1,6 @@
 package com.hackerprank.problems;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,9 +25,7 @@ public class ProblemController {
 
     @GetMapping
     public List<ProblemSummary> listProblems() {
-        return repository.findAll().stream()
-            .map(ProblemSummary::from)
-            .collect(Collectors.toList());
+        return repository.findAllSummaries();
     }
 
     @GetMapping("/{id}")

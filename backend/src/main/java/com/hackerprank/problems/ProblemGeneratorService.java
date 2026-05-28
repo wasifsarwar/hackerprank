@@ -31,8 +31,7 @@ public class ProblemGeneratorService {
 
     public PublicProblem generate(GenerateProblemRequest request) {
         ProblemDraft draft = createDraftEntity(request);
-        problemRepository.save(draft.getProblem());
-        draftRepository.deleteById(draft.getId());
+        draftRepository.publishById(draft.getId());
 
         return PublicProblem.from(draft.getProblem());
     }
@@ -48,8 +47,7 @@ public class ProblemGeneratorService {
     public Optional<PublicProblem> publishDraft(String draftId) {
         return draftRepository.findById(draftId)
             .map(draft -> {
-                problemRepository.save(draft.getProblem());
-                draftRepository.deleteById(draft.getId());
+                draftRepository.publishById(draft.getId());
                 return PublicProblem.from(draft.getProblem());
             });
     }
@@ -340,7 +338,7 @@ public class ProblemGeneratorService {
     private String uniqueId(String base) {
         for (int attempt = 0; attempt < 5; attempt++) {
             String id = base + "-" + UUID.randomUUID().toString().substring(0, 8);
-            if (problemRepository.findById(id).isEmpty() && !draftRepository.existsByProblemId(id)) {
+            if (!problemRepository.existsAnyById(id) && !draftRepository.existsByProblemId(id)) {
                 return id;
             }
         }

@@ -104,9 +104,10 @@ Steps:
 
 1. Identify what must persist: problems, generated drafts, submissions, test results, reference solutions, and generation metadata.
 2. Keep public problem data separate from private validation data.
-3. Decide whether the next step needs JPA, Flyway/Liquibase, or a lighter file/database approach.
-4. Add migrations and repository tests if using a relational database.
-5. Update `README.md` with setup commands and `PROJECT_NOTES.md` with the storage decision.
+3. Prefer explicit read projections for list views so large text fields, source code, and test output are loaded only on detail views.
+4. Add indexes that match each read path before the data volume makes the query shape painful.
+5. Add Flyway migrations and repository/service tests for relational storage changes.
+6. Update `README.md` with setup commands and `PROJECT_NOTES.md` with the storage decision.
 
 Done when:
 

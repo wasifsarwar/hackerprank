@@ -59,9 +59,30 @@ export interface TestCaseResult {
 }
 
 export interface SubmissionResult {
+  submissionId?: string;
+  createdAt?: string;
   status: "ACCEPTED" | "WRONG_ANSWER" | "RUNTIME_ERROR" | "COMPILE_ERROR" | "TIME_LIMIT_EXCEEDED";
   passedCount: number;
   totalCount: number;
+  compileOutput: string;
+  results: TestCaseResult[];
+}
+
+export interface SubmissionSummary {
+  id: string;
+  problemId: string | null;
+  problemTitle: string;
+  problemDifficulty: Difficulty;
+  language: Language;
+  status: SubmissionResult["status"];
+  passedCount: number;
+  totalCount: number;
+  createdAt: string;
+}
+
+export interface SubmissionDetail extends SubmissionSummary {
+  code: string;
+  runHiddenTests: boolean;
   compileOutput: string;
   results: TestCaseResult[];
 }

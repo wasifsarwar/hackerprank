@@ -1,6 +1,10 @@
 package com.hackerprank.submissions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SubmissionServiceTests {
     @Autowired
     private SubmissionService submissionService;
+
+    @Autowired
+    private SubmissionRepository submissionRepository;
 
     @Test
     void acceptsCorrectPythonSubmission() {
@@ -31,6 +38,14 @@ class SubmissionServiceTests {
         assertEquals("ACCEPTED", result.getStatus());
         assertEquals(4, result.getPassedCount());
         assertEquals(4, result.getTotalCount());
+        assertNotNull(result.getSubmissionId());
+        assertNotNull(result.getCreatedAt());
+
+        Optional<SubmissionDetail> persisted = submissionRepository.findById(result.getSubmissionId());
+        assertTrue(persisted.isPresent());
+        assertEquals("add-a-pair", persisted.get().getProblemId());
+        assertEquals("ACCEPTED", persisted.get().getStatus());
+        assertEquals(4, persisted.get().getResults().size());
     }
 
     @Test
