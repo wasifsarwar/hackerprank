@@ -126,7 +126,34 @@ public class ProblemGeneratorService {
             return Optional.empty();
         } catch (IllegalStateException exception) {
             LOGGER.warn(
-                "OpenAI problem generation did not pass validation; using deterministic fallback: {}",
+                "OpenAI problem generation did not pass validation; attempting one repair: {}",
+                exception.getMessage()
+            );
+            return tryRepairOpenAiDraft(request, exception.getMessage());
+        }
+    }
+
+    private Optional<ValidatedGeneratedProblem> tryRepairOpenAiDraft(
+        NormalizedGenerationRequest request,
+        String validationError
+    ) {
+        try {
+            GeneratedProblemSpec repaired = withUniqueProblemId(openAiProblemGenerator.repair(
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle(),
+                validationError
+            ));
+            GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(repaired);
+            return Optional.of(new ValidatedGeneratedProblem(repaired, validationReport));
+        } catch (OpenAiProblemGenerationException exception) {
+            LOGGER.warn("OpenAI problem repair failed; using deterministic fallback", exception);
+            return Optional.empty();
+        } catch (IllegalStateException exception) {
+            LOGGER.warn(
+                "OpenAI problem repair did not pass validation; using deterministic fallback: {}",
                 exception.getMessage()
             );
             return Optional.empty();

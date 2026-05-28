@@ -136,11 +136,33 @@ class OpenAiProblemGenerator {
         String constraintsNotes,
         String interviewStyle
     ) {
+        return generate(topic, difficulty, targetConcepts, constraintsNotes, interviewStyle, "");
+    }
+
+    GeneratedProblemSpec repair(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle,
+        String validationError
+    ) {
+        return generate(topic, difficulty, targetConcepts, constraintsNotes, interviewStyle, validationError);
+    }
+
+    private GeneratedProblemSpec generate(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle,
+        String validationError
+    ) {
         if (!isConfigured()) {
             throw new OpenAiProblemGenerationException("OpenAI generation requested without OPENAI_API_KEY");
         }
 
-        String userPrompt = userPrompt(topic, difficulty, targetConcepts, constraintsNotes, interviewStyle);
+        String userPrompt = userPrompt(topic, difficulty, targetConcepts, constraintsNotes, interviewStyle, validationError);
         try {
             String requestBody = requestBody(userPrompt);
             OpenAiHttpResponse response = transport.post(
@@ -169,7 +191,7 @@ class OpenAiProblemGenerator {
     }
 
     String requestBodyForTest(String topic, String difficulty) {
-        return requestBody(userPrompt(topic, difficulty, List.of(), "", "Classic"));
+        return requestBody(userPrompt(topic, difficulty, List.of(), "", "Classic", ""));
     }
 
     private String requestBody(String userPrompt) {
@@ -199,8 +221,10 @@ class OpenAiProblemGenerator {
         String difficulty,
         List<String> targetConcepts,
         String constraintsNotes,
-        String interviewStyle
+        String interviewStyle,
+        String validationError
     ) {
+        String repairInstructions = repairInstructions(validationError);
         return """
             Create one original interview-style coding problem.
 
@@ -218,12 +242,14 @@ class OpenAiProblemGenerator {
             - Include complete Python and Java reference solutions that pass every test case.
             - Keep the Java reference solution and starter code in a public class named Main.
             - Make the intended technique clear enough for a tutor to explain later.
+            %s
             """.formatted(
                 topic,
                 difficulty,
                 formatConcepts(targetConcepts),
                 textOrDefault(constraintsNotes, "none"),
-                textOrDefault(interviewStyle, "Classic")
+                textOrDefault(interviewStyle, "Classic"),
+                repairInstructions
             );
     }
 
@@ -376,6 +402,20 @@ class OpenAiProblemGenerator {
         }
 
         return String.join(", ", targetConcepts);
+    }
+
+    private String repairInstructions(String validationError) {
+        if (validationError == null || validationError.isBlank()) {
+            return "";
+        }
+
+        return """
+
+            Repair context:
+            - A previous draft failed validation with this error: %s
+            - Return a complete replacement draft that fixes the validation failure.
+            - Do not explain the repair. Return only the structured JSON required by the schema.
+            """.formatted(validationError);
     }
 
     private <T> List<T> listOrEmpty(List<T> values) {
