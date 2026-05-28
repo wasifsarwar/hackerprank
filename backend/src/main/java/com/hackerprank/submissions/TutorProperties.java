@@ -19,6 +19,17 @@ class TutorProperties {
     }
 
     boolean prefersOpenAi() {
-        return "openai".equals(provider == null ? "" : provider.toLowerCase(Locale.ROOT));
+        return "openai".equals(normalizedProvider());
+    }
+
+    boolean prefersAnthropic() {
+        return "anthropic".equals(normalizedProvider());
+    }
+
+    private String normalizedProvider() {
+        if (provider == null || provider.isBlank()) {
+            return "deterministic";
+        }
+        return provider.trim().toLowerCase(Locale.ROOT);
     }
 }

@@ -216,6 +216,7 @@ button:disabled {
 .workspace {
   display: grid;
   grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 1.08fr);
+  align-items: start;
   gap: 0;
   min-width: 0;
 }
@@ -223,8 +224,7 @@ button:disabled {
 .statement,
 .coding-panel {
   min-width: 0;
-  height: 100vh;
-  overflow: auto;
+  min-height: 100vh;
 }
 
 .statement {
@@ -449,7 +449,8 @@ pre {
 
 .coding-panel {
   display: grid;
-  grid-template-rows: auto minmax(280px, 1fr) minmax(230px, 0.78fr);
+  grid-template-rows: auto minmax(420px, 52vh) auto;
+  align-content: start;
   background: #e9ece4;
 }
 
@@ -520,6 +521,7 @@ pre {
   width: 100%;
   min-width: 0;
   height: 100%;
+  min-height: 420px;
   background: #101917;
 }
 
@@ -542,7 +544,6 @@ pre {
 }
 
 .results {
-  overflow: auto;
   padding: 16px;
   border-top: 1px solid #d1d8cc;
   background: #f8faf5;
@@ -929,11 +930,15 @@ pre {
 
   .statement,
   .coding-panel {
-    height: auto;
+    min-height: auto;
   }
 
   .coding-panel {
     grid-template-rows: auto 460px auto;
+  }
+
+  .code-editor-shell {
+    min-height: 460px;
   }
 }
 
