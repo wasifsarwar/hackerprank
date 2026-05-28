@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.hackerprank.anthropic.AnthropicHttpResponse;
+import com.hackerprank.anthropic.AnthropicTransport;
 import com.hackerprank.openai.OpenAiHttpResponse;
 import com.hackerprank.openai.OpenAiTransport;
 
@@ -85,9 +87,9 @@ class TutorHintServiceTests {
         tutorProperties.setProvider("openai");
         OpenAiTutorProperties openAiProperties = new OpenAiTutorProperties();
         openAiProperties.setApiKey("sk-test");
-        StubTransport transport = new StubTransport(responseBody(objectMapper));
+        StubOpenAiTransport transport = new StubOpenAiTransport(openAiResponseBody(objectMapper));
         OpenAiTutorHintGenerator generator = new OpenAiTutorHintGenerator(openAiProperties, objectMapper, transport);
-        TutorHintService service = new TutorHintService(tutorProperties, null, generator);
+        TutorHintService service = new TutorHintService(tutorProperties, null, generator, null);
 
         TutorHintResponse hint = service.createHint(submission(
             "WRONG_ANSWER",
@@ -95,6 +97,27 @@ class TutorHintServiceTests {
         ));
 
         assertEquals("openai", hint.getProvider());
+        assertEquals("nudge", hint.getLevel());
+        assertTrue(hint.getSummary().contains("visible mismatch"));
+    }
+
+    @Test
+    void usesAnthropicTutorWhenConfigured() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        TutorProperties tutorProperties = new TutorProperties();
+        tutorProperties.setProvider("anthropic");
+        AnthropicTutorProperties anthropicProperties = new AnthropicTutorProperties();
+        anthropicProperties.setApiKey("sk-ant-test");
+        StubAnthropicTransport transport = new StubAnthropicTransport(anthropicResponseBody(objectMapper));
+        AnthropicTutorHintGenerator generator = new AnthropicTutorHintGenerator(anthropicProperties, objectMapper, transport);
+        TutorHintService service = new TutorHintService(tutorProperties, null, null, generator);
+
+        TutorHintResponse hint = service.createHint(submission(
+            "WRONG_ANSWER",
+            List.of(new TestCaseResult("sample one", false, false, "4\n", "5\n", "", false, 0, 25))
+        ));
+
+        assertEquals("anthropic", hint.getProvider());
         assertEquals("nudge", hint.getLevel());
         assertTrue(hint.getSummary().contains("visible mismatch"));
     }
@@ -117,7 +140,7 @@ class TutorHintServiceTests {
         );
     }
 
-    private static String responseBody(ObjectMapper objectMapper) throws Exception {
+    private static String openAiResponseBody(ObjectMapper objectMapper) throws Exception {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("level", "nudge");
         payload.put("summary", "The visible mismatch points at one branch of your logic.");
@@ -136,16 +159,54 @@ class TutorHintServiceTests {
         return objectMapper.writeValueAsString(response);
     }
 
-    private static class StubTransport implements OpenAiTransport {
+    private static String anthropicResponseBody(ObjectMapper objectMapper) throws Exception {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("level", "nudge");
+        payload.put("summary", "The visible mismatch points at one branch of your logic.");
+        payload.putArray("hints").add("Trace the sample by hand and compare state after each token.");
+        payload.put("nextStep", "Make the visible sample pass before trying hidden tests again.");
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("type", "message");
+        response.put("role", "assistant");
+        response.put("model", "claude-sonnet-4-6");
+        response.put("stop_reason", "end_turn");
+        ArrayNode content = response.putArray("content");
+        ObjectNode text = content.addObject();
+        text.put("type", "text");
+        text.put("text", objectMapper.writeValueAsString(payload));
+        return objectMapper.writeValueAsString(response);
+    }
+
+    private static class StubOpenAiTransport implements OpenAiTransport {
         private final String responseBody;
 
-        StubTransport(String responseBody) {
+        StubOpenAiTransport(String responseBody) {
             this.responseBody = responseBody;
         }
 
         @Override
         public OpenAiHttpResponse post(URI uri, String apiKey, String requestBody, Duration timeout) {
             return new OpenAiHttpResponse(200, responseBody);
+        }
+    }
+
+    private static class StubAnthropicTransport implements AnthropicTransport {
+        private final String responseBody;
+
+        StubAnthropicTransport(String responseBody) {
+            this.responseBody = responseBody;
+        }
+
+        @Override
+        public AnthropicHttpResponse post(
+            URI uri,
+            String apiKey,
+            String anthropicVersion,
+            String requestBody,
+            Duration timeout
+        ) {
+            return new AnthropicHttpResponse(200, responseBody);
         }
     }
 }

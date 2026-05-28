@@ -15,9 +15,9 @@ For coding-agent operating instructions and repeatable workflows, start with the
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
-Failed submissions can request a focused tutor hint from the saved run and ask short submission-scoped follow-up questions. The default tutor implementation is deterministic and intentionally nudge-oriented: visible sample failures can mention visible expected vs actual output, while hidden-only failures stay generic. OpenAI-backed tutor hints and follow-ups can be enabled behind the same API with a strict safe-context boundary.
+Failed submissions can request a focused tutor hint from the saved run and ask short submission-scoped follow-up questions. The default tutor implementation is deterministic and intentionally nudge-oriented: visible sample failures can mention visible expected vs actual output, while hidden-only failures stay generic. OpenAI-backed or Anthropic-backed tutor hints and follow-ups can be enabled behind the same API with a strict safe-context boundary.
 
-The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. The OpenAI-backed generator uses those controls in the prompt, while deterministic fallback templates keep using topic and difficulty for selection and preserve the richer controls in draft generation metadata.
+The generator panel captures topic, difficulty, target concepts, constraints/notes, and interview style. AI-backed generators use those controls in the prompt, while deterministic fallback templates keep using topic and difficulty for selection and preserve the richer controls in draft generation metadata.
 
 Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
 
@@ -104,6 +104,23 @@ export HACKERPRANK_OPENAI_MAX_OUTPUT_TOKENS=6000
 
 The OpenAI path uses the Responses API with structured JSON output, then passes the generated draft through the same Python/Java reference-solution validator before persistence. If a schema-valid draft fails validation, the backend attempts one repair call with the validation error before falling back. If OpenAI is disabled, missing `OPENAI_API_KEY`, generation fails, or repair fails, the backend falls back to deterministic templates.
 
+Anthropic-backed Claude generation is also opt-in and uses the same generated-problem contract, validator, one-shot repair loop, and deterministic fallback:
+
+```sh
+export HACKERPRANK_GENERATOR_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=...
+```
+
+Optional Anthropic generator settings:
+
+```sh
+export HACKERPRANK_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
+export HACKERPRANK_ANTHROPIC_VERSION=2023-06-01
+export HACKERPRANK_ANTHROPIC_TIMEOUT_SECONDS=45
+export HACKERPRANK_ANTHROPIC_MAX_OUTPUT_TOKENS=6000
+```
+
 OpenAI-backed tutor hints are also opt-in. They reuse `OPENAI_API_KEY`, but require the tutor provider flag so local development stays deterministic by default:
 
 ```sh
@@ -121,7 +138,25 @@ export HACKERPRANK_TUTOR_OPENAI_MAX_OUTPUT_TOKENS=900
 export HACKERPRANK_TUTOR_OPENAI_PROMPT_VERSION=openai-tutor-v1
 ```
 
-The tutor sends only public problem data, user code, compile output, visible failure details, recent tutor messages, and hidden-test counts. Hidden test names, inputs, expected outputs, actual outputs, and stderr stay server-side and are never placed in the OpenAI tutor request. If the OpenAI call fails or returns an unusable hint or reply, the deterministic tutor response is used instead.
+Anthropic-backed Claude tutor hints and follow-up chat use the same safe context and fallback behavior:
+
+```sh
+export HACKERPRANK_TUTOR_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=...
+```
+
+Optional Anthropic tutor settings:
+
+```sh
+export HACKERPRANK_TUTOR_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_TUTOR_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
+export HACKERPRANK_TUTOR_ANTHROPIC_VERSION=2023-06-01
+export HACKERPRANK_TUTOR_ANTHROPIC_TIMEOUT_SECONDS=30
+export HACKERPRANK_TUTOR_ANTHROPIC_MAX_OUTPUT_TOKENS=900
+export HACKERPRANK_TUTOR_ANTHROPIC_PROMPT_VERSION=anthropic-tutor-v1
+```
+
+The tutor sends only public problem data, user code, compile output, visible failure details, recent tutor messages, and hidden-test counts. Hidden test names, inputs, expected outputs, actual outputs, and stderr stay server-side and are never placed in OpenAI or Anthropic tutor requests. If the model call fails or returns an unusable hint or reply, the deterministic tutor response is used instead.
 
 Generated-problem eval fixtures live in `backend/src/test/resources/generated-problems/`. Add `valid-*.json` and `invalid-*.json` fixtures there when changing prompt versions, mapping, or validation rules so the backend test suite automatically captures generation quality regressions.
 

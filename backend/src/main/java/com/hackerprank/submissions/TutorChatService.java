@@ -13,17 +13,20 @@ class TutorChatService {
     private final TutorSubmissionContextFactory contextFactory;
     private final TutorMessageRepository messageRepository;
     private final OpenAiTutorChatGenerator openAiTutorChatGenerator;
+    private final AnthropicTutorChatGenerator anthropicTutorChatGenerator;
 
     TutorChatService(
         TutorProperties properties,
         TutorSubmissionContextFactory contextFactory,
         TutorMessageRepository messageRepository,
-        OpenAiTutorChatGenerator openAiTutorChatGenerator
+        OpenAiTutorChatGenerator openAiTutorChatGenerator,
+        AnthropicTutorChatGenerator anthropicTutorChatGenerator
     ) {
         this.properties = properties;
         this.contextFactory = contextFactory;
         this.messageRepository = messageRepository;
         this.openAiTutorChatGenerator = openAiTutorChatGenerator;
+        this.anthropicTutorChatGenerator = anthropicTutorChatGenerator;
     }
 
     List<TutorMessage> findMessages(String submissionId) {
@@ -54,6 +57,14 @@ class TutorChatService {
             }
         }
 
+        if (shouldUseAnthropic(submission)) {
+            try {
+                return anthropicTutorChatGenerator.createReply(contextFactory.create(submission), recentMessages);
+            } catch (AnthropicTutorException exception) {
+                return deterministicReply(submission, userMessage);
+            }
+        }
+
         return deterministicReply(submission, userMessage);
     }
 
@@ -61,6 +72,13 @@ class TutorChatService {
         return properties.prefersOpenAi()
             && openAiTutorChatGenerator != null
             && openAiTutorChatGenerator.isConfigured()
+            && !"ACCEPTED".equals(normalizeStatus(submission.getStatus()));
+    }
+
+    private boolean shouldUseAnthropic(SubmissionDetail submission) {
+        return properties.prefersAnthropic()
+            && anthropicTutorChatGenerator != null
+            && anthropicTutorChatGenerator.isConfigured()
             && !"ACCEPTED".equals(normalizeStatus(submission.getStatus()));
     }
 

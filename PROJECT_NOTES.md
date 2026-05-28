@@ -82,6 +82,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Record first product-discovery decisions in the product plan and handoff notes
 - Current session - Add a public draft quality DTO and frontend QA panel with validation checks, test counts, and repair-used signal
 - Current session - Make local dev CORS origins and Vite API proxy target configurable for parallel branch smoke tests
+- Current session - Add opt-in Anthropic/Claude support for generated problem drafts, tutor hints, and tutor follow-up chat
 
 ## Current Application Shape
 
@@ -99,6 +100,7 @@ The frontend is a Vite React app. It currently provides:
 - Results panel with per-test output
 - Tutor hint panel for failed current runs and saved submission-history details
 - Opt-in OpenAI-backed tutor hints that send only public problem context, user code, compile output, visible failures, and hidden-test counts
+- Opt-in Anthropic/Claude-backed tutor hints with the same safe-context boundary
 - Submission-scoped tutor follow-up chat with persisted user/assistant messages
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
@@ -153,10 +155,13 @@ Important files:
 - `GeneratedProblemValidator.java` - validates generated draft shape and runs Python/Java reference solutions
 - `GenerationMetadata.java` - provider/model/prompt/validation metadata for generated drafts
 - `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
-- `ProblemGeneratorService.java` - generated-problem orchestration, OpenAI opt-in routing, deterministic fallback, and validation
+- `ProblemGeneratorService.java` - generated-problem orchestration, AI-provider opt-in routing, deterministic fallback, and validation
 - `OpenAiProblemGenerator.java` - Responses API request builder, structured JSON schema, response parser, and generated-problem mapper
 - `OpenAiProblemGeneratorProperties.java` - OpenAI model, endpoint, timeout, token, and API key config
 - `com.hackerprank.openai.JdkOpenAiTransport.java` - shared JDK `HttpClient` transport for OpenAI calls
+- `AnthropicProblemGenerator.java` - Anthropic Messages API request builder, JSON response parser, and generated-problem mapper
+- `AnthropicProblemGeneratorProperties.java` - Anthropic model, endpoint, API version, timeout, token, and API key config
+- `com.hackerprank.anthropic.JdkAnthropicTransport.java` - shared JDK `HttpClient` transport for Anthropic calls
 - `GeneratedProblemFixtureValidationTests.java` - fixture-driven generated-problem eval tests for valid drafts and expected contract failures
 - `backend/src/test/resources/generated-problems/` - JSON fixture corpus for generated-problem validation evals
 - `SubmissionController.java` - submission endpoint
@@ -164,8 +169,10 @@ Important files:
 - `SubmissionService.java` - prepares code, runs test cases, computes status
 - `TutorHintService.java` - provider selection, deterministic fallback, and privacy-safe tutor hint generation from persisted submission details
 - `OpenAiTutorHintGenerator.java` - Responses API request builder, structured JSON schema, response parser, and safe tutor hint mapper
+- `AnthropicTutorHintGenerator.java` - Anthropic Messages API request builder, JSON response parser, and safe tutor hint mapper
 - `TutorChatService.java` - persisted submission-scoped tutor follow-up orchestration
 - `OpenAiTutorChatGenerator.java` - Responses API request builder and parser for follow-up tutor replies
+- `AnthropicTutorChatGenerator.java` - Anthropic Messages API request builder and parser for follow-up tutor replies
 - `TutorMessageRepository.java` - JDBC persistence for tutor chat messages
 - `TutorHintContext.java` - safe context model that strips hidden test detail down to counts before model calls
 - `OpenAiTutorProperties.java` - OpenAI tutor model, endpoint, timeout, token, prompt version, and API key config
@@ -212,8 +219,9 @@ Current behavior:
 - Validates both private Python and Java reference solutions through `SubmissionService`.
 - Uses deterministic templates by default.
 - Can use the OpenAI Responses API when `HACKERPRANK_GENERATOR_PROVIDER=openai` and `OPENAI_API_KEY` are configured.
-- Attempts one OpenAI repair when a schema-valid generated draft fails validation, then falls back to deterministic templates if repair also fails.
-- Falls back to deterministic templates if OpenAI is disabled, missing an API key, generation fails, or the returned draft cannot be repaired.
+- Can use the Anthropic Messages API when `HACKERPRANK_GENERATOR_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` are configured.
+- Attempts one provider-specific repair when a schema-valid OpenAI or Anthropic draft fails validation, then falls back to deterministic templates if repair also fails.
+- Falls back to deterministic templates if the selected model provider is disabled, missing an API key, generation fails, or the returned draft cannot be repaired.
 - Preserves requested target concepts, constraints/notes, and interview style in generation metadata parameters JSON.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
@@ -258,7 +266,7 @@ Current behavior:
   - string/map/hash/count -> `First Solo Word`
   - stack/bracket/parentheses -> `Bracket Balance`
 
-When OpenAI generation is enabled, the backend requests structured JSON from the Responses API, maps it into the same `GeneratedProblemSpec`, validates Python and Java reference solutions, then publishes the validated draft. If validation fails, the backend logs the validation failure and uses the deterministic generator instead of surfacing a 500 to the user.
+When OpenAI generation is enabled, the backend requests structured JSON from the Responses API. When Anthropic generation is enabled, the backend asks Claude through the Messages API for JSON matching the same schema. Both providers map into `GeneratedProblemSpec`, validate Python and Java reference solutions, attempt one repair after validation failure, and fall back to deterministic generation instead of surfacing a 500 to the user.
 
 ### Submissions
 
@@ -324,7 +332,7 @@ Request body:
 }
 ```
 
-Stores the user message, creates an assistant reply, persists it, and returns the current submission-scoped tutor conversation. The OpenAI path receives only the same safe context used for tutor hints plus recent tutor messages.
+Stores the user message, creates an assistant reply, persists it, and returns the current submission-scoped tutor conversation. AI-backed paths receive only the same safe context used for tutor hints plus recent tutor messages.
 
 ## Problem Model
 
@@ -510,7 +518,7 @@ mvn test
 
 Last known result:
 
-- 10 tests passed
+- 42 tests passed
 
 Frontend build:
 
@@ -636,11 +644,11 @@ Docker/Colima execution:
 - Gives a reasonable local sandbox story.
 - Keeps the same `docker` CLI contract if the runtime changes later.
 
-Deterministic generator first, OpenAI second:
+Deterministic generator first, hosted model providers second:
 
 - Gives us a stable endpoint and validation flow.
 - Lets us test problem creation without spending tokens or debugging LLM variability.
-- Provides a safe fallback when OpenAI is not configured or generation fails validation/parsing.
+- Provides a safe fallback when OpenAI or Anthropic is not configured or generation fails validation/parsing.
 
 PostgreSQL + Flyway + JDBC persistence:
 
@@ -651,8 +659,8 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Known Limitations
 
-- OpenAI generation is backend-only and opt-in.
-- OpenAI prompt/eval quality still needs ongoing tuning.
+- AI-backed generation is backend-only and opt-in.
+- OpenAI and Anthropic prompt/eval quality still needs ongoing tuning.
 - Tutor chat is submission-scoped, but explicit hint-level controls and solution unlocks are not implemented yet.
 - No user accounts or sessions.
 - Submission history is not user-scoped yet.
@@ -690,6 +698,42 @@ The safe tutor context must not include:
 - hidden actual outputs
 - hidden stderr
 - reference solutions
+
+## Anthropic Provider Notes
+
+Anthropic/Claude is opt-in and uses the direct Messages API. The app currently uses `claude-sonnet-4-6` as the default model for generation and tutoring, with all endpoint, model, version, timeout, and output-token settings overrideable by environment variable.
+
+Generation setup:
+
+```sh
+export HACKERPRANK_GENERATOR_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=...
+```
+
+Tutor setup:
+
+```sh
+export HACKERPRANK_TUTOR_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=...
+```
+
+Important properties:
+
+- `HACKERPRANK_ANTHROPIC_MODEL`
+- `HACKERPRANK_ANTHROPIC_MESSAGES_URL`
+- `HACKERPRANK_ANTHROPIC_VERSION`
+- `HACKERPRANK_ANTHROPIC_MAX_OUTPUT_TOKENS`
+- `HACKERPRANK_TUTOR_ANTHROPIC_MODEL`
+- `HACKERPRANK_TUTOR_ANTHROPIC_MESSAGES_URL`
+- `HACKERPRANK_TUTOR_ANTHROPIC_VERSION`
+- `HACKERPRANK_TUTOR_ANTHROPIC_MAX_OUTPUT_TOKENS`
+
+Provider behavior mirrors the OpenAI path:
+
+- Problem drafts are validated before persistence.
+- Validation failures get one repair attempt.
+- Missing API keys, transport failures, parsing failures, validation failures, or repair failures fall back to deterministic generation or deterministic tutoring.
+- Tutor hints and chat use the same safe context boundary and must never send hidden test details or reference solutions.
 
 ## OpenAI Generator Notes
 

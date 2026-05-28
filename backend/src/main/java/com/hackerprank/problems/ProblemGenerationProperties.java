@@ -22,6 +22,10 @@ class ProblemGenerationProperties {
         return "openai".equals(normalizedProvider());
     }
 
+    boolean useAnthropic() {
+        return "anthropic".equals(normalizedProvider());
+    }
+
     private String normalizedProvider() {
         if (provider == null || provider.isBlank()) {
             return "deterministic";

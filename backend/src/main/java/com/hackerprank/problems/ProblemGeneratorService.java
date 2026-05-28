@@ -25,19 +25,22 @@ public class ProblemGeneratorService {
     private final GeneratedProblemValidator generatedProblemValidator;
     private final ProblemGenerationProperties generationProperties;
     private final OpenAiProblemGenerator openAiProblemGenerator;
+    private final AnthropicProblemGenerator anthropicProblemGenerator;
 
     public ProblemGeneratorService(
         ProblemRepository problemRepository,
         ProblemDraftRepository draftRepository,
         GeneratedProblemValidator generatedProblemValidator,
         ProblemGenerationProperties generationProperties,
-        OpenAiProblemGenerator openAiProblemGenerator
+        OpenAiProblemGenerator openAiProblemGenerator,
+        AnthropicProblemGenerator anthropicProblemGenerator
     ) {
         this.problemRepository = problemRepository;
         this.draftRepository = draftRepository;
         this.generatedProblemValidator = generatedProblemValidator;
         this.generationProperties = generationProperties;
         this.openAiProblemGenerator = openAiProblemGenerator;
+        this.anthropicProblemGenerator = anthropicProblemGenerator;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
@@ -101,6 +104,13 @@ public class ProblemGeneratorService {
             }
         }
 
+        if (generationProperties.useAnthropic()) {
+            Optional<ValidatedGeneratedProblem> generated = tryAnthropicDraft(normalizedRequest);
+            if (generated.isPresent()) {
+                return generated.get();
+            }
+        }
+
         GeneratedProblemSpec deterministic = deterministicDraftFor(normalizedRequest);
         return new ValidatedGeneratedProblem(deterministic, generatedProblemValidator.validate(deterministic));
     }
@@ -154,6 +164,61 @@ public class ProblemGeneratorService {
         } catch (IllegalStateException exception) {
             LOGGER.warn(
                 "OpenAI problem repair did not pass validation; using deterministic fallback: {}",
+                exception.getMessage()
+            );
+            return Optional.empty();
+        }
+    }
+
+    private Optional<ValidatedGeneratedProblem> tryAnthropicDraft(NormalizedGenerationRequest request) {
+        if (!anthropicProblemGenerator.isConfigured()) {
+            LOGGER.info("Anthropic problem generation requested without an API key; using deterministic fallback");
+            return Optional.empty();
+        }
+
+        try {
+            GeneratedProblemSpec generated = withUniqueProblemId(anthropicProblemGenerator.generate(
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle()
+            ));
+            GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
+            return Optional.of(new ValidatedGeneratedProblem(generated, validationReport));
+        } catch (AnthropicProblemGenerationException exception) {
+            LOGGER.warn("Anthropic problem generation failed; using deterministic fallback", exception);
+            return Optional.empty();
+        } catch (IllegalStateException exception) {
+            LOGGER.warn(
+                "Anthropic problem generation did not pass validation; attempting one repair: {}",
+                exception.getMessage()
+            );
+            return tryRepairAnthropicDraft(request, exception.getMessage());
+        }
+    }
+
+    private Optional<ValidatedGeneratedProblem> tryRepairAnthropicDraft(
+        NormalizedGenerationRequest request,
+        String validationError
+    ) {
+        try {
+            GeneratedProblemSpec repaired = withUniqueProblemId(anthropicProblemGenerator.repair(
+                request.topic(),
+                request.difficulty(),
+                request.targetConcepts(),
+                request.constraintsNotes(),
+                request.interviewStyle(),
+                validationError
+            ));
+            GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(repaired);
+            return Optional.of(new ValidatedGeneratedProblem(repaired, validationReport));
+        } catch (AnthropicProblemGenerationException exception) {
+            LOGGER.warn("Anthropic problem repair failed; using deterministic fallback", exception);
+            return Optional.empty();
+        } catch (IllegalStateException exception) {
+            LOGGER.warn(
+                "Anthropic problem repair did not pass validation; using deterministic fallback: {}",
                 exception.getMessage()
             );
             return Optional.empty();

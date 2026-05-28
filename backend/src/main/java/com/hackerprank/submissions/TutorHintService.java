@@ -16,20 +16,23 @@ public class TutorHintService {
     private final TutorProperties properties;
     private final TutorSubmissionContextFactory contextFactory;
     private final OpenAiTutorHintGenerator openAiTutorHintGenerator;
+    private final AnthropicTutorHintGenerator anthropicTutorHintGenerator;
 
     TutorHintService() {
-        this(new TutorProperties(), null, null);
+        this(new TutorProperties(), null, null, null);
     }
 
     @Autowired
     public TutorHintService(
         TutorProperties properties,
         TutorSubmissionContextFactory contextFactory,
-        OpenAiTutorHintGenerator openAiTutorHintGenerator
+        OpenAiTutorHintGenerator openAiTutorHintGenerator,
+        AnthropicTutorHintGenerator anthropicTutorHintGenerator
     ) {
         this.properties = properties;
         this.contextFactory = contextFactory;
         this.openAiTutorHintGenerator = openAiTutorHintGenerator;
+        this.anthropicTutorHintGenerator = anthropicTutorHintGenerator;
     }
 
     public TutorHintResponse createHint(SubmissionDetail submission) {
@@ -41,6 +44,14 @@ public class TutorHintService {
             }
         }
 
+        if (shouldUseAnthropic(submission)) {
+            try {
+                return anthropicTutorHintGenerator.createHint(createContext(submission));
+            } catch (AnthropicTutorException exception) {
+                return createDeterministicHint(submission);
+            }
+        }
+
         return createDeterministicHint(submission);
     }
 
@@ -48,6 +59,13 @@ public class TutorHintService {
         return properties.prefersOpenAi()
             && openAiTutorHintGenerator != null
             && openAiTutorHintGenerator.isConfigured()
+            && !"ACCEPTED".equals(normalizeStatus(submission.getStatus()));
+    }
+
+    private boolean shouldUseAnthropic(SubmissionDetail submission) {
+        return properties.prefersAnthropic()
+            && anthropicTutorHintGenerator != null
+            && anthropicTutorHintGenerator.isConfigured()
             && !"ACCEPTED".equals(normalizeStatus(submission.getStatus()));
     }
 
