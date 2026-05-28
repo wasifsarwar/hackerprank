@@ -119,6 +119,6 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 ## Next Milestones
 
 1. Add an OpenAI-backed generator behind the current draft flow.
-2. Add richer generator controls and stored generation metadata.
+2. Add richer generator controls for concepts, constraints, and interview style.
 3. Add user accounts so submission history can be user-scoped.
 4. Move execution to a worker queue.

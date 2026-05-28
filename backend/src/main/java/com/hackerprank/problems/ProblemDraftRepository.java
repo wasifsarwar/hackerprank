@@ -30,9 +30,10 @@ public class ProblemDraftRepository {
         problemRepository.saveDraftProblem(draft.getProblem());
         problemRepository.savePrivateArtifacts(
             draft.getProblem().getId(),
-            draft.getReferenceSolution(),
+            draft.getReferenceSolutions(),
             draft.getTopic(),
-            draft.getValidationStatus()
+            draft.getValidationStatus(),
+            draft.getGenerationMetadata()
         );
 
         int updated = jdbcTemplate.update(
@@ -118,15 +119,17 @@ public class ProblemDraftRepository {
         String problemId = rs.getString("problem_id");
         Problem problem = problemRepository.findAnyById(problemId)
             .orElseThrow(() -> new IllegalStateException("Draft problem not found: " + problemId));
-        String referenceSolution = problemRepository.findReferenceSolutionByProblemId(problemId).orElse("");
+        GenerationMetadata generationMetadata = problemRepository.findGenerationMetadataByProblemId(problemId)
+            .orElseGet(GenerationMetadata::empty);
 
         return new ProblemDraft(
             rs.getString("id"),
             rs.getString("topic"),
             rs.getString("difficulty"),
             problem,
-            referenceSolution,
+            problemRepository.findReferenceSolutionsByProblemId(problemId),
             rs.getString("validation_status"),
+            generationMetadata,
             instant(rs, "created_at")
         );
     }

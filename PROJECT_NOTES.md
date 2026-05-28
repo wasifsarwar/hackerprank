@@ -50,6 +50,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Move agent workflow docs into `docs/agentic/` and begin componentizing the frontend
 - Current session - Restore a root `AGENTS.md` entry point so agent instructions remain repo-scoped while detailed docs live under `docs/agentic/`
 - Current session - Guard generated draft actions so stale generate, publish, or discard responses cannot overwrite the active problem state
+- Current session - Add a generated-problem contract, generation metadata storage, and Python/Java reference-solution validation
 
 ## Current Application Shape
 
@@ -108,8 +109,11 @@ Important files:
 
 - `ProblemController.java` - problem list/detail/generate endpoints
 - `ProblemRepository.java` - JDBC problem repository with optimized summary projections
-- `ProblemDraft.java` - private generated draft model with reference solution
+- `ProblemDraft.java` - private generated draft model with per-language reference solutions and metadata
 - `ProblemDraftRepository.java` - JDBC generated draft store
+- `GeneratedProblemSpec.java` - strict generated-problem contract used before drafts are persisted
+- `GeneratedProblemValidator.java` - validates generated draft shape and runs Python/Java reference solutions
+- `GenerationMetadata.java` - provider/model/prompt/validation metadata for generated drafts
 - `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
 - `ProblemGeneratorService.java` - deterministic generated-problem templates and validation
 - `SubmissionController.java` - submission endpoint
@@ -119,6 +123,7 @@ Important files:
 - `LocalSandboxRunner.java` - local process runner for tests/dev
 - `application.properties` - default database, Flyway, pool, and runner config
 - `db/migration/V1__initial_persistence.sql` - normalized persistence schema and indexes
+- `db/migration/V2__generation_metadata.sql` - per-language reference solutions and generation audit metadata
 
 ## API Surface
 
@@ -148,9 +153,11 @@ Returns a validated `PublicProblemDraft`.
 Current behavior:
 
 - Creates a database-backed draft, not a public problem.
-- Validates the generated draft by running its private Python reference solution through `SubmissionService`.
-- Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, and `problem`.
-- Public draft responses do not expose hidden test cases or reference solutions.
+- Validates the generated draft schema before persistence.
+- Validates both private Python and Java reference solutions through `SubmissionService`.
+- Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
+- Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
+- Public draft responses do not expose hidden test cases, prompt text, or reference solutions.
 
 `GET /api/problems/drafts/{id}`
 
@@ -566,7 +573,6 @@ PostgreSQL + Flyway + JDBC persistence:
 - No user accounts or sessions.
 - Submission history is not user-scoped yet.
 - No worker queue.
-- No full generated-prompt/model audit trail yet beyond topic, validation status, and reference solution storage.
 - Output matching only trims trailing whitespace.
 - Docker sandbox is local-dev grade, not production hardened.
 - No rate limiting or abuse controls.
@@ -575,13 +581,11 @@ PostgreSQL + Flyway + JDBC persistence:
 ## Recommended Next Milestones
 
 1. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
-2. Define a strict JSON schema for generated problem drafts.
-3. Store prompt text, model id, generation parameters, and validation diagnostics.
-4. Add Java reference-solution validation in addition to Python.
-5. Add richer generator controls for concepts, constraints, and interview style.
-6. Add user accounts and user-scoped submission history.
-7. Move execution to a worker queue.
-8. Harden sandboxing before any remote or multi-user deployment.
+2. Add richer generator controls for concepts, constraints, and interview style.
+3. Render generation metadata and intended technique details in the draft UI.
+4. Add user accounts and user-scoped submission history.
+5. Move execution to a worker queue.
+6. Harden sandboxing before any remote or multi-user deployment.
 
 ## Future OpenAI Generator Notes
 

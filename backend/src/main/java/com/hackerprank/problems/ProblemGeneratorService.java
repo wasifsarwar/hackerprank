@@ -1,8 +1,5 @@
 package com.hackerprank.problems;
 
-import com.hackerprank.submissions.SubmissionResult;
-import com.hackerprank.submissions.SubmissionService;
-
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -17,16 +14,16 @@ import org.springframework.stereotype.Service;
 public class ProblemGeneratorService {
     private final ProblemRepository problemRepository;
     private final ProblemDraftRepository draftRepository;
-    private final SubmissionService submissionService;
+    private final GeneratedProblemValidator generatedProblemValidator;
 
     public ProblemGeneratorService(
         ProblemRepository problemRepository,
         ProblemDraftRepository draftRepository,
-        SubmissionService submissionService
+        GeneratedProblemValidator generatedProblemValidator
     ) {
         this.problemRepository = problemRepository;
         this.draftRepository = draftRepository;
-        this.submissionService = submissionService;
+        this.generatedProblemValidator = generatedProblemValidator;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
@@ -61,23 +58,25 @@ public class ProblemGeneratorService {
     }
 
     private ProblemDraft createDraftEntity(GenerateProblemRequest request) {
-        GeneratedProblemDraft generated = draftFor(request);
-        validateReferenceSolution(generated);
+        GeneratedProblemSpec generated = draftFor(request);
+        GeneratedProblemValidationReport validationReport = generatedProblemValidator.validate(generated);
+        GenerationMetadata generationMetadata = generated.generationMetadata().withValidation(validationReport);
 
         ProblemDraft draft = new ProblemDraft(
             uniqueDraftId(),
             generated.topic(),
             generated.problem().getDifficulty(),
             generated.problem(),
-            generated.referenceSolution(),
-            "VALIDATED",
+            generated.referenceSolutions(),
+            validationReport.status(),
+            generationMetadata,
             Instant.now()
         );
 
         return draftRepository.save(draft);
     }
 
-    private GeneratedProblemDraft draftFor(GenerateProblemRequest request) {
+    private GeneratedProblemSpec draftFor(GenerateProblemRequest request) {
         String topic = normalizeTopic(request == null ? null : request.getTopic());
         String difficulty = normalizeDifficulty(request == null ? null : request.getDifficulty());
 
@@ -92,7 +91,7 @@ public class ProblemGeneratorService {
         return signalPeaksProblem(topic, difficulty);
     }
 
-    private GeneratedProblemDraft signalPeaksProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec signalPeaksProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -147,7 +146,8 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(topic, problem, """
+        Map<String, String> referenceSolutions = new LinkedHashMap<>();
+        referenceSolutions.put("python", """
             import sys
 
             tokens = list(map(int, sys.stdin.read().strip().split()))
@@ -159,9 +159,42 @@ public class ProblemGeneratorService {
                     total += 1
             print(total)
             """);
+        referenceSolutions.put("java", """
+            import java.util.*;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Scanner scanner = new Scanner(System.in);
+                    int n = scanner.hasNextInt() ? scanner.nextInt() : 0;
+                    int[] readings = new int[n];
+                    for (int i = 0; i < n; i++) {
+                        readings[i] = scanner.nextInt();
+                    }
+                    int total = 0;
+                    for (int i = 1; i < readings.length - 1; i++) {
+                        if (readings[i] > readings[i - 1] && readings[i] > readings[i + 1]) {
+                            total++;
+                        }
+                    }
+                    System.out.println(total);
+                }
+            }
+            """);
+
+        return new GeneratedProblemSpec(
+            topic,
+            difficulty,
+            problem,
+            referenceSolutions,
+            GenerationMetadata.deterministic(
+                topic,
+                difficulty,
+                "Single pass array scan comparing each internal reading to its immediate neighbors."
+            )
+        );
     }
 
-    private GeneratedProblemDraft firstSoloWordProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec firstSoloWordProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -216,7 +249,8 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(topic, problem, """
+        Map<String, String> referenceSolutions = new LinkedHashMap<>();
+        referenceSolutions.put("python", """
             import sys
 
             tokens = sys.stdin.read().strip().split()
@@ -232,9 +266,44 @@ public class ProblemGeneratorService {
             else:
                 print("NONE")
             """);
+        referenceSolutions.put("java", """
+            import java.util.*;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Scanner scanner = new Scanner(System.in);
+                    int n = scanner.hasNextInt() ? scanner.nextInt() : 0;
+                    String[] words = new String[n];
+                    Map<String, Integer> counts = new HashMap<>();
+                    for (int i = 0; i < n; i++) {
+                        words[i] = scanner.next();
+                        counts.put(words[i], counts.getOrDefault(words[i], 0) + 1);
+                    }
+                    for (String word : words) {
+                        if (counts.get(word) == 1) {
+                            System.out.println(word);
+                            return;
+                        }
+                    }
+                    System.out.println("NONE");
+                }
+            }
+            """);
+
+        return new GeneratedProblemSpec(
+            topic,
+            difficulty,
+            problem,
+            referenceSolutions,
+            GenerationMetadata.deterministic(
+                topic,
+                difficulty,
+                "Count each word with a hash map, then scan the original order to find the first count of one."
+            )
+        );
     }
 
-    private GeneratedProblemDraft bracketBalanceProblem(String topic, String difficulty) {
+    private GeneratedProblemSpec bracketBalanceProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -284,7 +353,8 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(topic, problem, """
+        Map<String, String> referenceSolutions = new LinkedHashMap<>();
+        referenceSolutions.put("python", """
             import sys
 
             text = sys.stdin.read().strip()
@@ -301,13 +371,42 @@ public class ProblemGeneratorService {
                         break
             print("YES" if ok and not stack else "NO")
             """);
-    }
+        referenceSolutions.put("java", """
+            import java.util.*;
 
-    private void validateReferenceSolution(GeneratedProblemDraft draft) {
-        SubmissionResult result = submissionService.run(draft.problem(), "python", draft.referenceSolution(), true);
-        if (!"ACCEPTED".equals(result.getStatus())) {
-            throw new IllegalStateException("Generated problem failed validation with status " + result.getStatus());
-        }
+            public class Main {
+                public static void main(String[] args) {
+                    Scanner scanner = new Scanner(System.in);
+                    String text = scanner.hasNext() ? scanner.next() : "";
+                    Map<Character, Character> pairs = Map.of(')', '(', ']', '[', '}', '{');
+                    Deque<Character> stack = new ArrayDeque<>();
+                    boolean ok = true;
+                    for (char current : text.toCharArray()) {
+                        if (pairs.containsValue(current)) {
+                            stack.push(current);
+                        } else if (pairs.containsKey(current)) {
+                            if (stack.isEmpty() || !stack.pop().equals(pairs.get(current))) {
+                                ok = false;
+                                break;
+                            }
+                        }
+                    }
+                    System.out.println(ok && stack.isEmpty() ? "YES" : "NO");
+                }
+            }
+            """);
+
+        return new GeneratedProblemSpec(
+            topic,
+            difficulty,
+            problem,
+            referenceSolutions,
+            GenerationMetadata.deterministic(
+                topic,
+                difficulty,
+                "Use a stack of opening brackets and match each closing bracket against the top."
+            )
+        );
     }
 
     private String normalizeTopic(String topic) {
@@ -355,8 +454,5 @@ public class ProblemGeneratorService {
         }
 
         throw new IllegalStateException("Could not allocate a generated draft id");
-    }
-
-    private record GeneratedProblemDraft(String topic, Problem problem, String referenceSolution) {
     }
 }

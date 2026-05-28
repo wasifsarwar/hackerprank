@@ -8,6 +8,7 @@ public class PublicProblemDraft {
     private final String difficulty;
     private final String validationStatus;
     private final Instant createdAt;
+    private final PublicGenerationMetadata generationMetadata;
     private final PublicProblem problem;
 
     public PublicProblemDraft(
@@ -16,6 +17,7 @@ public class PublicProblemDraft {
         String difficulty,
         String validationStatus,
         Instant createdAt,
+        PublicGenerationMetadata generationMetadata,
         PublicProblem problem
     ) {
         this.id = id;
@@ -23,6 +25,7 @@ public class PublicProblemDraft {
         this.difficulty = difficulty;
         this.validationStatus = validationStatus;
         this.createdAt = createdAt;
+        this.generationMetadata = generationMetadata;
         this.problem = problem;
     }
 
@@ -33,6 +36,7 @@ public class PublicProblemDraft {
             draft.getDifficulty(),
             draft.getValidationStatus(),
             draft.getCreatedAt(),
+            PublicGenerationMetadata.from(draft.getGenerationMetadata()),
             PublicProblem.from(draft.getProblem())
         );
     }
@@ -57,8 +61,11 @@ public class PublicProblemDraft {
         return createdAt;
     }
 
+    public PublicGenerationMetadata getGenerationMetadata() {
+        return generationMetadata;
+    }
+
     public PublicProblem getProblem() {
         return problem;
     }
 }
-

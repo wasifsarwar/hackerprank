@@ -30,12 +30,24 @@ export interface GenerateProblemRequest {
   difficulty?: Difficulty;
 }
 
+export interface GenerationMetadata {
+  provider: string;
+  modelId: string;
+  promptVersion: string;
+  parametersJson: string;
+  validationStatus: string;
+  validationErrors: string;
+  validationSummary: string;
+  intendedTechnique: string;
+}
+
 export interface ProblemDraft {
   id: string;
   topic: string;
   difficulty: Difficulty;
   validationStatus: "VALIDATED";
   createdAt: string;
+  generationMetadata: GenerationMetadata;
   problem: Problem;
 }
 
