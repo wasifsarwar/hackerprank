@@ -83,6 +83,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add a public draft quality DTO and frontend QA panel with validation checks, test counts, and repair-used signal
 - Current session - Make local dev CORS origins and Vite API proxy target configurable for parallel branch smoke tests
 - Current session - Add opt-in Anthropic/Claude support for generated problem drafts, tutor hints, and tutor follow-up chat
+- Current session - Restore natural page scrolling by removing desktop-only internal statement/results scroll traps
 
 ## Current Application Shape
 
@@ -132,6 +133,7 @@ Current frontend limitation:
 - Draft previews show safe generation metadata and quality signals, but intentionally omit prompt text, reference solutions, hidden tests, raw validation errors, and raw parameter JSON.
 - Submission history is global per problem because there are no user accounts yet.
 - Async problem, run, history, and draft requests now use request guards so stale responses cannot overwrite the currently selected problem, result, history, or draft state.
+- The main UI now uses document-level vertical scrolling; the editor keeps a stable internal height while statement, QA, results, and history content extend the page naturally.
 
 ### Backend
 
