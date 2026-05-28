@@ -1,14 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import {
   createProblemDraft,
   deleteProblemDraft,
   fetchProblem,
   fetchProblems,
+  fetchSubmissionDetail,
+  fetchSubmissionHistory,
   publishProblemDraft,
   runSubmission
 } from "./api";
-import type { Difficulty, Language, Problem, ProblemDraft, ProblemSummary, SubmissionResult } from "./types";
+import type {
+  Difficulty,
+  Language,
+  Problem,
+  ProblemDraft,
+  ProblemSummary,
+  SubmissionDetail,
+  SubmissionResult,
+  SubmissionSummary,
+  TestCaseResult
+} from "./types";
 
 const languageLabels: Record<Language, string> = {
   python: "Python",
@@ -21,6 +33,20 @@ const editorLanguages: Record<Language, string> = {
 };
 
 const difficultyOptions: Difficulty[] = ["Easy", "Medium", "Hard"];
+type ResultView = "current" | "history";
+
+function formatStatus(status: string) {
+  return status.replace(/_/g, " ");
+}
+
+function formatTimestamp(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
 
 function App() {
   const [problems, setProblems] = useState<ProblemSummary[]>([]);
@@ -32,10 +58,17 @@ function App() {
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
+  const [resultView, setResultView] = useState<ResultView>("current");
+  const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string>("");
+  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetail | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const codeOverrideRef = useRef<string | null>(null);
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
@@ -56,6 +89,9 @@ function App() {
 
     setProblem(null);
     setResult(null);
+    setResultView("current");
+    setSelectedSubmission(null);
+    setSelectedSubmissionId("");
     fetchProblem(selectedId)
       .then((loaded) => {
         setProblem(loaded);
@@ -66,10 +102,47 @@ function App() {
 
   useEffect(() => {
     if (activeProblem) {
-      setCode(activeProblem.starterCode[language]);
+      if (codeOverrideRef.current !== null) {
+        setCode(codeOverrideRef.current);
+        codeOverrideRef.current = null;
+      } else {
+        setCode(activeProblem.starterCode[language]);
+      }
       setResult(null);
     }
   }, [activeProblem?.id, language]);
+
+  useEffect(() => {
+    if (!problem || isDraftPreview) {
+      setSubmissions([]);
+      setSelectedSubmission(null);
+      setSelectedSubmissionId("");
+      return;
+    }
+
+    let isCancelled = false;
+    setIsLoadingHistory(true);
+    fetchSubmissionHistory(problem.id)
+      .then((items) => {
+        if (!isCancelled) {
+          setSubmissions(items);
+        }
+      })
+      .catch((err: Error) => {
+        if (!isCancelled) {
+          setError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoadingHistory(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [problem?.id, isDraftPreview]);
 
   const statusTone = useMemo(() => {
     if (!result) {
@@ -78,6 +151,28 @@ function App() {
 
     return result.status === "ACCEPTED" ? "success" : "danger";
   }, [result]);
+
+  const historyTone = useMemo(() => {
+    if (!selectedSubmission) {
+      return "idle";
+    }
+
+    return selectedSubmission.status === "ACCEPTED" ? "success" : "danger";
+  }, [selectedSubmission]);
+
+  const resultsTone = resultView === "history" ? historyTone : statusTone;
+
+  async function refreshSubmissionHistory(problemId: string) {
+    setIsLoadingHistory(true);
+    try {
+      const items = await fetchSubmissionHistory(problemId);
+      setSubmissions(items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }
 
   async function handleRun(runHiddenTests: boolean) {
     if (!problem || isDraftPreview) {
@@ -96,6 +191,8 @@ function App() {
         runHiddenTests
       });
       setResult(nextResult);
+      setResultView("current");
+      await refreshSubmissionHistory(problem.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -116,6 +213,9 @@ function App() {
         difficulty: generatorDifficulty
       });
       setDraft(nextDraft);
+      setSubmissions([]);
+      setSelectedSubmission(null);
+      setSelectedSubmissionId("");
       setCode(nextDraft.problem.starterCode[language]);
       if (previousDraftId && previousDraftId !== nextDraft.id) {
         deleteProblemDraft(previousDraftId).catch(() => {});
@@ -149,6 +249,8 @@ function App() {
       setProblem(published);
       setSelectedId(published.id);
       setCode(published.starterCode[language]);
+      setResultView("current");
+      await refreshSubmissionHistory(published.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -180,6 +282,70 @@ function App() {
     }
     setDraft(null);
     setSelectedId(id);
+  }
+
+  async function handleSelectSubmission(summary: SubmissionSummary) {
+    setResultView("history");
+    setSelectedSubmissionId(summary.id);
+    setIsLoadingSubmission(true);
+    setError(null);
+
+    try {
+      const detail = await fetchSubmissionDetail(summary.id);
+      setSelectedSubmission(detail);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoadingSubmission(false);
+    }
+  }
+
+  function handleLoadSubmissionCode() {
+    if (!selectedSubmission) {
+      return;
+    }
+
+    if (selectedSubmission.language !== language) {
+      codeOverrideRef.current = selectedSubmission.code;
+      setLanguage(selectedSubmission.language);
+    } else {
+      setCode(selectedSubmission.code);
+    }
+    setResultView("current");
+  }
+
+  function renderTestResults(results: TestCaseResult[]) {
+    return results.map((test) => (
+      <article className={test.passed ? "test-result pass" : "test-result fail"} key={test.name}>
+        <div>
+          <strong>{test.name}</strong>
+          <span>{test.hidden ? "Hidden" : "Sample"}</span>
+        </div>
+        <p>
+          {test.passed
+            ? "Passed"
+            : test.timedOut
+              ? "Timed out"
+              : test.exitCode !== 0
+                ? "Runtime error"
+                : "Failed"}{" "}
+          in {test.runtimeMs}ms
+        </p>
+        {!test.hidden && (
+          <div className="io-grid">
+            <div>
+              <span>Expected</span>
+              <pre>{test.expectedOutput}</pre>
+            </div>
+            <div>
+              <span>Actual</span>
+              <pre>{test.actualOutput || "(empty)"}</pre>
+            </div>
+          </div>
+        )}
+        {test.stderr && <pre className="stderr">{test.stderr}</pre>}
+      </article>
+    ));
   }
 
   return (
@@ -379,55 +545,130 @@ function App() {
                 />
               </div>
 
-              <section className={`results ${statusTone}`}>
-                <div className="result-summary">
-                  <h3>{isDraftPreview ? "Draft" : result ? result.status.replace(/_/g, " ") : "Results"}</h3>
-                  {draft && <span>{draft.validationStatus.toLowerCase()}</span>}
-                  {!isDraftPreview && isRunning && <span>Running...</span>}
-                  {!isDraftPreview && result && (
-                    <span>
-                      {result.passedCount}/{result.totalCount} passed
-                    </span>
-                  )}
-                </div>
-
-                {!isDraftPreview && result?.compileOutput && (
-                  <pre className="compile-output">{result.compileOutput}</pre>
+              <section className={`results ${resultsTone}`}>
+                {!isDraftPreview && (
+                  <div className="result-tabs" aria-label="Result view">
+                    <button
+                      className={resultView === "current" ? "selected" : ""}
+                      onClick={() => setResultView("current")}
+                      type="button"
+                    >
+                      Current
+                    </button>
+                    <button
+                      className={resultView === "history" ? "selected" : ""}
+                      onClick={() => setResultView("history")}
+                      type="button"
+                    >
+                      History
+                    </button>
+                  </div>
                 )}
 
-                <div className="test-results">
-                  {!isDraftPreview && result?.results.map((test) => (
-                    <article className={test.passed ? "test-result pass" : "test-result fail"} key={test.name}>
-                      <div>
-                        <strong>{test.name}</strong>
-                        <span>{test.hidden ? "Hidden" : "Sample"}</span>
-                      </div>
-                      <p>
-                        {test.passed
-                          ? "Passed"
-                          : test.timedOut
-                            ? "Timed out"
-                            : test.exitCode !== 0
-                              ? "Runtime error"
-                              : "Failed"}{" "}
-                        in {test.runtimeMs}ms
-                      </p>
-                      {!test.hidden && (
-                        <div className="io-grid">
-                          <div>
-                            <span>Expected</span>
-                            <pre>{test.expectedOutput}</pre>
-                          </div>
-                          <div>
-                            <span>Actual</span>
-                            <pre>{test.actualOutput || "(empty)"}</pre>
-                          </div>
-                        </div>
+                {isDraftPreview ? (
+                  <div className="result-summary">
+                    <h3>Draft</h3>
+                    {draft && <span>{draft.validationStatus.toLowerCase()}</span>}
+                  </div>
+                ) : resultView === "current" ? (
+                  <>
+                    <div className="result-summary">
+                      <h3>{result ? formatStatus(result.status) : "Results"}</h3>
+                      {isRunning && <span>Running...</span>}
+                      {result && (
+                        <span>
+                          {result.passedCount}/{result.totalCount} passed
+                        </span>
                       )}
-                      {test.stderr && <pre className="stderr">{test.stderr}</pre>}
-                    </article>
-                  ))}
-                </div>
+                    </div>
+
+                    {result?.submissionId && result.createdAt && (
+                      <div className="submission-meta">
+                        <span>{formatTimestamp(result.createdAt)}</span>
+                        <code>{result.submissionId}</code>
+                      </div>
+                    )}
+
+                    {result?.compileOutput && (
+                      <pre className="compile-output">{result.compileOutput}</pre>
+                    )}
+
+                    {!result && !isRunning && <p className="empty-state">No result yet.</p>}
+
+                    <div className="test-results">
+                      {result && renderTestResults(result.results)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="result-summary">
+                      <h3>History</h3>
+                      <span>{isLoadingHistory ? "Loading..." : `${submissions.length} saved`}</span>
+                    </div>
+
+                    <div className="history-layout">
+                      <div className="history-list">
+                        {submissions.map((submission) => (
+                          <button
+                            className={submission.id === selectedSubmissionId ? "history-item selected" : "history-item"}
+                            key={submission.id}
+                            onClick={() => handleSelectSubmission(submission)}
+                            type="button"
+                          >
+                            <span>{formatStatus(submission.status)}</span>
+                            <strong>
+                              {submission.passedCount}/{submission.totalCount}
+                            </strong>
+                            <small>
+                              {languageLabels[submission.language]} - {formatTimestamp(submission.createdAt)}
+                            </small>
+                          </button>
+                        ))}
+                        {!isLoadingHistory && submissions.length === 0 && (
+                          <p className="empty-state">No saved runs.</p>
+                        )}
+                      </div>
+
+                      <div className="history-detail">
+                        {isLoadingSubmission ? (
+                          <p className="empty-state">Loading run...</p>
+                        ) : selectedSubmission ? (
+                          <>
+                            <div className="history-detail-header">
+                              <div>
+                                <span>{formatTimestamp(selectedSubmission.createdAt)}</span>
+                                <strong>{formatStatus(selectedSubmission.status)}</strong>
+                              </div>
+                              <button onClick={handleLoadSubmissionCode} type="button">
+                                Load Code
+                              </button>
+                            </div>
+
+                            <div className="submission-meta">
+                              <span>
+                                {languageLabels[selectedSubmission.language]} -{" "}
+                                {selectedSubmission.runHiddenTests ? "hidden tests" : "samples only"}
+                              </span>
+                              <code>{selectedSubmission.id}</code>
+                            </div>
+
+                            <pre className="history-code">{selectedSubmission.code}</pre>
+
+                            {selectedSubmission.compileOutput && (
+                              <pre className="compile-output">{selectedSubmission.compileOutput}</pre>
+                            )}
+
+                            <div className="test-results">
+                              {renderTestResults(selectedSubmission.results)}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="empty-state">Select a saved run.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </section>
             </section>
           </>
