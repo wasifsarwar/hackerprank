@@ -60,6 +60,7 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - Current session - Auto-discover generated-problem eval fixtures and validate generated examples against reference solutions
 - Current session - Keep auto-discovered valid fixture assertions generic so non-array topics can join the eval corpus
 - Current session - Let invalid generated-problem fixtures omit top-level sections so validator contract errors are asserted
+- Current session - Add a one-shot OpenAI repair loop before deterministic fallback when validation fails
 
 ## Current Application Shape
 
@@ -177,7 +178,8 @@ Current behavior:
 - Validates both private Python and Java reference solutions through `SubmissionService`.
 - Uses deterministic templates by default.
 - Can use the OpenAI Responses API when `HACKERPRANK_GENERATOR_PROVIDER=openai` and `OPENAI_API_KEY` are configured.
-- Falls back to deterministic templates if OpenAI is disabled, missing an API key, generation fails, or the returned draft fails generated-problem validation.
+- Attempts one OpenAI repair when a schema-valid generated draft fails validation, then falls back to deterministic templates if repair also fails.
+- Falls back to deterministic templates if OpenAI is disabled, missing an API key, generation fails, or the returned draft cannot be repaired.
 - Preserves requested target concepts, constraints/notes, and interview style in generation metadata parameters JSON.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
 - Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
