@@ -1,6 +1,7 @@
 {
   "topic": "arrays",
   "difficulty": "Easy",
+  "expectedFailureMessage": "referenceSolutions.java is required",
   "problem": {
     "id": "missing-java-reference",
     "title": "Missing Java Reference",

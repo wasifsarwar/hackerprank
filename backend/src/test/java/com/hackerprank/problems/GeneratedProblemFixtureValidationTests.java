@@ -7,15 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 @SpringBootTest(properties = {
     "hackerprank.runner.mode=local",
@@ -30,10 +33,8 @@ class GeneratedProblemFixtureValidationTests {
     @Autowired
     private GeneratedProblemValidator validator;
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-        "valid-edge-window-sum.json"
-    })
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("validFixtureNames")
     void validFixturesPassGeneratedProblemValidation(String fixtureName) throws Exception {
         GeneratedProblemSpec spec = readFixture(fixtureName);
 
@@ -44,32 +45,54 @@ class GeneratedProblemFixtureValidationTests {
         assertTrue(spec.generationMetadata().parametersJson().contains("array indexing"));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-        "invalid-reference-wrong-answer.json,reference solution returned WRONG_ANSWER",
-        "invalid-missing-java-reference.json,referenceSolutions.java is required",
-        "invalid-missing-hidden-tests.json,problem.testCases needs at least one hidden test"
-    })
-    void invalidFixturesFailWithExpectedContractReason(String fixtureName, String expectedMessage) throws Exception {
-        GeneratedProblemSpec spec = readFixture(fixtureName);
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidFixtureNames")
+    void invalidFixturesFailWithExpectedContractReason(String fixtureName) throws Exception {
+        GeneratedProblemFixture fixture = readRawFixture(fixtureName);
+        GeneratedProblemSpec spec = fixture.toSpec();
+
+        assertTrue(
+            fixture.expectedFailureMessage() != null && !fixture.expectedFailureMessage().isBlank(),
+            "invalid fixtures must declare expectedFailureMessage"
+        );
 
         IllegalStateException exception = assertThrows(
             IllegalStateException.class,
             () -> validator.validate(spec)
         );
 
-        assertTrue(exception.getMessage().contains(expectedMessage));
+        assertTrue(exception.getMessage().contains(fixture.expectedFailureMessage()));
     }
 
     private GeneratedProblemSpec readFixture(String fixtureName) throws IOException {
+        return readRawFixture(fixtureName).toSpec();
+    }
+
+    private GeneratedProblemFixture readRawFixture(String fixtureName) throws IOException {
         ClassPathResource resource = new ClassPathResource(FIXTURE_ROOT + fixtureName);
-        GeneratedProblemFixture fixture = objectMapper.readValue(resource.getInputStream(), GeneratedProblemFixture.class);
-        return fixture.toSpec();
+        return objectMapper.readValue(resource.getInputStream(), GeneratedProblemFixture.class);
+    }
+
+    private static Stream<String> validFixtureNames() throws IOException {
+        return fixtureNames("valid-*.json");
+    }
+
+    private static Stream<String> invalidFixtureNames() throws IOException {
+        return fixtureNames("invalid-*.json");
+    }
+
+    private static Stream<String> fixtureNames(String pattern) throws IOException {
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        return Arrays.stream(resolver.getResources("classpath:" + FIXTURE_ROOT + pattern))
+            .map(resource -> resource.getFilename())
+            .filter(Objects::nonNull)
+            .sorted();
     }
 
     private record GeneratedProblemFixture(
         String topic,
         String difficulty,
+        String expectedFailureMessage,
         ProblemFixture problem,
         Map<String, String> referenceSolutions,
         MetadataFixture generationMetadata

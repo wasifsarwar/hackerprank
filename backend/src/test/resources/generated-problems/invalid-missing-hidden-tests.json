@@ -1,6 +1,7 @@
 {
   "topic": "arrays",
   "difficulty": "Easy",
+  "expectedFailureMessage": "problem.testCases needs at least one hidden test",
   "problem": {
     "id": "missing-hidden-tests",
     "title": "Missing Hidden Tests",

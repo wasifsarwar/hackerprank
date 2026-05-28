@@ -1,10 +1,10 @@
 {
   "topic": "arrays",
   "difficulty": "Easy",
-  "expectedFailureMessage": "reference solution returned WRONG_ANSWER",
+  "expectedFailureMessage": "reference solution returned WRONG_ANSWER for examples",
   "problem": {
-    "id": "broken-edge-window-sum",
-    "title": "Broken Edge Window Sum",
+    "id": "bad-example-edge-window-sum",
+    "title": "Bad Example Edge Window Sum",
     "difficulty": "Easy",
     "tags": ["Arrays", "Implementation"],
     "description": "Given n integers, print the sum of the first and last value. If there is only one value, print that value once.",
@@ -14,8 +14,8 @@
     "examples": [
       {
         "input": "5\n4 1 9 2 7\n",
-        "output": "11\n",
-        "explanation": "The first value is 4 and the last value is 7."
+        "output": "12\n",
+        "explanation": "This fixture intentionally gives the wrong sample output."
       }
     ],
     "testCases": [
@@ -38,15 +38,15 @@
     }
   },
   "referenceSolutions": {
-    "python": "print(0)\n",
-    "java": "public class Main { public static void main(String[] args) { System.out.println(0); } }\n"
+    "python": "import sys\n\ntokens = list(map(int, sys.stdin.read().strip().split()))\nn = tokens[0]\nvalues = tokens[1:1 + n]\nprint(values[0] if n == 1 else values[0] + values[-1])\n",
+    "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int n = scanner.nextInt();\n        int first = scanner.nextInt();\n        int last = first;\n        for (int i = 1; i < n; i++) {\n            last = scanner.nextInt();\n        }\n        System.out.println(n == 1 ? first : first + last);\n    }\n}\n"
   },
   "generationMetadata": {
     "provider": "fixture",
     "modelId": "fixture-v1",
     "promptVersion": "generated-problem-fixture-v1",
-    "promptText": "This fixture intentionally has bad reference solutions.",
+    "promptText": "This fixture intentionally has a bad user-facing example output.",
     "parametersJson": "{\"topic\":\"arrays\",\"difficulty\":\"Easy\",\"targetConcepts\":[],\"constraintsNotes\":\"\",\"interviewStyle\":\"Classic\"}",
-    "intendedTechnique": "Fixture should fail reference validation."
+    "intendedTechnique": "Fixture should fail example validation."
   }
 }
