@@ -1,0 +1,74 @@
+{
+  "topic": "arrays",
+  "difficulty": "Easy",
+  "problem": {
+    "id": "edge-window-sum",
+    "title": "Edge Window Sum",
+    "difficulty": "Easy",
+    "tags": ["Arrays", "Implementation"],
+    "description": "Given n integers, print the sum of the first and last value. If there is only one value, print that value once.",
+    "inputFormat": "The first line contains n. The second line contains n space-separated integers.",
+    "outputFormat": "Print one integer: the edge window sum.",
+    "constraints": ["1 <= n <= 100000", "-100000 <= value <= 100000"],
+    "examples": [
+      {
+        "input": "5\n4 1 9 2 7\n",
+        "output": "11\n",
+        "explanation": "The first value is 4 and the last value is 7."
+      },
+      {
+        "input": "1\n8\n",
+        "output": "8\n",
+        "explanation": "A single value is counted once."
+      }
+    ],
+    "testCases": [
+      {
+        "name": "Sample 1",
+        "input": "5\n4 1 9 2 7\n",
+        "expectedOutput": "11\n",
+        "hidden": false
+      },
+      {
+        "name": "Sample 2",
+        "input": "1\n8\n",
+        "expectedOutput": "8\n",
+        "hidden": false
+      },
+      {
+        "name": "Hidden 1",
+        "input": "3\n-2 10 5\n",
+        "expectedOutput": "3\n",
+        "hidden": true
+      },
+      {
+        "name": "Hidden 2",
+        "input": "2\n100 -40\n",
+        "expectedOutput": "60\n",
+        "hidden": true
+      },
+      {
+        "name": "Hidden 3",
+        "input": "6\n0 1 2 3 4 0\n",
+        "expectedOutput": "0\n",
+        "hidden": true
+      }
+    ],
+    "starterCode": {
+      "python": "import sys\n\ndef main():\n    tokens = list(map(int, sys.stdin.read().strip().split()))\n    n = tokens[0]\n    values = tokens[1:1 + n]\n    # TODO: print the sum of the first and last value\n    print(0)\n\nif __name__ == \"__main__\":\n    main()\n",
+      "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int n = scanner.nextInt();\n        int[] values = new int[n];\n        for (int i = 0; i < n; i++) {\n            values[i] = scanner.nextInt();\n        }\n        // TODO: print the sum of the first and last value\n        System.out.println(0);\n    }\n}\n"
+    }
+  },
+  "referenceSolutions": {
+    "python": "import sys\n\ntokens = list(map(int, sys.stdin.read().strip().split()))\nn = tokens[0]\nvalues = tokens[1:1 + n]\nprint(values[0] if n == 1 else values[0] + values[-1])\n",
+    "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int n = scanner.nextInt();\n        int first = scanner.nextInt();\n        int last = first;\n        for (int i = 1; i < n; i++) {\n            last = scanner.nextInt();\n        }\n        System.out.println(n == 1 ? first : first + last);\n    }\n}\n"
+  },
+  "generationMetadata": {
+    "provider": "fixture",
+    "modelId": "fixture-v1",
+    "promptVersion": "generated-problem-fixture-v1",
+    "promptText": "Create an easy arrays problem about edge values.",
+    "parametersJson": "{\"topic\":\"arrays\",\"difficulty\":\"Easy\",\"targetConcepts\":[\"array indexing\"],\"constraintsNotes\":\"Include a one-element boundary case.\",\"interviewStyle\":\"Classic\"}",
+    "intendedTechnique": "Read the first and last values while handling n = 1."
+  }
+}
