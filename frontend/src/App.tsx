@@ -69,6 +69,7 @@ function App() {
   const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const codeOverrideRef = useRef<string | null>(null);
+  const selectedSubmissionRequestRef = useRef<string>("");
 
   const activeProblem = draft?.problem ?? problem;
   const isDraftPreview = draft !== null;
@@ -92,6 +93,7 @@ function App() {
     setResultView("current");
     setSelectedSubmission(null);
     setSelectedSubmissionId("");
+    selectedSubmissionRequestRef.current = "";
     fetchProblem(selectedId)
       .then((loaded) => {
         setProblem(loaded);
@@ -117,6 +119,7 @@ function App() {
       setSubmissions([]);
       setSelectedSubmission(null);
       setSelectedSubmissionId("");
+      selectedSubmissionRequestRef.current = "";
       return;
     }
 
@@ -216,6 +219,7 @@ function App() {
       setSubmissions([]);
       setSelectedSubmission(null);
       setSelectedSubmissionId("");
+      selectedSubmissionRequestRef.current = "";
       setCode(nextDraft.problem.starterCode[language]);
       if (previousDraftId && previousDraftId !== nextDraft.id) {
         deleteProblemDraft(previousDraftId).catch(() => {});
@@ -281,22 +285,33 @@ function App() {
       deleteProblemDraft(draft.id).catch(() => {});
     }
     setDraft(null);
+    setSelectedSubmission(null);
+    setSelectedSubmissionId("");
+    selectedSubmissionRequestRef.current = "";
     setSelectedId(id);
   }
 
   async function handleSelectSubmission(summary: SubmissionSummary) {
+    selectedSubmissionRequestRef.current = summary.id;
     setResultView("history");
     setSelectedSubmissionId(summary.id);
+    setSelectedSubmission(null);
     setIsLoadingSubmission(true);
     setError(null);
 
     try {
       const detail = await fetchSubmissionDetail(summary.id);
-      setSelectedSubmission(detail);
+      if (selectedSubmissionRequestRef.current === summary.id) {
+        setSelectedSubmission(detail);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (selectedSubmissionRequestRef.current === summary.id) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setIsLoadingSubmission(false);
+      if (selectedSubmissionRequestRef.current === summary.id) {
+        setIsLoadingSubmission(false);
+      }
     }
   }
 
