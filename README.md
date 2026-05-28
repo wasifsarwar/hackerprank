@@ -3,6 +3,7 @@
 A local proof of concept for a LeetCode/HackerRank-style coding practice platform.
 
 For project memory, design decisions, and future-chat handoff context, see `PROJECT_NOTES.md`.
+For the product north star and iteration roadmap, see `docs/PRODUCT_PLAN.md`.
 For coding-agent operating instructions and repeatable workflows, start with the repo-scoped `AGENTS.md`, then see `docs/agentic/AGENTS.md` and `docs/agentic/SKILLS.md`.
 
 ## Shape of the App
@@ -146,7 +147,7 @@ Pushes to `main` run the same checks and then publish backend and frontend image
 
 ## Next Milestones
 
-1. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
-2. Add OpenAI-backed tutor hints with a strict no-solution/no-hidden-test contract.
-3. Add user accounts so submission history can be user-scoped.
-4. Move execution to a worker queue.
+1. Add OpenAI-backed tutor hints with a strict no-solution/no-hidden-test contract.
+2. Add tutor follow-up chat attached to failed submissions.
+3. Add a richer generated-draft quality panel.
+4. Add generation variant controls and deeper prompt behavior.
