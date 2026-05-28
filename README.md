@@ -8,7 +8,7 @@ For coding-agent operating instructions and repeatable workflows, see `AGENTS.md
 ## Shape of the App
 
 - `frontend/`: React + TypeScript + Vite
-- `backend/`: Spring Boot API that serves problems and runs submissions
+- `backend/`: Spring Boot API that serves problems, creates generated drafts, publishes problems, and runs submissions
 
 The first version intentionally uses stdin/stdout problems. That keeps the runner simple while still teaching the important pieces: APIs, DTOs, process execution, timeouts, test results, and frontend state.
 
@@ -64,12 +64,12 @@ Docker submissions run with no container network, memory/CPU/pid limits, dropped
 
 - Docker isolation is local-dev grade, not production hardened.
 - Output matching is exact after trimming trailing whitespace.
-- Problems are seeded in memory.
+- Problems and generated drafts are stored in memory.
 - There is no database or auth yet.
 
 ## Next Milestones
 
 1. Add persistence for problems and submissions.
-2. Add a generated-problem draft flow.
+2. Add an OpenAI-backed generator behind the current draft flow.
 3. Add richer result inspection.
 4. Move execution to a worker queue.

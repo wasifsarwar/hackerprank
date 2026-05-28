@@ -35,6 +35,10 @@ The long-term goal is an agentic tutor that can generate original interview-styl
 - `438df5f` - Replace code textarea with Monaco editor
 - `8a5d158` - Run submissions in Docker sandboxes
 - `1b06269` - Add generated problem endpoint
+- `0e44f06` - Add project handoff notes
+- `956d2c6` - Add agent workflow docs
+- `c5dc1bb` - Strengthen agent handoff rules
+- Current session - Add generated problem draft flow
 
 ## Current Application Shape
 
@@ -50,7 +54,8 @@ The frontend is a Vite React app. It currently provides:
 - Monaco code editor
 - Run samples and submit buttons
 - Results panel with per-test output
-- Generate Problem button wired to `POST /api/problems/generate`
+- Generator panel with topic input and difficulty selector
+- Generated draft preview with publish and discard actions
 
 Important files:
 
@@ -62,8 +67,8 @@ Important files:
 
 Current frontend limitation:
 
-- The Generate Problem button sends a fixed payload: `{ topic: "arrays", difficulty: "Easy" }`.
-- There are not yet UI controls for topic, difficulty, concepts, or style.
+- The generator UI supports topic and difficulty, but not richer constraints such as target concepts, company style, time limits, or prompt notes.
+- Draft preview is in-memory only because backend drafts are in-memory only.
 
 ### Backend
 
@@ -81,6 +86,9 @@ Important files:
 
 - `ProblemController.java` - problem list/detail/generate endpoints
 - `ProblemRepository.java` - in-memory problem store
+- `ProblemDraft.java` - private generated draft model with reference solution
+- `ProblemDraftRepository.java` - in-memory generated draft store
+- `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
 - `ProblemGeneratorService.java` - deterministic generated-problem templates and validation
 - `SubmissionController.java` - submission endpoint
 - `SubmissionService.java` - prepares code, runs test cases, computes status
@@ -100,6 +108,38 @@ Returns problem summaries.
 
 Returns a public problem without hidden test cases.
 
+`POST /api/problems/drafts`
+
+Request body:
+
+```json
+{
+  "topic": "stacks",
+  "difficulty": "Medium"
+}
+```
+
+Returns a validated `PublicProblemDraft`.
+
+Current behavior:
+
+- Creates an in-memory draft, not a public problem.
+- Validates the generated draft by running its private Python reference solution through `SubmissionService`.
+- Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, and `problem`.
+- Public draft responses do not expose hidden test cases or reference solutions.
+
+`GET /api/problems/drafts/{id}`
+
+Returns a public draft preview if the draft still exists.
+
+`POST /api/problems/drafts/{id}/publish`
+
+Moves a draft into the public in-memory problem repository and deletes the draft.
+
+`DELETE /api/problems/drafts/{id}`
+
+Discards a draft.
+
 `POST /api/problems/generate`
 
 Request body:
@@ -115,15 +155,14 @@ Returns a generated `PublicProblem`.
 
 Current behavior:
 
+- Kept as a compatibility shortcut.
+- Internally creates a validated draft, publishes it immediately, then deletes the draft.
 - Defaults to topic `arrays` and difficulty `Easy` if omitted.
 - Accepts difficulty `Easy`, `Medium`, or `Hard`.
 - Routes topic text to deterministic templates:
   - arrays/default -> `Signal Peaks`
   - string/map/hash/count -> `First Solo Word`
   - stack/bracket/parentheses -> `Bracket Balance`
-- Saves the generated problem into the in-memory repository.
-- Runs an internal Python reference solution through `SubmissionService`.
-- Deletes the generated problem if validation does not return `ACCEPTED`.
 
 This endpoint is intentionally deterministic for now. The API shape is ready to become OpenAI-backed later.
 
@@ -173,12 +212,24 @@ Statuses:
 
 `PublicProblem` intentionally omits hidden test cases.
 
+`ProblemDraft` includes private validation data:
+
+- `id`
+- `topic`
+- `difficulty`
+- `problem`
+- `referenceSolution`
+- `validationStatus`
+- `createdAt`
+
+`PublicProblemDraft` intentionally omits the reference solution and hidden test cases.
+
 Seed problems:
 
 - `add-a-pair`
 - `most-frequent-word`
 
-Generated problems are currently stored in memory only. They disappear when the backend restarts.
+Generated drafts and generated problems are currently stored in memory only. They disappear when the backend restarts.
 
 ## Runner And Sandbox Notes
 
@@ -263,7 +314,7 @@ mvn test
 
 Last known result:
 
-- 8 tests passed
+- 10 tests passed
 
 Frontend build:
 
@@ -292,6 +343,36 @@ Expected:
 - `HTTP 200`
 - A generated problem such as `signal-peaks-<id>`
 
+Draft flow smoke test:
+
+```sh
+node - <<'NODE'
+const base = 'http://127.0.0.1:5173';
+const draftResponse = await fetch(`${base}/api/problems/drafts`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ topic: 'stacks', difficulty: 'Medium' })
+});
+const draft = await draftResponse.json();
+console.log(draftResponse.status, draft.id, draft.problem.id, draft.validationStatus);
+const listBefore = await (await fetch(`${base}/api/problems`)).json();
+console.log(listBefore.some((item) => item.id === draft.problem.id));
+const publishResponse = await fetch(`${base}/api/problems/drafts/${draft.id}/publish`, { method: 'POST' });
+const published = await publishResponse.json();
+console.log(publishResponse.status, published.id);
+const listAfter = await (await fetch(`${base}/api/problems`)).json();
+console.log(listAfter.some((item) => item.id === published.id));
+NODE
+```
+
+Expected:
+
+- Draft creation returns `200`
+- Draft has `VALIDATED` status
+- Problem is not listed before publish
+- Publish returns `200`
+- Problem is listed after publish
+
 Check no leftover sandbox containers:
 
 ```sh
@@ -304,28 +385,20 @@ Expected:
 
 ## Browser Automation Note
 
-The user had the Codex in-app browser open at `http://localhost:5173/`, but the automation connector did not attach.
+The in-app browser automation connector is currently available.
 
-Observed from automation:
+Healthy state from automation:
 
 ```json
-[]
+[
+  {
+    "name": "Codex In-app Browser",
+    "type": "iab"
+  }
+]
 ```
 
-That means the Browser plugin registry did not expose an `iab` target. The app itself was still verified through curl and builds.
-
-Troubleshooting steps suggested:
-
-1. Close and reopen the in-app browser panel.
-2. Reload the Codex app/window.
-3. Confirm the Browser plugin/tool is enabled.
-4. Accept any permission prompt like "allow automation" or "connect browser".
-5. Open a fresh in-app browser tab to `http://localhost:5173/`.
-6. Ask Codex to retry the connector check.
-
-Healthy state:
-
-- `agent.browsers.list()` should show an `iab` browser target.
+Latest UI verification used the browser connector to confirm the generator controls render, a `stacks`/`Medium` draft previews as `Bracket Balance`, and publishing adds the problem to the problem list.
 
 ## Design Decisions So Far
 
@@ -360,9 +433,9 @@ Deterministic generator first:
 ## Known Limitations
 
 - Problem storage is in memory only.
-- Generated problems disappear on backend restart.
+- Generated drafts and generated problems disappear on backend restart.
 - Generated-problem templates are deterministic and limited.
-- The frontend generate button does not yet let the user choose topic or difficulty.
+- Generator controls only cover topic and difficulty.
 - No user accounts or sessions.
 - No submission history.
 - No database.
@@ -375,16 +448,15 @@ Deterministic generator first:
 
 ## Recommended Next Milestones
 
-1. Add frontend controls for topic and difficulty.
-2. Add a generated-problem draft/review flow before publishing problems.
-3. Add persistence for problems and submissions.
-4. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
-5. Define a strict JSON schema for generated problem drafts.
-6. Store reference solutions separately from public problem data.
-7. Add Java reference-solution validation in addition to Python.
-8. Add submission history and result detail pages.
-9. Move execution to a worker queue.
-10. Harden sandboxing before any remote or multi-user deployment.
+1. Add persistence for problems, drafts, reference solutions, and submissions.
+2. Introduce an OpenAI-backed generator behind `ProblemGeneratorService`.
+3. Define a strict JSON schema for generated problem drafts.
+4. Store reference solutions separately from public problem data in persistent storage.
+5. Add Java reference-solution validation in addition to Python.
+6. Add richer generator controls for concepts, constraints, and interview style.
+7. Add submission history and result detail pages.
+8. Move execution to a worker queue.
+9. Harden sandboxing before any remote or multi-user deployment.
 
 ## Future OpenAI Generator Notes
 

@@ -90,6 +90,90 @@ button:disabled {
   background: #ffd978;
 }
 
+.generator-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.generator-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+.generator-panel span,
+.draft-card span {
+  color: #b9cac5;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.generator-panel input,
+.generator-panel select {
+  min-width: 0;
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid #315850;
+  border-radius: 8px;
+  color: #f9fbf7;
+  background: #24473f;
+  font: inherit;
+  font-weight: 700;
+}
+
+.generator-panel input {
+  padding: 0 11px;
+}
+
+.generator-panel select {
+  padding: 0 8px;
+}
+
+.draft-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #6f7e5d;
+  border-radius: 8px;
+  background: #203f38;
+}
+
+.draft-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.draft-card strong {
+  color: #f9fbf7;
+}
+
+.draft-card small {
+  color: #f6c85f;
+  font-weight: 800;
+}
+
+.draft-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.draft-actions button {
+  min-height: 36px;
+  border-radius: 7px;
+  font-weight: 800;
+}
+
+.publish-action {
+  color: #172421;
+  background: #f6c85f;
+}
+
+.discard-action {
+  color: #f9fbf7;
+  background: #315850;
+}
+
 .problem-list {
   display: grid;
   gap: 10px;
@@ -282,9 +366,24 @@ pre {
   background: #275448;
 }
 
+.run-actions button.publish-action {
+  color: #172421;
+  background: #f6c85f;
+}
+
+.run-actions button.discard-action {
+  color: #20312d;
+  background: #c8d8c4;
+}
+
 .run-actions button:first-child {
   color: #20312d;
   background: #c8d8c4;
+}
+
+.run-actions button.publish-action:first-child {
+  color: #172421;
+  background: #f6c85f;
 }
 
 .code-editor-shell {

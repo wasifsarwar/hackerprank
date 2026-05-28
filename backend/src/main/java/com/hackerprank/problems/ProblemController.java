@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +41,34 @@ public class ProblemController {
     @PostMapping("/generate")
     public PublicProblem generateProblem(@RequestBody(required = false) GenerateProblemRequest request) {
         return generatorService.generate(request);
+    }
+
+    @PostMapping("/drafts")
+    public PublicProblemDraft createDraft(@RequestBody(required = false) GenerateProblemRequest request) {
+        return generatorService.createDraft(request);
+    }
+
+    @GetMapping("/drafts/{id}")
+    public ResponseEntity<PublicProblemDraft> getDraft(@PathVariable String id) {
+        return generatorService.findDraft(id)
+            .map(draft -> ResponseEntity.ok(draft))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/drafts/{id}/publish")
+    public ResponseEntity<PublicProblem> publishDraft(@PathVariable String id) {
+        return generatorService.publishDraft(id)
+            .map(problem -> ResponseEntity.ok(problem))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/drafts/{id}")
+    public ResponseEntity<Void> deleteDraft(@PathVariable String id) {
+        if (generatorService.deleteDraft(id)) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.notFound().build();
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

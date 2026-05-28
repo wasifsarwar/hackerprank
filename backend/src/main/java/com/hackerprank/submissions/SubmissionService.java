@@ -41,16 +41,20 @@ public class SubmissionService {
         Problem problem = problemRepository.findById(request.getProblemId())
             .orElseThrow(() -> new IllegalArgumentException("Problem not found: " + request.getProblemId()));
 
-        String language = normalizeLanguage(request.getLanguage());
+        return run(problem, request.getLanguage(), request.getCode(), request.isRunHiddenTests());
+    }
+
+    public SubmissionResult run(Problem problem, String requestedLanguage, String code, boolean runHiddenTests) {
+        String language = normalizeLanguage(requestedLanguage);
         List<TestCase> cases = problem.getTestCases().stream()
-            .filter(testCase -> request.isRunHiddenTests() || !testCase.isHidden())
+            .filter(testCase -> runHiddenTests || !testCase.isHidden())
             .collect(Collectors.toList());
 
         Path workspace = null;
         try {
             Files.createDirectories(workspaceRoot);
             workspace = Files.createTempDirectory(workspaceRoot, "submission-");
-            String compileOutput = prepareSubmission(language, request.getCode(), workspace);
+            String compileOutput = prepareSubmission(language, code, workspace);
             if (compileOutput != null) {
                 return new SubmissionResult("COMPILE_ERROR", 0, cases.size(), compileOutput, new ArrayList<>());
             }

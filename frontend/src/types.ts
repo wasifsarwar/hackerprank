@@ -1,4 +1,5 @@
 export type Language = "python" | "java";
+export type Difficulty = "Easy" | "Medium" | "Hard";
 
 export type StarterCode = Record<Language, string>;
 
@@ -11,7 +12,7 @@ export interface Example {
 export interface ProblemSummary {
   id: string;
   title: string;
-  difficulty: "Easy" | "Medium" | "Hard";
+  difficulty: Difficulty;
   tags: string[];
 }
 
@@ -26,7 +27,16 @@ export interface Problem extends ProblemSummary {
 
 export interface GenerateProblemRequest {
   topic?: string;
-  difficulty?: ProblemSummary["difficulty"];
+  difficulty?: Difficulty;
+}
+
+export interface ProblemDraft {
+  id: string;
+  topic: string;
+  difficulty: Difficulty;
+  validationStatus: "VALIDATED";
+  createdAt: string;
+  problem: Problem;
 }
 
 export interface SubmissionRequest {

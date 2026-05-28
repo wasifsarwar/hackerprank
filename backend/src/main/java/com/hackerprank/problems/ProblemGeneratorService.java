@@ -1,13 +1,14 @@
 package com.hackerprank.problems;
 
-import com.hackerprank.submissions.SubmissionRequest;
 import com.hackerprank.submissions.SubmissionResult;
 import com.hackerprank.submissions.SubmissionService;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -15,27 +16,67 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProblemGeneratorService {
     private final ProblemRepository problemRepository;
+    private final ProblemDraftRepository draftRepository;
     private final SubmissionService submissionService;
 
-    public ProblemGeneratorService(ProblemRepository problemRepository, SubmissionService submissionService) {
+    public ProblemGeneratorService(
+        ProblemRepository problemRepository,
+        ProblemDraftRepository draftRepository,
+        SubmissionService submissionService
+    ) {
         this.problemRepository = problemRepository;
+        this.draftRepository = draftRepository;
         this.submissionService = submissionService;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
-        GeneratedProblemDraft draft = draftFor(request);
-        problemRepository.save(draft.problem());
+        ProblemDraft draft = createDraftEntity(request);
+        problemRepository.save(draft.getProblem());
+        draftRepository.deleteById(draft.getId());
 
-        boolean validated = false;
-        try {
-            validateReferenceSolution(draft);
-            validated = true;
-            return PublicProblem.from(draft.problem());
-        } finally {
-            if (!validated) {
-                problemRepository.deleteById(draft.problem().getId());
-            }
+        return PublicProblem.from(draft.getProblem());
+    }
+
+    public PublicProblemDraft createDraft(GenerateProblemRequest request) {
+        return PublicProblemDraft.from(createDraftEntity(request));
+    }
+
+    public Optional<PublicProblemDraft> findDraft(String draftId) {
+        return draftRepository.findById(draftId).map(PublicProblemDraft::from);
+    }
+
+    public Optional<PublicProblem> publishDraft(String draftId) {
+        return draftRepository.findById(draftId)
+            .map(draft -> {
+                problemRepository.save(draft.getProblem());
+                draftRepository.deleteById(draft.getId());
+                return PublicProblem.from(draft.getProblem());
+            });
+    }
+
+    public boolean deleteDraft(String draftId) {
+        boolean exists = draftRepository.findById(draftId).isPresent();
+        if (exists) {
+            draftRepository.deleteById(draftId);
         }
+        return exists;
+    }
+
+    private ProblemDraft createDraftEntity(GenerateProblemRequest request) {
+        GeneratedProblemDraft generated = draftFor(request);
+        validateReferenceSolution(generated);
+
+        ProblemDraft draft = new ProblemDraft(
+            uniqueDraftId(),
+            generated.topic(),
+            generated.problem().getDifficulty(),
+            generated.problem(),
+            generated.referenceSolution(),
+            "VALIDATED",
+            Instant.now()
+        );
+
+        return draftRepository.save(draft);
     }
 
     private GeneratedProblemDraft draftFor(GenerateProblemRequest request) {
@@ -43,17 +84,17 @@ public class ProblemGeneratorService {
         String difficulty = normalizeDifficulty(request == null ? null : request.getDifficulty());
 
         if (containsAny(topic, "stack", "bracket", "parentheses")) {
-            return bracketBalanceProblem(difficulty);
+            return bracketBalanceProblem(topic, difficulty);
         }
 
         if (containsAny(topic, "string", "map", "hash", "count")) {
-            return firstSoloWordProblem(difficulty);
+            return firstSoloWordProblem(topic, difficulty);
         }
 
-        return signalPeaksProblem(difficulty);
+        return signalPeaksProblem(topic, difficulty);
     }
 
-    private GeneratedProblemDraft signalPeaksProblem(String difficulty) {
+    private GeneratedProblemDraft signalPeaksProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -108,7 +149,7 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(problem, """
+        return new GeneratedProblemDraft(topic, problem, """
             import sys
 
             tokens = list(map(int, sys.stdin.read().strip().split()))
@@ -122,7 +163,7 @@ public class ProblemGeneratorService {
             """);
     }
 
-    private GeneratedProblemDraft firstSoloWordProblem(String difficulty) {
+    private GeneratedProblemDraft firstSoloWordProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -177,7 +218,7 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(problem, """
+        return new GeneratedProblemDraft(topic, problem, """
             import sys
 
             tokens = sys.stdin.read().strip().split()
@@ -195,7 +236,7 @@ public class ProblemGeneratorService {
             """);
     }
 
-    private GeneratedProblemDraft bracketBalanceProblem(String difficulty) {
+    private GeneratedProblemDraft bracketBalanceProblem(String topic, String difficulty) {
         Map<String, String> starterCode = new LinkedHashMap<>();
         starterCode.put("python", """
             import sys
@@ -245,7 +286,7 @@ public class ProblemGeneratorService {
             starterCode
         );
 
-        return new GeneratedProblemDraft(problem, """
+        return new GeneratedProblemDraft(topic, problem, """
             import sys
 
             text = sys.stdin.read().strip()
@@ -265,13 +306,7 @@ public class ProblemGeneratorService {
     }
 
     private void validateReferenceSolution(GeneratedProblemDraft draft) {
-        SubmissionRequest request = new SubmissionRequest();
-        request.setProblemId(draft.problem().getId());
-        request.setLanguage("python");
-        request.setCode(draft.referenceSolution());
-        request.setRunHiddenTests(true);
-
-        SubmissionResult result = submissionService.run(request);
+        SubmissionResult result = submissionService.run(draft.problem(), "python", draft.referenceSolution(), true);
         if (!"ACCEPTED".equals(result.getStatus())) {
             throw new IllegalStateException("Generated problem failed validation with status " + result.getStatus());
         }
@@ -305,7 +340,7 @@ public class ProblemGeneratorService {
     private String uniqueId(String base) {
         for (int attempt = 0; attempt < 5; attempt++) {
             String id = base + "-" + UUID.randomUUID().toString().substring(0, 8);
-            if (problemRepository.findById(id).isEmpty()) {
+            if (problemRepository.findById(id).isEmpty() && !draftRepository.existsByProblemId(id)) {
                 return id;
             }
         }
@@ -313,6 +348,17 @@ public class ProblemGeneratorService {
         throw new IllegalStateException("Could not allocate a generated problem id");
     }
 
-    private record GeneratedProblemDraft(Problem problem, String referenceSolution) {
+    private String uniqueDraftId() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String id = "draft-" + UUID.randomUUID().toString().substring(0, 8);
+            if (draftRepository.findById(id).isEmpty()) {
+                return id;
+            }
+        }
+
+        throw new IllegalStateException("Could not allocate a generated draft id");
+    }
+
+    private record GeneratedProblemDraft(String topic, Problem problem, String referenceSolution) {
     }
 }
