@@ -622,10 +622,12 @@ PostgreSQL + Flyway + JDBC persistence:
 
 ## Recommended Next Milestones
 
-1. Tune OpenAI prompt/versioning with generated-problem eval fixtures.
-2. Add user accounts and user-scoped submission history.
-3. Move execution to a worker queue.
-4. Harden sandboxing before any remote or multi-user deployment.
+Use `docs/PRODUCT_PLAN.md` as the canonical roadmap. As of this handoff, the next recommended implementation branch is `codex/openai-tutor-hints`.
+
+1. Add OpenAI-backed tutor hints with deterministic fallback and a strict no-hidden-test contract.
+2. Add tutor follow-up chat attached to failed submissions.
+3. Add a richer generated-draft quality panel.
+4. Add user accounts and user-scoped submission history.
 
 ## OpenAI Generator Notes
 
