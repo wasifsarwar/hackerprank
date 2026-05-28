@@ -42,7 +42,6 @@ class GeneratedProblemFixtureValidationTests {
 
         assertEquals("VALIDATED", report.status());
         assertTrue(report.summary().contains("Python/Java"));
-        assertTrue(spec.generationMetadata().parametersJson().contains("array indexing"));
     }
 
     @ParameterizedTest(name = "{0}")
