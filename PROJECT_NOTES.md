@@ -91,6 +91,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Continue UI modernization toward the concept reference with rail search/difficulty filters, topbar actions, statement section tabs, editor runtime chip, and a bottom local-mode rail status
 - Current session - Tighten the concept-matching UI pass with a collapsed generator drawer, vertical studio navigation, command shortcut/status controls, and split-pane app surfaces instead of floating cards
 - Current session - Refine the modernized UI density with smaller typography, calmer control weights, a shorter editor viewport, and tighter rail/problem/result spacing after visual comparison with `concept.png`
+- Current session - Correct the over-bold UI pass by lowering the global type scale, reducing 800/900 font weights across chrome/content/results, tightening example cards, and dropping Monaco to 13px
 
 ## Current Application Shape
 

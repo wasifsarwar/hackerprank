@@ -37,8 +37,9 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.44;
 }
 
 button,
@@ -113,7 +114,8 @@ button:disabled {
 
 .brand h1 {
   color: var(--ink);
-  font-size: 1.08rem;
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -121,7 +123,7 @@ button:disabled {
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .rail-menu {
@@ -141,8 +143,8 @@ button:disabled {
   padding: 8px 10px;
   border-radius: 7px;
   color: var(--muted);
-  font-size: 0.83rem;
-  font-weight: 750;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .rail-menu span span {
@@ -176,7 +178,7 @@ button:disabled {
   background: linear-gradient(180deg, #174737, #0f3329);
   box-shadow: inset 0 -12px 22px rgb(0 0 0 / 12%);
   font-size: 0.8rem;
-  font-weight: 850;
+  font-weight: 700;
   list-style: none;
   cursor: pointer;
 }
@@ -208,7 +210,7 @@ button:disabled {
   color: #1d1a0b;
   background: var(--amber);
   box-shadow: 0 10px 22px rgb(238 168 0 / 22%);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .generate-action:hover:not(:disabled) {
@@ -236,7 +238,7 @@ button:disabled {
 .problem-list-header span {
   color: var(--faint);
   font-size: 0.64rem;
-  font-weight: 850;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -250,7 +252,7 @@ button:disabled {
   border-radius: 8px;
   color: var(--ink);
   background: var(--panel-soft);
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .generator-panel input,
@@ -290,7 +292,8 @@ button:disabled {
   min-width: 0;
   overflow: hidden;
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: 0.86rem;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -298,7 +301,7 @@ button:disabled {
 .draft-card small {
   color: var(--forest-2);
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .draft-actions {
@@ -311,7 +314,7 @@ button:disabled {
   min-height: 34px;
   border-radius: 7px;
   font-size: 0.82rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .publish-action {
@@ -340,8 +343,8 @@ button:disabled {
   border-radius: 8px;
   color: var(--ink);
   background: var(--panel);
-  font-size: 0.84rem;
-  font-weight: 650;
+  font-size: 0.8rem;
+  font-weight: 450;
 }
 
 .problem-filters {
@@ -359,7 +362,7 @@ button:disabled {
   color: var(--muted);
   background: var(--panel);
   font-size: 0.7rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .problem-filters button.selected {
@@ -399,8 +402,8 @@ button:disabled {
 .problem-item span {
   min-width: 0;
   overflow: hidden;
-  font-size: 0.8rem;
-  font-weight: 750;
+  font-size: 0.78rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -408,15 +411,15 @@ button:disabled {
 .problem-item small {
   color: var(--forest-2);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .rail-empty {
   margin: 0;
   padding: 10px;
   color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 750;
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .rail-footer {
@@ -437,7 +440,7 @@ button:disabled {
 .rail-footer small {
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .rail-footer span {
@@ -486,7 +489,7 @@ button:disabled {
 .topbar span {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .topbar strong {
@@ -494,6 +497,7 @@ button:disabled {
   overflow: hidden;
   color: var(--ink);
   font-size: 0.86rem;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -510,7 +514,7 @@ button:disabled {
   background: #f6f8f6;
   box-shadow: inset 0 -8px 18px rgb(23 32 29 / 4%);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -528,7 +532,7 @@ button:disabled {
   background: var(--panel);
   color: var(--forest);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .topbar-status span {
@@ -565,7 +569,8 @@ button:disabled {
   border-radius: 8px;
   color: var(--ink);
   background: transparent;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
+  font-weight: 650;
 }
 
 .topbar-status .avatar {
@@ -577,6 +582,7 @@ button:disabled {
   color: #ffffff;
   background: #101816;
   font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .workspace {
@@ -598,7 +604,7 @@ button:disabled {
 
 .statement {
   min-height: calc(100vh - 56px);
-  padding: 0 22px 24px;
+  padding: 0 20px 22px;
   border: 0;
   border-right: 1px solid var(--line);
   border-radius: 0;
@@ -611,9 +617,9 @@ button:disabled {
   top: 56px;
   z-index: 2;
   display: flex;
-  gap: 26px;
-  margin: 0 -22px 22px;
-  padding: 0 22px;
+  gap: 24px;
+  margin: 0 -20px 20px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line);
   background: rgb(255 255 255 / 94%);
   backdrop-filter: blur(12px);
@@ -622,11 +628,11 @@ button:disabled {
 .statement-tabs a {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
+  min-height: 44px;
   border-bottom: 2px solid transparent;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 760;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -647,7 +653,7 @@ button:disabled {
   margin: 0 0 7px;
   color: var(--forest-2);
   font-size: 0.68rem;
-  font-weight: 850;
+  font-weight: 650;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -661,19 +667,22 @@ p {
 h2 {
   margin-bottom: 0;
   color: var(--ink);
-  font-size: clamp(1.45rem, 2vw, 1.8rem);
+  font-size: clamp(1.35rem, 1.7vw, 1.55rem);
+  font-weight: 700;
   line-height: 1.12;
 }
 
 h3 {
   margin-bottom: 8px;
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
+  font-weight: 650;
 }
 
 p,
 li {
   color: #3f4a45;
+  font-size: 0.86rem;
   line-height: 1.52;
 }
 
@@ -691,14 +700,14 @@ li {
   color: var(--forest-2);
   background: #f3f8f3;
   font-size: 0.68rem;
-  font-weight: 760;
+  font-weight: 600;
 }
 
 .draft-quality {
   display: grid;
-  gap: 13px;
+  gap: 10px;
   margin: 0 0 24px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: linear-gradient(180deg, #fbfdfb, #f7faf7);
@@ -720,14 +729,15 @@ li {
 .draft-quality span,
 .draft-quality dt {
   color: var(--faint);
-  font-size: 0.68rem;
-  font-weight: 900;
+  font-size: 0.64rem;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .draft-quality strong {
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 0.9rem;
+  font-weight: 650;
 }
 
 .draft-quality .validation-pill {
@@ -764,7 +774,7 @@ li {
 
 .draft-metadata-grid div {
   min-width: 0;
-  padding: 9px;
+  padding: 8px;
   border: 1px solid #e3e9e2;
   border-radius: 8px;
   background: #ffffff;
@@ -775,8 +785,8 @@ li {
   overflow: hidden;
   margin: 3px 0 0;
   color: var(--ink);
-  font-size: 0.83rem;
-  font-weight: 850;
+  font-size: 0.78rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -784,8 +794,8 @@ li {
 .draft-quality p {
   margin: 0;
   color: #4d5853;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 450;
 }
 
 .draft-quality-checks {
@@ -801,7 +811,7 @@ li {
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  padding: 9px;
+  padding: 8px;
   border: 1px solid #e1e8df;
   border-radius: 8px;
   background: #ffffff;
@@ -825,12 +835,13 @@ li {
 .draft-quality-checks strong {
   display: block;
   margin-bottom: 2px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
+  font-weight: 650;
 }
 
 .draft-quality-checks p {
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: 0.76rem;
+  font-weight: 450;
 }
 
 .draft-studio {
@@ -851,8 +862,8 @@ li {
   min-height: 32px;
   padding: 0 10px;
   border-radius: 7px;
-  font-size: 0.78rem;
-  font-weight: 900;
+  font-size: 0.74rem;
+  font-weight: 650;
 }
 
 .draft-feedback-options button {
@@ -876,7 +887,7 @@ li {
   color: var(--ink);
   background: #ffffff;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   resize: vertical;
 }
 
@@ -901,11 +912,11 @@ li {
 .io-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .format-grid {
-  margin: 20px 0;
+  margin: 18px 0;
 }
 
 .examples-stack {
@@ -915,25 +926,25 @@ li {
 
 .format-grid section,
 .example {
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft);
 }
 
 .example {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 pre {
   overflow: auto;
   margin: 0;
-  padding: 10px;
+  padding: 9px 10px;
   border-radius: 8px;
   color: #ecf6f2;
   background: var(--editor);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   line-height: 1.55;
 }
 
@@ -943,13 +954,13 @@ pre {
   margin-bottom: 6px;
   color: var(--faint);
   font-size: 0.66rem;
-  font-weight: 850;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .coding-panel {
   display: grid;
-  grid-template-rows: auto minmax(380px, 49vh) auto;
+  grid-template-rows: auto minmax(360px, 47vh) auto;
   align-content: start;
   overflow: hidden;
   min-height: calc(100vh - 56px);
@@ -964,7 +975,7 @@ pre {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 48px;
+  min-height: 44px;
   padding: 7px 14px;
   border-bottom: 1px solid var(--line);
   background: #ffffff;
@@ -985,13 +996,13 @@ pre {
 }
 
 .runtime-pill {
-  min-height: 30px;
-  padding: 7px 10px;
+  min-height: 28px;
+  padding: 6px 10px;
   border-radius: 8px;
   color: var(--muted);
   background: #f3f6f2;
   font-size: 0.72rem;
-  font-weight: 760;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -1004,13 +1015,13 @@ pre {
 
 .language-tabs button,
 .run-actions button {
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 12px;
   border-radius: 0;
   color: var(--ink);
   background: transparent;
   font-size: 0.78rem;
-  font-weight: 820;
+  font-weight: 650;
 }
 
 .language-tabs button.selected {
@@ -1045,7 +1056,7 @@ pre {
   width: 100%;
   min-width: 0;
   height: 100%;
-  min-height: 360px;
+  min-height: 340px;
   background: var(--editor);
 }
 
@@ -1057,8 +1068,8 @@ pre {
   color: #bcd4cf;
   background: var(--editor);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .code-editor-shell .monaco-editor,
@@ -1085,13 +1096,13 @@ pre {
 }
 
 .result-tabs button {
-  min-height: 42px;
+  min-height: 38px;
   padding: 0 13px;
   border-radius: 0;
   color: var(--ink);
   background: transparent;
   font-size: 0.78rem;
-  font-weight: 820;
+  font-weight: 650;
 }
 
 .result-tabs button.selected {
@@ -1106,7 +1117,7 @@ pre {
   justify-content: space-between;
   gap: 12px;
   margin: 0;
-  padding: 12px 18px 10px;
+  padding: 10px 18px 8px;
 }
 
 .result-summary h3 {
@@ -1116,7 +1127,7 @@ pre {
 
 .result-summary span {
   color: var(--muted);
-  font-weight: 760;
+  font-weight: 500;
 }
 
 .results.success .result-summary span {
@@ -1137,7 +1148,7 @@ pre {
   padding: 0 18px 12px;
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 760;
+  font-weight: 500;
 }
 
 .submission-meta code {
@@ -1166,7 +1177,7 @@ pre {
   border-radius: 8px;
   color: var(--muted);
   background: #ffffff;
-  font-weight: 750;
+  font-weight: 500;
 }
 
 .history-layout {
@@ -1209,7 +1220,7 @@ pre {
 .history-item span {
   overflow: hidden;
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 600;
   text-overflow: ellipsis;
   text-transform: capitalize;
   white-space: nowrap;
@@ -1226,7 +1237,7 @@ pre {
   overflow: hidden;
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 750;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1252,7 +1263,7 @@ pre {
 .history-detail-header span {
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 850;
+  font-weight: 500;
 }
 
 .history-detail-header strong {
@@ -1267,7 +1278,7 @@ pre {
   border-radius: 7px;
   color: #f9fff8;
   background: var(--forest);
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .history-code {
@@ -1302,7 +1313,7 @@ pre {
 .tutor-hint-header span {
   color: #8a6500;
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -1317,7 +1328,7 @@ pre {
   border-radius: 7px;
   color: #1d1a0b;
   background: var(--amber);
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .tutor-hint p {
@@ -1337,7 +1348,7 @@ pre {
 }
 
 .tutor-next-step {
-  font-weight: 850;
+  font-weight: 600;
 }
 
 .tutor-thread {
@@ -1363,7 +1374,7 @@ pre {
 .tutor-message span {
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -1389,7 +1400,7 @@ pre {
   border-radius: 7px;
   color: #f9fff8;
   background: var(--forest);
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .test-results {
@@ -1436,7 +1447,7 @@ pre {
   color: var(--forest-2);
   background: #eef7ed;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .alert {
@@ -1451,7 +1462,7 @@ pre {
   color: #7e231d;
   background: #fff2f0;
   box-shadow: var(--shadow);
-  font-weight: 800;
+  font-weight: 600;
   transform: translateX(-50%);
 }
 
@@ -1461,7 +1472,7 @@ pre {
   place-items: center;
   grid-column: 1 / -1;
   color: var(--muted);
-  font-weight: 850;
+  font-weight: 500;
 }
 
 @media (max-width: 1180px) {
