@@ -651,11 +651,14 @@ function App() {
 
       <section className="app-main">
         <header className="topbar">
-          <div>
+          <div className="topbar-breadcrumb">
             <span>Studio</span>
+            <span aria-hidden="true">&gt;</span>
             <strong>{activeProblem?.title ?? "Loading problem"}</strong>
           </div>
+          <div className="command-chip" aria-label="Command shortcut">Cmd K</div>
           <div className="topbar-status">
+            <span className="autosave-pill">Auto-saved</span>
             {draft ? <span>Draft ID: {draft.id}</span> : <span>Local Mode</span>}
             {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
             {draft ? (
@@ -666,6 +669,9 @@ function App() {
             <button className="topbar-primary" disabled={isGenerating} onClick={handleGenerate} type="button">
               {isGenerating ? "Generating..." : "Generate Draft"}
             </button>
+            <button className="topbar-icon" aria-label="Help" type="button">?</button>
+            <button className="topbar-icon" aria-label="Notifications" type="button">!</button>
+            <span className="avatar">WS</span>
           </div>
         </header>
 

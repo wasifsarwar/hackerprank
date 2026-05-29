@@ -89,6 +89,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Modernize the React UI with a studio-style shell, top command bar, lighter navigation rail, refreshed problem/QA/results panels, and responsive layout polish
 - Current session - Backfill and lazily create generation attempts for drafts that existed before the generation-attempt audit table so feedback/publish/discard still work after migration
 - Current session - Continue UI modernization toward the concept reference with rail search/difficulty filters, topbar actions, statement section tabs, editor runtime chip, and a bottom local-mode rail status
+- Current session - Tighten the concept-matching UI pass with a collapsed generator drawer, vertical studio navigation, command shortcut/status controls, and split-pane app surfaces instead of floating cards
 
 ## Current Application Shape
 
@@ -133,7 +134,7 @@ Important files:
 - `frontend/src/ui.ts` - shared UI constants
 - `frontend/src/format.ts` - display formatting helpers
 - `frontend/src/styles.css` - current app styling
-- Current styling direction: modern interview-practice studio with a light rail, white problem canvas, dark editor anchor, forest/amber action palette, compact 8px-radius controls, and document-level responsive scrolling
+- Current styling direction: concept-matched interview-practice studio with a light rail, vertical workspace navigation, collapsed draft generator drawer, white problem canvas, dark editor anchor, forest/amber action palette, compact 8px-radius controls, and document-level responsive scrolling
 - `frontend/vite.config.ts` - Vite dev server and configurable `/api` proxy to backend
 
 Current frontend limitation:
