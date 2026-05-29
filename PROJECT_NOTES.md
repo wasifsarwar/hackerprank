@@ -86,6 +86,8 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Restore natural page scrolling by removing desktop-only internal statement/results scroll traps
 - Current session - Add ignored local `.env` support plus a committed `.env.example` for Claude/OpenAI provider setup
 - Current session - Add Generation Quality Studio v1 with persisted generation attempts, draft feedback tags/notes, and draft regeneration from critique
+- Current session - Modernize the React UI with a studio-style shell, top command bar, lighter navigation rail, refreshed problem/QA/results panels, and responsive layout polish
+- Current session - Backfill and lazily create generation attempts for drafts that existed before the generation-attempt audit table so feedback/publish/discard still work after migration
 
 ## Current Application Shape
 
@@ -96,6 +98,7 @@ Path: `frontend/`
 The frontend is a Vite React app. It currently provides:
 
 - Problem rail/sidebar
+- Studio-style top command bar with active problem/draft context
 - Problem statement view
 - Language tabs for Python and Java
 - Monaco code editor
@@ -128,6 +131,7 @@ Important files:
 - `frontend/src/ui.ts` - shared UI constants
 - `frontend/src/format.ts` - display formatting helpers
 - `frontend/src/styles.css` - current app styling
+- Current styling direction: modern interview-practice studio with a light rail, white problem canvas, dark editor anchor, forest/amber action palette, compact 8px-radius controls, and document-level responsive scrolling
 - `frontend/vite.config.ts` - Vite dev server and configurable `/api` proxy to backend
 
 Current frontend limitation:
@@ -190,6 +194,7 @@ Important files:
 - `db/migration/V2__generation_metadata.sql` - per-language reference solutions and generation audit metadata
 - `db/migration/V3__tutor_messages.sql` - submission-scoped tutor message persistence and indexes
 - `db/migration/V4__generation_attempts.sql` - generation attempt audit trail plus indexed feedback tags
+- `db/migration/V5__backfill_generation_attempts.sql` - backfills audit rows for drafts that predate generation attempts
 
 ## API Surface
 

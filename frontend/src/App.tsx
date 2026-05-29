@@ -649,64 +649,77 @@ function App() {
         selectedId={selectedId}
       />
 
-      <section className="workspace">
-        {error && <div className="alert">{error}</div>}
+      <section className="app-main">
+        <header className="topbar">
+          <div>
+            <span>Studio</span>
+            <strong>{activeProblem?.title ?? "Loading problem"}</strong>
+          </div>
+          <div className="topbar-status">
+            {draft ? <span>Draft ID: {draft.id}</span> : <span>Local Mode</span>}
+            {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
+          </div>
+        </header>
 
-        {activeProblem ? (
-          <>
-            <ProblemStatement
-              draftFeedbackNotes={draftFeedbackNotes}
-              draftFeedbackTags={draftFeedbackTags}
-              generationAttempt={draft?.generationAttempt}
-              generationMetadata={draft?.generationMetadata}
-              isDraftPreview={isDraftPreview}
-              isRegeneratingDraft={isRegeneratingDraft}
-              isSavingDraftFeedback={isSavingDraftFeedback}
-              onDraftFeedbackNotesChange={setDraftFeedbackNotes}
-              onDraftFeedbackTagToggle={handleDraftFeedbackTagToggle}
-              onRegenerateDraft={handleRegenerateDraft}
-              onSaveDraftFeedback={handleSaveDraftFeedback}
-              problem={activeProblem}
-              quality={draft?.quality}
-            />
-            <CodingPanel
-              activeProblem={activeProblem}
-              code={code}
-              draft={draft}
-              isDraftPreview={isDraftPreview}
-              isLoadingHistory={isLoadingHistory}
-              isLoadingSubmission={isLoadingSubmission}
-              isLoadingTutorHint={isLoadingTutorHint}
-              isLoadingTutorMessages={isLoadingTutorMessages}
-              isPublishing={isPublishing}
-              isRunning={isRunning}
-              isSendingTutorMessage={isSendingTutorMessage}
-              language={language}
-              onCodeChange={setCode}
-              onDiscardDraft={handleDiscardDraft}
-              onLanguageChange={setLanguage}
-              onLoadSubmissionCode={handleLoadSubmissionCode}
-              onPublishDraft={handlePublishDraft}
-              onResultViewChange={setResultView}
-              onRequestTutorHint={handleRequestTutorHint}
-              onRun={handleRun}
-              onSelectSubmission={handleSelectSubmission}
-              onSendTutorMessage={handleSendTutorMessage}
-              result={result}
-              resultView={resultView}
-              resultsTone={resultsTone}
-              selectedSubmission={selectedSubmission}
-              selectedSubmissionId={selectedSubmissionId}
-              submissions={submissions}
-              tutorHint={tutorHint}
-              tutorHintSubmissionId={tutorHintSubmissionId}
-              tutorMessages={tutorMessages}
-              tutorMessagesSubmissionId={tutorMessagesSubmissionId}
-            />
-          </>
-        ) : (
-          <div className="loading">Loading problem...</div>
-        )}
+        <section className="workspace">
+          {error && <div className="alert">{error}</div>}
+
+          {activeProblem ? (
+            <>
+              <ProblemStatement
+                draftFeedbackNotes={draftFeedbackNotes}
+                draftFeedbackTags={draftFeedbackTags}
+                generationAttempt={draft?.generationAttempt}
+                generationMetadata={draft?.generationMetadata}
+                isDraftPreview={isDraftPreview}
+                isRegeneratingDraft={isRegeneratingDraft}
+                isSavingDraftFeedback={isSavingDraftFeedback}
+                onDraftFeedbackNotesChange={setDraftFeedbackNotes}
+                onDraftFeedbackTagToggle={handleDraftFeedbackTagToggle}
+                onRegenerateDraft={handleRegenerateDraft}
+                onSaveDraftFeedback={handleSaveDraftFeedback}
+                problem={activeProblem}
+                quality={draft?.quality}
+              />
+              <CodingPanel
+                activeProblem={activeProblem}
+                code={code}
+                draft={draft}
+                isDraftPreview={isDraftPreview}
+                isLoadingHistory={isLoadingHistory}
+                isLoadingSubmission={isLoadingSubmission}
+                isLoadingTutorHint={isLoadingTutorHint}
+                isLoadingTutorMessages={isLoadingTutorMessages}
+                isPublishing={isPublishing}
+                isRunning={isRunning}
+                isSendingTutorMessage={isSendingTutorMessage}
+                language={language}
+                onCodeChange={setCode}
+                onDiscardDraft={handleDiscardDraft}
+                onLanguageChange={setLanguage}
+                onLoadSubmissionCode={handleLoadSubmissionCode}
+                onPublishDraft={handlePublishDraft}
+                onResultViewChange={setResultView}
+                onRequestTutorHint={handleRequestTutorHint}
+                onRun={handleRun}
+                onSelectSubmission={handleSelectSubmission}
+                onSendTutorMessage={handleSendTutorMessage}
+                result={result}
+                resultView={resultView}
+                resultsTone={resultsTone}
+                selectedSubmission={selectedSubmission}
+                selectedSubmissionId={selectedSubmissionId}
+                submissions={submissions}
+                tutorHint={tutorHint}
+                tutorHintSubmissionId={tutorHintSubmissionId}
+                tutorMessages={tutorMessages}
+                tutorMessagesSubmissionId={tutorMessagesSubmissionId}
+              />
+            </>
+          ) : (
+            <div className="loading">Loading problem...</div>
+          )}
+        </section>
       </section>
     </main>
   );

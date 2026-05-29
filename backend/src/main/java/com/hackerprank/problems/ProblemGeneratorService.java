@@ -71,14 +71,15 @@ public class ProblemGeneratorService {
     }
 
     public Optional<PublicGenerationAttempt> saveDraftFeedback(String draftId, DraftFeedbackRequest request) {
-        if (draftRepository.findById(draftId).isEmpty()) {
-            return Optional.empty();
-        }
-
-        DraftFeedbackRequest safeRequest = request == null ? new DraftFeedbackRequest() : request;
-        return attemptRepository
-            .replaceFeedbackByDraftId(draftId, safeRequest.getTags(), safeRequest.getNotes())
-            .map(PublicGenerationAttempt::from);
+        return draftRepository.findById(draftId)
+            .map(draft -> {
+                DraftFeedbackRequest safeRequest = request == null ? new DraftFeedbackRequest() : request;
+                ensureAttemptForDraft(draft);
+                return attemptRepository
+                    .replaceFeedbackByDraftId(draftId, safeRequest.getTags(), safeRequest.getNotes())
+                    .map(PublicGenerationAttempt::from)
+                    .orElseThrow(() -> new IllegalStateException("Could not record draft feedback"));
+            });
     }
 
     public Optional<PublicProblemDraft> regenerateDraft(String draftId, RegenerateDraftRequest request) {
@@ -100,6 +101,7 @@ public class ProblemGeneratorService {
     public Optional<PublicProblem> publishDraft(String draftId) {
         return draftRepository.findById(draftId)
             .map(draft -> {
+                ensureAttemptForDraft(draft);
                 draftRepository.publishById(draft.getId());
                 attemptRepository.updateOutcomeByDraftId(draft.getId(), "PUBLISHED");
                 return PublicProblem.from(draft.getProblem());
@@ -109,6 +111,7 @@ public class ProblemGeneratorService {
     public boolean deleteDraft(String draftId) {
         boolean exists = draftRepository.findById(draftId).isPresent();
         if (exists) {
+            draftRepository.findById(draftId).ifPresent(this::ensureAttemptForDraft);
             attemptRepository.updateOutcomeByDraftId(draftId, "DISCARDED");
             draftRepository.deleteById(draftId);
         }
@@ -135,6 +138,11 @@ public class ProblemGeneratorService {
         ProblemDraft savedDraft = draftRepository.save(draft);
         attemptRepository.save(attemptFor(savedDraft));
         return savedDraft;
+    }
+
+    private GenerationAttempt ensureAttemptForDraft(ProblemDraft draft) {
+        return attemptRepository.findByDraftId(draft.getId())
+            .orElseGet(() -> attemptRepository.save(attemptFor(draft)));
     }
 
     private GenerationAttempt attemptFor(ProblemDraft draft) {

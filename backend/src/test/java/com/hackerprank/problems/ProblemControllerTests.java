@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -43,6 +44,9 @@ class ProblemControllerTests {
 
     @Autowired
     private GenerationAttemptRepository attemptRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void generatesValidatedProblemAndStoresIt() throws Exception {
@@ -135,6 +139,44 @@ class ProblemControllerTests {
         assertEquals("Make the examples more interview-like.", attempt.getFeedbackNotes());
         assertEquals(3, attempt.getFeedbackTags().size());
         assertTrue(attempt.getFeedbackTags().stream().allMatch(tag -> tag.length() <= 80));
+    }
+
+    @Test
+    void recordsFeedbackForDraftsCreatedBeforeGenerationAttempts() throws Exception {
+        MvcResult draftResult = mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"topic\":\"arrays\",\"difficulty\":\"Easy\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        JsonNode draftBody = objectMapper.readTree(draftResult.getResponse().getContentAsString());
+        String draftId = draftBody.get("id").asText();
+
+        jdbcTemplate.update(
+            """
+                DELETE FROM generation_attempt_feedback_tags
+                WHERE attempt_id IN (SELECT id FROM generation_attempts WHERE draft_id = ?)
+                """,
+            draftId
+        );
+        jdbcTemplate.update("DELETE FROM generation_attempts WHERE draft_id = ?", draftId);
+
+        mockMvc.perform(post("/api/problems/drafts/" + draftId + "/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tags": ["Strong interview feel"],
+                      "notes": "Keep this draft available after migration."
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.outcome").value("DRAFTED"))
+            .andExpect(jsonPath("$.feedbackTags[0]").value("Strong interview feel"))
+            .andExpect(jsonPath("$.feedbackNotes").value("Keep this draft available after migration."));
+
+        GenerationAttempt attempt = attemptRepository.findByDraftId(draftId).orElseThrow();
+        assertEquals("DRAFTED", attempt.getOutcome());
+        assertEquals("Keep this draft available after migration.", attempt.getFeedbackNotes());
     }
 
     @Test
