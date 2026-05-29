@@ -90,6 +90,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Backfill and lazily create generation attempts for drafts that existed before the generation-attempt audit table so feedback/publish/discard still work after migration
 - Current session - Continue UI modernization toward the concept reference with rail search/difficulty filters, topbar actions, statement section tabs, editor runtime chip, and a bottom local-mode rail status
 - Current session - Tighten the concept-matching UI pass with a collapsed generator drawer, vertical studio navigation, command shortcut/status controls, and split-pane app surfaces instead of floating cards
+- Current session - Refine the modernized UI density with smaller typography, calmer control weights, a shorter editor viewport, and tighter rail/problem/result spacing after visual comparison with `concept.png`
 
 ## Current Application Shape
 

@@ -133,7 +133,7 @@ export function CodingPanel({
           options={{
             automaticLayout: true,
             fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
-            fontSize: 15,
+            fontSize: 14,
             formatOnPaste: true,
             minimap: { enabled: false },
             padding: { top: 16, bottom: 16 },
