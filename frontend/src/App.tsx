@@ -658,6 +658,14 @@ function App() {
           <div className="topbar-status">
             {draft ? <span>Draft ID: {draft.id}</span> : <span>Local Mode</span>}
             {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
+            {draft ? (
+              <button disabled={isSavingDraftFeedback || isRegeneratingDraft} onClick={handleSaveDraftFeedback} type="button">
+                {isSavingDraftFeedback ? "Saving..." : "Save Feedback"}
+              </button>
+            ) : null}
+            <button className="topbar-primary" disabled={isGenerating} onClick={handleGenerate} type="button">
+              {isGenerating ? "Generating..." : "Generate Draft"}
+            </button>
           </div>
         </header>
 

@@ -34,8 +34,14 @@ export function ProblemStatement({
 }: ProblemStatementProps) {
   return (
     <section className="statement">
+      <nav className="statement-tabs" aria-label="Problem sections">
+        <a href="#problem-overview">Problem</a>
+        <a href="#problem-examples">Examples</a>
+        <a href="#problem-constraints">Constraints</a>
+        <a href="#draft-quality">Draft QA</a>
+      </nav>
       <div className="problem-heading">
-        <div>
+        <div id="problem-overview">
           <p className="eyebrow">
             {problem.difficulty}
             {isDraftPreview ? " Draft" : ""}
@@ -48,6 +54,28 @@ export function ProblemStatement({
           ))}
         </div>
       </div>
+
+      <p>{problem.description}</p>
+
+      <div className="format-grid">
+        <section>
+          <h3>Input</h3>
+          <p>{problem.inputFormat}</p>
+        </section>
+        <section>
+          <h3>Output</h3>
+          <p>{problem.outputFormat}</p>
+        </section>
+      </div>
+
+      <section id="problem-constraints">
+        <h3>Constraints</h3>
+        <ul>
+          {problem.constraints.map((constraint) => (
+            <li key={constraint}>{constraint}</li>
+          ))}
+        </ul>
+      </section>
 
       {isDraftPreview && generationMetadata && quality ? (
         <DraftMetadata
@@ -65,29 +93,8 @@ export function ProblemStatement({
         />
       ) : null}
 
-      <p>{problem.description}</p>
-
-      <div className="format-grid">
-        <section>
-          <h3>Input</h3>
-          <p>{problem.inputFormat}</p>
-        </section>
-        <section>
-          <h3>Output</h3>
-          <p>{problem.outputFormat}</p>
-        </section>
-      </div>
-
-      <section>
-        <h3>Constraints</h3>
-        <ul>
-          {problem.constraints.map((constraint) => (
-            <li key={constraint}>{constraint}</li>
-          ))}
-        </ul>
-      </section>
-
-      {problem.examples.map((example, index) => (
+      <div id="problem-examples" className="examples-stack">
+        {problem.examples.map((example, index) => (
         <section className="example" key={`${example.input}-${index}`}>
           <h3>Example {index + 1}</h3>
           <div className="example-grid">
@@ -102,7 +109,8 @@ export function ProblemStatement({
           </div>
           <p>{example.explanation}</p>
         </section>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }

@@ -68,13 +68,16 @@ export function DraftMetadata({
   ];
 
   return (
-    <section className="draft-quality" aria-label="Draft quality">
+    <section className="draft-quality" id="draft-quality" aria-label="Draft quality">
       <div className="draft-metadata-header">
         <div>
           <span>Draft QA</span>
           <strong>{displayValue(generationMetadata.intendedTechnique)}</strong>
         </div>
-        <span className="validation-pill">{formatStatus(quality.status)}</span>
+        <div className="draft-quality-actions">
+          <span className="quality-pill">Quality: {formatStatus(quality.status)}</span>
+          <span className="validation-pill">{formatStatus(quality.status)}</span>
+        </div>
       </div>
 
       <dl className="draft-metadata-grid">

@@ -85,17 +85,20 @@ export function CodingPanel({
   return (
     <section className="coding-panel">
       <div className="toolbar">
-        <div className="language-tabs" aria-label="Language">
-          {(Object.keys(languageLabels) as Language[]).map((item) => (
-            <button
-              className={item === language ? "selected" : ""}
-              key={item}
-              onClick={() => onLanguageChange(item)}
-              type="button"
-            >
-              {languageLabels[item]}
-            </button>
-          ))}
+        <div className="editor-toolbar-left">
+          <div className="language-tabs" aria-label="Language">
+            {(Object.keys(languageLabels) as Language[]).map((item) => (
+              <button
+                className={item === language ? "selected" : ""}
+                key={item}
+                onClick={() => onLanguageChange(item)}
+                type="button"
+              >
+                {languageLabels[item]}
+              </button>
+            ))}
+          </div>
+          <span className="runtime-pill">{language === "java" ? "Java 21" : "Python 3.12"}</span>
         </div>
 
         {isDraftPreview ? (

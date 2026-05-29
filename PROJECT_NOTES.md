@@ -88,6 +88,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add Generation Quality Studio v1 with persisted generation attempts, draft feedback tags/notes, and draft regeneration from critique
 - Current session - Modernize the React UI with a studio-style shell, top command bar, lighter navigation rail, refreshed problem/QA/results panels, and responsive layout polish
 - Current session - Backfill and lazily create generation attempts for drafts that existed before the generation-attempt audit table so feedback/publish/discard still work after migration
+- Current session - Continue UI modernization toward the concept reference with rail search/difficulty filters, topbar actions, statement section tabs, editor runtime chip, and a bottom local-mode rail status
 
 ## Current Application Shape
 
@@ -98,6 +99,7 @@ Path: `frontend/`
 The frontend is a Vite React app. It currently provides:
 
 - Problem rail/sidebar
+- Problem rail search and difficulty filters
 - Studio-style top command bar with active problem/draft context
 - Problem statement view
 - Language tabs for Python and Java
