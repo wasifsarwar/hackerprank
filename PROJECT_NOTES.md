@@ -93,6 +93,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Refine the modernized UI density with smaller typography, calmer control weights, a shorter editor viewport, and tighter rail/problem/result spacing after visual comparison with `concept.png`
 - Current session - Correct the over-bold UI pass by lowering the global type scale, reducing 800/900 font weights across chrome/content/results, tightening example cards, and dropping Monaco to 13px
 - Current session - Clean up the Studio shell by removing fake nav/topbar controls, moving draft generation into a first-class prompt composer, and adding Monaco v1 interview snippets/completions/hover plus reset/format editor actions
+- Current session - Improve Monaco v1 suggestions with ranked Java/Python interview snippets, Java API/type completions, dot-context methods for common helpers/collections, and cleaner hover explanations
 
 ## Current Application Shape
 
