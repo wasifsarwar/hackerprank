@@ -34,4 +34,9 @@ public class JavaLspController {
     public JavaLspSignatureHelpResponse signatureHelp(@RequestBody JavaLspPositionRequest request) {
         return javaLspService.signatureHelp(request);
     }
+
+    @PostMapping("/diagnostics")
+    public JavaLspDiagnosticsResponse diagnostics(@RequestBody JavaCompletionRequest request) {
+        return javaLspService.diagnostics(request);
+    }
 }
