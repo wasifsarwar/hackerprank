@@ -131,7 +131,7 @@ export ANTHROPIC_API_KEY=...
 Optional Anthropic generator settings:
 
 ```sh
-export HACKERPRANK_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 export HACKERPRANK_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
 export HACKERPRANK_ANTHROPIC_VERSION=2023-06-01
 export HACKERPRANK_ANTHROPIC_TIMEOUT_SECONDS=45
@@ -165,7 +165,7 @@ export ANTHROPIC_API_KEY=...
 Optional Anthropic tutor settings:
 
 ```sh
-export HACKERPRANK_TUTOR_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_TUTOR_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 export HACKERPRANK_TUTOR_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
 export HACKERPRANK_TUTOR_ANTHROPIC_VERSION=2023-06-01
 export HACKERPRANK_TUTOR_ANTHROPIC_TIMEOUT_SECONDS=30
