@@ -1,6 +1,7 @@
 package com.hackerprank.editor;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -30,5 +31,14 @@ class JavaLspServiceTests {
         assertFalse(response.enabled());
         assertTrue(response.message().contains("textDocument") || response.message().contains("initialize"));
         assertFalse(service.hasRunningProcess());
+    }
+
+    @Test
+    void documentVersionsAreMonotonicAndIndependentFromJsonRpcRequestIds() {
+        JavaLspService service = new JavaLspService(new JavaLspProperties(), new ObjectMapper());
+
+        assertEquals(1, service.nextDocumentVersion());
+        assertEquals(2, service.nextDocumentVersion());
+        assertEquals(3, service.nextDocumentVersion());
     }
 }

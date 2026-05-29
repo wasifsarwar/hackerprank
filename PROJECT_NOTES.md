@@ -844,6 +844,7 @@ Notes:
 - LSP response mapping lives in `JavaLspProtocolMapper` so protocol edge cases can be unit tested without spawning JDT LS. Keep completion mapping, hover markup, signature help, and `workspace/configuration` shape changes covered there.
 - JDT LS startup timeout is configurable through `HACKERPRANK_JAVA_LSP_STARTUP_TIMEOUT_MS`; production defaults to 20 seconds, while tests can use a short timeout to verify cleanup paths.
 - JDT LS diagnostics settle time is configurable through `HACKERPRANK_JAVA_LSP_DIAGNOSTICS_SETTLE_MS`; production defaults to 1200ms so publishDiagnostics has a chance to arrive after didOpen/didChange, especially on the first cold JDT startup.
+- LSP document versions are tracked separately from JSON-RPC request IDs. Every `didOpen` and `didChange`, including diagnostics-only syncs, must send a monotonically increasing text document version so JDT LS does not publish stale diagnostics for the wrong buffer.
 - This is still a REST bridge, not a full Monaco language-client/WebSocket bridge. Future editor work can add code actions, organize imports, rename, and richer diagnostics streaming.
 
 ## How To Keep These Notes Useful

@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,6 +32,7 @@ public class JavaLspService {
     private final ObjectMapper objectMapper;
     private final JavaLspProtocolMapper protocolMapper;
     private final AtomicLong nextRequestId = new AtomicLong(1);
+    private final AtomicInteger documentVersion = new AtomicInteger();
     private final Map<Long, CompletableFuture<JsonNode>> pendingRequests = new ConcurrentHashMap<>();
     private final Object lifecycleLock = new Object();
     private final Object completionLock = new Object();
@@ -160,6 +162,7 @@ public class JavaLspService {
             }
 
             prepareProject();
+            documentVersion.set(0);
             ProcessBuilder processBuilder = new ProcessBuilder(commandWithData(command.get()));
             processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
             process = processBuilder.start();
@@ -200,6 +203,7 @@ public class JavaLspService {
         process = null;
         initialized = false;
         documentOpened = false;
+        documentVersion.set(0);
         diagnosticsByUri.clear();
     }
 
@@ -245,7 +249,7 @@ public class JavaLspService {
             ObjectNode textDocument = params.putObject("textDocument");
             textDocument.put("uri", documentUri);
             textDocument.put("languageId", DOCUMENT_LANGUAGE);
-            textDocument.put("version", 1);
+            textDocument.put("version", nextDocumentVersion());
             textDocument.put("text", code == null ? "" : code);
             notify("textDocument/didOpen", params);
             documentOpened = true;
@@ -254,10 +258,14 @@ public class JavaLspService {
 
         ObjectNode textDocument = params.putObject("textDocument");
         textDocument.put("uri", documentUri);
-        textDocument.put("version", (int) nextRequestId.get());
+        textDocument.put("version", nextDocumentVersion());
         ArrayNode changes = params.putArray("contentChanges");
         changes.addObject().put("text", code == null ? "" : code);
         notify("textDocument/didChange", params);
+    }
+
+    int nextDocumentVersion() {
+        return documentVersion.incrementAndGet();
     }
 
     private void waitForDiagnostics() {
