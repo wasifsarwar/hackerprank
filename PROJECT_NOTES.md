@@ -840,6 +840,8 @@ Notes:
 - If JDT LS startup fails after the process has been spawned, the service must close stdio, complete pending requests, and destroy the child before allowing the next retry. This prevents duplicate language servers from fighting over the same `.hackerprank-jdtls/data` workspace.
 - Completion responses now preserve JDT LS `additionalTextEdits` so Monaco can apply import edits along with selected Java symbols.
 - The frontend treats temporary JDT LS failures as a short retry backoff instead of permanently disabling language-server requests for the rest of the React component lifetime.
+- LSP response mapping lives in `JavaLspProtocolMapper` so protocol edge cases can be unit tested without spawning JDT LS. Keep completion mapping, hover markup, signature help, and `workspace/configuration` shape changes covered there.
+- JDT LS startup timeout is configurable through `HACKERPRANK_JAVA_LSP_STARTUP_TIMEOUT_MS`; production defaults to 20 seconds, while tests can use a short timeout to verify cleanup paths.
 - This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
 
 ## How To Keep These Notes Useful

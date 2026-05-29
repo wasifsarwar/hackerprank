@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +29,7 @@ public class JavaLspService {
 
     private final JavaLspProperties properties;
     private final ObjectMapper objectMapper;
+    private final JavaLspProtocolMapper protocolMapper;
     private final AtomicLong nextRequestId = new AtomicLong(1);
     private final Map<Long, CompletableFuture<JsonNode>> pendingRequests = new ConcurrentHashMap<>();
     private final Object lifecycleLock = new Object();
@@ -48,6 +48,7 @@ public class JavaLspService {
     public JavaLspService(JavaLspProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.protocolMapper = new JavaLspProtocolMapper(objectMapper);
     }
 
     @PreDestroy
@@ -81,7 +82,7 @@ public class JavaLspService {
                 writeSource(request.getCode());
                 syncDocument(request.getCode());
                 JsonNode result = request("textDocument/completion", completionParams(request), properties.getRequestTimeoutMs());
-                return JavaCompletionResponse.enabled(toCompletionItems(result));
+                return JavaCompletionResponse.enabled(protocolMapper.toCompletionItems(result));
             }
         } catch (Exception exception) {
             disabledReason = exception.getMessage();
@@ -100,7 +101,7 @@ public class JavaLspService {
                 writeSource(request.getCode());
                 syncDocument(request.getCode());
                 JsonNode result = request("textDocument/hover", positionParams(request), properties.getRequestTimeoutMs());
-                return JavaLspHoverResponse.enabled(hoverContents(result));
+                return JavaLspHoverResponse.enabled(protocolMapper.hoverContents(result));
             }
         } catch (Exception exception) {
             disabledReason = exception.getMessage();
@@ -119,7 +120,7 @@ public class JavaLspService {
                 writeSource(request.getCode());
                 syncDocument(request.getCode());
                 JsonNode result = request("textDocument/signatureHelp", positionParams(request), properties.getRequestTimeoutMs());
-                return toSignatureHelp(result);
+                return protocolMapper.toSignatureHelp(result);
             }
         } catch (Exception exception) {
             disabledReason = exception.getMessage();
@@ -150,7 +151,7 @@ public class JavaLspService {
                 reader.setDaemon(true);
                 reader.start();
 
-                request("initialize", initializeParams(), Duration.ofSeconds(20).toMillis());
+                request("initialize", initializeParams(), properties.getStartupTimeoutMs());
                 notify("initialized", objectMapper.createObjectNode());
                 initialized = true;
                 documentOpened = false;
@@ -179,6 +180,12 @@ public class JavaLspService {
         process = null;
         initialized = false;
         documentOpened = false;
+    }
+
+    boolean hasRunningProcess() {
+        synchronized (lifecycleLock) {
+            return process != null && process.isAlive();
+        }
     }
 
     private void prepareProject() throws IOException {
@@ -357,27 +364,15 @@ public class JavaLspService {
         ObjectNode response = objectMapper.createObjectNode();
         response.put("jsonrpc", "2.0");
         response.set("id", message.get("id"));
-        String method = text(message, "method");
+        String method = protocolMapper.text(message, "method");
         if ("workspace/configuration".equals(method)) {
-            response.set("result", emptyConfigurationResult(message));
+            response.set("result", protocolMapper.emptyConfigurationResult(message));
         } else if ("workspace/workspaceFolders".equals(method)) {
             response.set("result", objectMapper.createArrayNode());
         } else {
             response.putNull("result");
         }
         writeMessage(response);
-    }
-
-    private ArrayNode emptyConfigurationResult(JsonNode message) {
-        ArrayNode result = objectMapper.createArrayNode();
-        JsonNode items = message.path("params").path("items");
-        if (!items.isArray()) {
-            return result;
-        }
-        for (int index = 0; index < items.size(); index += 1) {
-            result.addNull();
-        }
-        return result;
     }
 
     private JsonNode readMessage(BufferedInputStream output) throws IOException {
@@ -419,145 +414,6 @@ public class JavaLspService {
             buffer.write(current);
         }
         return null;
-    }
-
-    private List<JavaCompletionItem> toCompletionItems(JsonNode result) {
-        JsonNode items = result == null ? null : result.get("items");
-        if (items == null && result != null && result.isArray()) {
-            items = result;
-        }
-        if (items == null || !items.isArray()) {
-            return List.of();
-        }
-
-        List<JavaCompletionItem> completions = new ArrayList<>();
-        for (JsonNode item : items) {
-            completions.add(new JavaCompletionItem(
-                text(item, "label"),
-                text(item, "detail"),
-                insertText(item),
-                String.valueOf(item.path("kind").asInt(0)),
-                additionalTextEdits(item)
-            ));
-            if (completions.size() >= 60) {
-                break;
-            }
-        }
-        return completions;
-    }
-
-    private String insertText(JsonNode item) {
-        JsonNode textEdit = item.get("textEdit");
-        if (textEdit != null && textEdit.has("newText")) {
-            return textEdit.get("newText").asText();
-        }
-        if (item.has("insertText")) {
-            return item.get("insertText").asText();
-        }
-        return text(item, "label");
-    }
-
-    private List<JavaLspTextEdit> additionalTextEdits(JsonNode item) {
-        JsonNode edits = item.get("additionalTextEdits");
-        if (edits == null || !edits.isArray()) {
-            return List.of();
-        }
-
-        List<JavaLspTextEdit> mappedEdits = new ArrayList<>();
-        for (JsonNode edit : edits) {
-            JsonNode range = edit.path("range");
-            JsonNode start = range.path("start");
-            JsonNode end = range.path("end");
-            mappedEdits.add(new JavaLspTextEdit(
-                start.path("line").asInt(0) + 1,
-                start.path("character").asInt(0) + 1,
-                end.path("line").asInt(0) + 1,
-                end.path("character").asInt(0) + 1,
-                text(edit, "newText")
-            ));
-        }
-        return mappedEdits;
-    }
-
-    private String hoverContents(JsonNode result) {
-        if (result == null || result.isNull()) {
-            return "";
-        }
-        return markup(result.get("contents"));
-    }
-
-    private JavaLspSignatureHelpResponse toSignatureHelp(JsonNode result) {
-        if (result == null || result.isNull()) {
-            return JavaLspSignatureHelpResponse.enabled(0, 0, List.of());
-        }
-
-        List<JavaLspSignature> signatures = new ArrayList<>();
-        JsonNode signatureItems = result.path("signatures");
-        if (signatureItems.isArray()) {
-            for (JsonNode signature : signatureItems) {
-                List<String> parameters = new ArrayList<>();
-                JsonNode parameterItems = signature.path("parameters");
-                if (parameterItems.isArray()) {
-                    for (JsonNode parameter : parameterItems) {
-                        parameters.add(parameterLabel(parameter.path("label")));
-                    }
-                }
-                signatures.add(new JavaLspSignature(
-                    text(signature, "label"),
-                    markup(signature.get("documentation")),
-                    parameters
-                ));
-                if (signatures.size() >= 12) {
-                    break;
-                }
-            }
-        }
-        return JavaLspSignatureHelpResponse.enabled(
-            result.path("activeSignature").asInt(0),
-            result.path("activeParameter").asInt(0),
-            signatures
-        );
-    }
-
-    private String parameterLabel(JsonNode label) {
-        if (label == null || label.isNull()) {
-            return "";
-        }
-        if (label.isArray() && label.size() == 2) {
-            return label.get(0).asInt() + ":" + label.get(1).asInt();
-        }
-        return label.asText("");
-    }
-
-    private String markup(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return "";
-        }
-        if (node.isTextual()) {
-            return node.asText();
-        }
-        if (node.isArray()) {
-            List<String> parts = new ArrayList<>();
-            for (JsonNode item : node) {
-                String part = markup(item);
-                if (!part.isBlank()) {
-                    parts.add(part);
-                }
-            }
-            return String.join("\n\n", parts);
-        }
-        if (node.has("language") && node.has("value")) {
-            return "```" + text(node, "language") + "\n" + text(node, "value") + "\n```";
-        }
-        if (node.has("value")) {
-            return node.get("value").asText("");
-        }
-        return node.toString();
-    }
-
-    private String text(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        return value == null || value.isNull() ? "" : value.asText();
     }
 
     private Optional<List<String>> resolveCommand() {
