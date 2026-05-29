@@ -833,6 +833,7 @@ Notes:
 
 - JDT LS requires Java 21, which matches the project runtime.
 - `.hackerprank-jdtls/` is ignored because it stores generated workspace/project state.
+- JDT LS can send client requests while HackerPrank is waiting for initialize/completion responses. Keep lifecycle, completion, and protocol write locks separate so the reader thread can answer those requests instead of deadlocking the language server.
 - This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
 
 ## How To Keep These Notes Useful

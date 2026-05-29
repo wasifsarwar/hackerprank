@@ -31,6 +31,9 @@ public class JavaLspService {
     private final ObjectMapper objectMapper;
     private final AtomicLong nextRequestId = new AtomicLong(1);
     private final Map<Long, CompletableFuture<JsonNode>> pendingRequests = new ConcurrentHashMap<>();
+    private final Object lifecycleLock = new Object();
+    private final Object completionLock = new Object();
+    private final Object writeLock = new Object();
 
     private Process process;
     private BufferedOutputStream input;
@@ -46,7 +49,7 @@ public class JavaLspService {
         this.objectMapper = objectMapper;
     }
 
-    public synchronized JavaCompletionResponse status() {
+    public JavaCompletionResponse status() {
         if (!properties.isEnabled()) {
             return JavaCompletionResponse.disabled("Java LSP is disabled.");
         }
@@ -59,17 +62,19 @@ public class JavaLspService {
         return new JavaCompletionResponse(true, "jdtls", "JDT LS command is available.", List.of());
     }
 
-    public synchronized JavaCompletionResponse complete(JavaCompletionRequest request) {
+    public JavaCompletionResponse complete(JavaCompletionRequest request) {
         if (!properties.isEnabled()) {
             return JavaCompletionResponse.disabled("Java LSP is disabled.");
         }
 
         try {
             ensureStarted();
-            writeSource(request.getCode());
-            syncDocument(request.getCode());
-            JsonNode result = request("textDocument/completion", completionParams(request), properties.getRequestTimeoutMs());
-            return JavaCompletionResponse.enabled(toCompletionItems(result));
+            synchronized (completionLock) {
+                writeSource(request.getCode());
+                syncDocument(request.getCode());
+                JsonNode result = request("textDocument/completion", completionParams(request), properties.getRequestTimeoutMs());
+                return JavaCompletionResponse.enabled(toCompletionItems(result));
+            }
         } catch (Exception exception) {
             disabledReason = exception.getMessage();
             return JavaCompletionResponse.disabled(disabledReason == null ? "JDT LS completion failed." : disabledReason);
@@ -77,28 +82,30 @@ public class JavaLspService {
     }
 
     private void ensureStarted() throws IOException {
-        if (initialized && process != null && process.isAlive()) {
-            return;
+        synchronized (lifecycleLock) {
+            if (initialized && process != null && process.isAlive()) {
+                return;
+            }
+
+            Optional<List<String>> command = resolveCommand();
+            if (command.isEmpty()) {
+                throw new IOException("JDT LS was not found. Install `jdtls` or set HACKERPRANK_JAVA_LSP_COMMAND.");
+            }
+
+            prepareProject();
+            ProcessBuilder processBuilder = new ProcessBuilder(commandWithData(command.get()));
+            processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
+            process = processBuilder.start();
+            input = new BufferedOutputStream(process.getOutputStream());
+            Thread reader = new Thread(() -> readMessages(process), "jdtls-lsp-reader");
+            reader.setDaemon(true);
+            reader.start();
+
+            request("initialize", initializeParams(), Duration.ofSeconds(20).toMillis());
+            notify("initialized", objectMapper.createObjectNode());
+            initialized = true;
+            documentOpened = false;
         }
-
-        Optional<List<String>> command = resolveCommand();
-        if (command.isEmpty()) {
-            throw new IOException("JDT LS was not found. Install `jdtls` or set HACKERPRANK_JAVA_LSP_COMMAND.");
-        }
-
-        prepareProject();
-        ProcessBuilder processBuilder = new ProcessBuilder(commandWithData(command.get()));
-        processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
-        process = processBuilder.start();
-        input = new BufferedOutputStream(process.getOutputStream());
-        Thread reader = new Thread(() -> readMessages(process), "jdtls-lsp-reader");
-        reader.setDaemon(true);
-        reader.start();
-
-        request("initialize", initializeParams(), Duration.ofSeconds(20).toMillis());
-        notify("initialized", objectMapper.createObjectNode());
-        initialized = true;
-        documentOpened = false;
     }
 
     private void prepareProject() throws IOException {
@@ -212,12 +219,14 @@ public class JavaLspService {
         writeMessage(message);
     }
 
-    private synchronized void writeMessage(JsonNode message) throws IOException {
+    private void writeMessage(JsonNode message) throws IOException {
         byte[] body = objectMapper.writeValueAsBytes(message);
         String header = "Content-Length: " + body.length + "\r\n\r\n";
-        input.write(header.getBytes(StandardCharsets.US_ASCII));
-        input.write(body);
-        input.flush();
+        synchronized (writeLock) {
+            input.write(header.getBytes(StandardCharsets.US_ASCII));
+            input.write(body);
+            input.flush();
+        }
     }
 
     private void readMessages(Process lspProcess) {
