@@ -95,20 +95,20 @@ export function ProblemStatement({
 
       <div id="problem-examples" className="examples-stack">
         {problem.examples.map((example, index) => (
-        <section className="example" key={`${example.input}-${index}`}>
-          <h3>Example {index + 1}</h3>
-          <div className="example-grid">
-            <div>
-              <span>Input</span>
-              <pre>{example.input}</pre>
+          <section className="example" key={`${example.input}-${index}`}>
+            <h3>Example {index + 1}</h3>
+            <div className="example-grid">
+              <div>
+                <span>Input</span>
+                <pre>{example.input}</pre>
+              </div>
+              <div>
+                <span>Output</span>
+                <pre>{example.output}</pre>
+              </div>
             </div>
-            <div>
-              <span>Output</span>
-              <pre>{example.output}</pre>
-            </div>
-          </div>
-          <p>{example.explanation}</p>
-        </section>
+            <p>{example.explanation}</p>
+          </section>
         ))}
       </div>
     </section>

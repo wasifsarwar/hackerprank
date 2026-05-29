@@ -92,6 +92,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Tighten the concept-matching UI pass with a collapsed generator drawer, vertical studio navigation, command shortcut/status controls, and split-pane app surfaces instead of floating cards
 - Current session - Refine the modernized UI density with smaller typography, calmer control weights, a shorter editor viewport, and tighter rail/problem/result spacing after visual comparison with `concept.png`
 - Current session - Correct the over-bold UI pass by lowering the global type scale, reducing 800/900 font weights across chrome/content/results, tightening example cards, and dropping Monaco to 13px
+- Current session - Clean up the Studio shell by removing fake nav/topbar controls, moving draft generation into a first-class prompt composer, and adding Monaco v1 interview snippets/completions/hover plus reset/format editor actions
 
 ## Current Application Shape
 
@@ -103,6 +104,7 @@ The frontend is a Vite React app. It currently provides:
 
 - Problem rail/sidebar
 - Problem rail search and difficulty filters
+- Studio generation composer with prompt, difficulty, target concepts, interview style, optional notes, and draft generation
 - Studio-style top command bar with active problem/draft context
 - Problem statement view
 - Language tabs for Python and Java
@@ -124,7 +126,8 @@ The frontend is a Vite React app. It currently provides:
 Important files:
 
 - `frontend/src/App.tsx` - app-level state orchestration and API-driven workflows
-- `frontend/src/components/ProblemRail.tsx` - sidebar, generator controls, draft actions, and problem list
+- `frontend/src/components/GenerationComposer.tsx` - prompt-first draft generation controls
+- `frontend/src/components/ProblemRail.tsx` - sidebar, draft actions, and problem list
 - `frontend/src/components/ProblemStatement.tsx` - problem statement, formats, constraints, and examples
 - `frontend/src/components/DraftMetadata.tsx` - safe generated draft QA panel for draft previews
 - `frontend/src/components/CodingPanel.tsx` - language toolbar, Monaco editor, and results layout
@@ -134,6 +137,7 @@ Important files:
 - `frontend/src/api.ts` - API client functions
 - `frontend/src/types.ts` - shared TypeScript API shapes
 - `frontend/src/ui.ts` - shared UI constants
+- `frontend/src/editorIntelligence.ts` - Monaco v1 snippets, completion providers, and hover helpers for interview Java/Python
 - `frontend/src/format.ts` - display formatting helpers
 - `frontend/src/styles.css` - current app styling
 - Current styling direction: concept-matched interview-practice studio with a light rail, vertical workspace navigation, collapsed draft generator drawer, white problem canvas, dark editor anchor, forest/amber action palette, compact 8px-radius controls, and document-level responsive scrolling

@@ -15,6 +15,7 @@ import {
   sendTutorMessage
 } from "./api";
 import { CodingPanel } from "./components/CodingPanel";
+import { GenerationComposer } from "./components/GenerationComposer";
 import { ProblemRail } from "./components/ProblemRail";
 import { ProblemStatement } from "./components/ProblemStatement";
 import type {
@@ -44,7 +45,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [draft, setDraft] = useState<ProblemDraft | null>(null);
-  const [generatorTopic, setGeneratorTopic] = useState("arrays");
+  const [generatorTopic, setGeneratorTopic] = useState("");
   const [generatorDifficulty, setGeneratorDifficulty] = useState<Difficulty>("Easy");
   const [generatorTargetConcepts, setGeneratorTargetConcepts] = useState("");
   const [generatorConstraintsNotes, setGeneratorConstraintsNotes] = useState("");
@@ -629,20 +630,8 @@ function App() {
     <main className="app-shell">
       <ProblemRail
         draft={draft}
-        generatorConstraintsNotes={generatorConstraintsNotes}
-        generatorDifficulty={generatorDifficulty}
-        generatorInterviewStyle={generatorInterviewStyle}
-        generatorTargetConcepts={generatorTargetConcepts}
-        generatorTopic={generatorTopic}
-        isGenerating={isGenerating}
         isPublishing={isPublishing}
         onDiscardDraft={handleDiscardDraft}
-        onGenerate={handleGenerate}
-        onGeneratorConstraintsNotesChange={setGeneratorConstraintsNotes}
-        onGeneratorDifficultyChange={setGeneratorDifficulty}
-        onGeneratorInterviewStyleChange={setGeneratorInterviewStyle}
-        onGeneratorTargetConceptsChange={setGeneratorTargetConcepts}
-        onGeneratorTopicChange={setGeneratorTopic}
         onPublishDraft={handlePublishDraft}
         onSelectProblem={handleSelectProblem}
         problems={problems}
@@ -656,9 +645,8 @@ function App() {
             <span aria-hidden="true">&gt;</span>
             <strong>{activeProblem?.title ?? "Loading problem"}</strong>
           </div>
-          <div className="command-chip" aria-label="Command shortcut">Cmd K</div>
           <div className="topbar-status">
-            <span className="autosave-pill">Auto-saved</span>
+            {isGenerating ? <span className="autosave-pill">Generating draft...</span> : null}
             {draft ? <span>Draft ID: {draft.id}</span> : <span>Local Mode</span>}
             {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
             {draft ? (
@@ -666,14 +654,23 @@ function App() {
                 {isSavingDraftFeedback ? "Saving..." : "Save Feedback"}
               </button>
             ) : null}
-            <button className="topbar-primary" disabled={isGenerating} onClick={handleGenerate} type="button">
-              {isGenerating ? "Generating..." : "Generate Draft"}
-            </button>
-            <button className="topbar-icon" aria-label="Help" type="button">?</button>
-            <button className="topbar-icon" aria-label="Notifications" type="button">!</button>
-            <span className="avatar">WS</span>
           </div>
         </header>
+
+        <GenerationComposer
+          constraintsNotes={generatorConstraintsNotes}
+          difficulty={generatorDifficulty}
+          interviewStyle={generatorInterviewStyle}
+          isGenerating={isGenerating}
+          onConstraintsNotesChange={setGeneratorConstraintsNotes}
+          onDifficultyChange={setGeneratorDifficulty}
+          onGenerate={handleGenerate}
+          onInterviewStyleChange={setGeneratorInterviewStyle}
+          onTargetConceptsChange={setGeneratorTargetConcepts}
+          onTopicChange={setGeneratorTopic}
+          targetConcepts={generatorTargetConcepts}
+          topic={generatorTopic}
+        />
 
         <section className="workspace">
           {error && <div className="alert">{error}</div>}
@@ -713,6 +710,7 @@ function App() {
                 onLanguageChange={setLanguage}
                 onLoadSubmissionCode={handleLoadSubmissionCode}
                 onPublishDraft={handlePublishDraft}
+                onResetCode={() => setCode(activeProblem.starterCode[language])}
                 onResultViewChange={setResultView}
                 onRequestTutorHint={handleRequestTutorHint}
                 onRun={handleRun}

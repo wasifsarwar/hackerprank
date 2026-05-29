@@ -1,23 +1,11 @@
 import { useMemo, useState } from "react";
-import type { Difficulty, InterviewStyle, ProblemDraft, ProblemSummary } from "../types";
-import { difficultyOptions, interviewStyleOptions } from "../ui";
+import type { Difficulty, ProblemDraft, ProblemSummary } from "../types";
+import { difficultyOptions } from "../ui";
 
 interface ProblemRailProps {
   draft: ProblemDraft | null;
-  generatorConstraintsNotes: string;
-  generatorDifficulty: Difficulty;
-  generatorInterviewStyle: InterviewStyle;
-  generatorTargetConcepts: string;
-  generatorTopic: string;
-  isGenerating: boolean;
   isPublishing: boolean;
   onDiscardDraft: () => void;
-  onGenerate: () => void;
-  onGeneratorConstraintsNotesChange: (constraintsNotes: string) => void;
-  onGeneratorDifficultyChange: (difficulty: Difficulty) => void;
-  onGeneratorInterviewStyleChange: (interviewStyle: InterviewStyle) => void;
-  onGeneratorTargetConceptsChange: (targetConcepts: string) => void;
-  onGeneratorTopicChange: (topic: string) => void;
   onPublishDraft: () => void;
   onSelectProblem: (id: string) => void;
   problems: ProblemSummary[];
@@ -26,20 +14,8 @@ interface ProblemRailProps {
 
 export function ProblemRail({
   draft,
-  generatorConstraintsNotes,
-  generatorDifficulty,
-  generatorInterviewStyle,
-  generatorTargetConcepts,
-  generatorTopic,
-  isGenerating,
   isPublishing,
   onDiscardDraft,
-  onGenerate,
-  onGeneratorConstraintsNotesChange,
-  onGeneratorDifficultyChange,
-  onGeneratorInterviewStyleChange,
-  onGeneratorTargetConceptsChange,
-  onGeneratorTopicChange,
   onPublishDraft,
   onSelectProblem,
   problems,
@@ -69,100 +45,9 @@ export function ProblemRail({
         </div>
       </div>
 
-      <details className="generator-drawer">
-        <summary>{isGenerating ? "Generating..." : "Generate Draft"}</summary>
-        <form
-          className="generator-panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onGenerate();
-          }}
-        >
-          <label>
-            <span>Topic</span>
-            <input
-              onChange={(event) => onGeneratorTopicChange(event.target.value)}
-              placeholder="arrays, stacks, strings"
-              value={generatorTopic}
-            />
-          </label>
-          <label>
-            <span>Difficulty</span>
-            <select
-              onChange={(event) => onGeneratorDifficultyChange(event.target.value as Difficulty)}
-              value={generatorDifficulty}
-            >
-              {difficultyOptions.map((difficulty) => (
-                <option key={difficulty} value={difficulty}>
-                  {difficulty}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Concepts</span>
-            <input
-              onChange={(event) => onGeneratorTargetConceptsChange(event.target.value)}
-              placeholder="two pointers, prefix sums"
-              value={generatorTargetConcepts}
-            />
-          </label>
-          <label>
-            <span>Style</span>
-            <select
-              onChange={(event) => onGeneratorInterviewStyleChange(event.target.value as InterviewStyle)}
-              value={generatorInterviewStyle}
-            >
-              {interviewStyleOptions.map((style) => (
-                <option key={style} value={style}>
-                  {style}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Notes</span>
-            <textarea
-              onChange={(event) => onGeneratorConstraintsNotesChange(event.target.value)}
-              placeholder="must include edge cases"
-              rows={3}
-              value={generatorConstraintsNotes}
-            />
-          </label>
-          <button className="generate-action" disabled={isGenerating} type="submit">
-            {isGenerating ? "Generating..." : "Generate Draft"}
-          </button>
-        </form>
-      </details>
-
       <nav className="rail-menu" aria-label="Workspace">
         <span className="selected">
-          <span aria-hidden="true">&lt;/&gt;</span>
           Studio
-        </span>
-        <span>
-          <span aria-hidden="true">()</span>
-          Problems
-        </span>
-        <span>
-          <span aria-hidden="true">[]</span>
-          Drafts
-        </span>
-        <span>
-          <span aria-hidden="true">ok</span>
-          Submissions
-        </span>
-        <span>
-          <span aria-hidden="true">{">_"}</span>
-          Playground
-        </span>
-        <span>
-          <span aria-hidden="true">%</span>
-          Analytics
-        </span>
-        <span>
-          <span aria-hidden="true">*</span>
-          Settings
         </span>
       </nav>
 
