@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -47,6 +48,29 @@ public class JavaLspService {
     public JavaLspService(JavaLspProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        synchronized (lifecycleLock) {
+            pendingRequests.values().forEach(future -> future.completeExceptionally(new IOException("JDT LS stopped.")));
+            pendingRequests.clear();
+            closeInput();
+            if (process != null && process.isAlive()) {
+                process.destroy();
+                try {
+                    if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                    }
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    process.destroyForcibly();
+                }
+            }
+            process = null;
+            initialized = false;
+            documentOpened = false;
+        }
     }
 
     public JavaCompletionResponse status() {
@@ -226,6 +250,21 @@ public class JavaLspService {
             input.write(header.getBytes(StandardCharsets.US_ASCII));
             input.write(body);
             input.flush();
+        }
+    }
+
+    private void closeInput() {
+        synchronized (writeLock) {
+            if (input == null) {
+                return;
+            }
+            try {
+                input.close();
+            } catch (IOException ignored) {
+                // The process is being torn down; no recovery is needed here.
+            } finally {
+                input = null;
+            }
         }
     }
 
