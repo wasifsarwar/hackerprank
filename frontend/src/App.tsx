@@ -9,7 +9,9 @@ import {
   fetchSubmissionHistory,
   fetchTutorMessages,
   publishProblemDraft,
+  regenerateProblemDraft,
   runSubmission,
+  saveDraftFeedback,
   sendTutorMessage
 } from "./api";
 import { CodingPanel } from "./components/CodingPanel";
@@ -47,6 +49,8 @@ function App() {
   const [generatorTargetConcepts, setGeneratorTargetConcepts] = useState("");
   const [generatorConstraintsNotes, setGeneratorConstraintsNotes] = useState("");
   const [generatorInterviewStyle, setGeneratorInterviewStyle] = useState<InterviewStyle>("Classic");
+  const [draftFeedbackTags, setDraftFeedbackTags] = useState<string[]>([]);
+  const [draftFeedbackNotes, setDraftFeedbackNotes] = useState("");
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
@@ -60,6 +64,8 @@ function App() {
   const [tutorMessagesSubmissionId, setTutorMessagesSubmissionId] = useState<string>("");
   const [isRunning, setIsRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRegeneratingDraft, setIsRegeneratingDraft] = useState(false);
+  const [isSavingDraftFeedback, setIsSavingDraftFeedback] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
@@ -114,6 +120,13 @@ function App() {
     setSubmissions([]);
     clearSelectedSubmission();
     resetTutorHint();
+  }
+
+  function resetDraftFeedback() {
+    setDraftFeedbackTags([]);
+    setDraftFeedbackNotes("");
+    setIsSavingDraftFeedback(false);
+    setIsRegeneratingDraft(false);
   }
 
   function isCurrentPublishedProblem(problemId: string) {
@@ -303,6 +316,7 @@ function App() {
       isDraftPreviewRef.current = true;
       currentDraftIdRef.current = nextDraft.id;
       setDraft(nextDraft);
+      resetDraftFeedback();
       resetSubmissionHistory();
       setCode(nextDraft.problem.starterCode[language]);
       if (previousDraftId && previousDraftId !== nextDraft.id) {
@@ -349,6 +363,7 @@ function App() {
 
       setProblems((items) => [...items.filter((item) => item.id !== published.id), publishedSummary]);
       setDraft(null);
+      resetDraftFeedback();
       setProblem(published);
       setSelectedId(published.id);
       setCode(published.starterCode[language]);
@@ -385,6 +400,7 @@ function App() {
       isDraftPreviewRef.current = false;
       currentDraftIdRef.current = "";
       setDraft(null);
+      resetDraftFeedback();
       if (problem) {
         setCode(problem.starterCode[language]);
       }
@@ -408,9 +424,87 @@ function App() {
     runRequestRef.current += 1;
     setIsRunning(false);
     setIsGenerating(false);
+    setIsRegeneratingDraft(false);
+    setIsSavingDraftFeedback(false);
     setIsPublishing(false);
     setDraft(null);
+    resetDraftFeedback();
     setSelectedId(id);
+  }
+
+  function handleDraftFeedbackTagToggle(tag: string) {
+    setDraftFeedbackTags((current) =>
+      current.includes(tag) ? current.filter((value) => value !== tag) : [...current, tag]
+    );
+  }
+
+  async function handleSaveDraftFeedback() {
+    if (!draft) {
+      return;
+    }
+
+    const draftId = draft.id;
+    const requestId = draftRequestRef.current;
+    setIsSavingDraftFeedback(true);
+    setError(null);
+
+    try {
+      const attempt = await saveDraftFeedback(draftId, {
+        tags: draftFeedbackTags,
+        notes: draftFeedbackNotes.trim() || undefined
+      });
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setDraft((current) => (current?.id === draftId ? { ...current, generationAttempt: attempt } : current));
+      }
+    } catch (err) {
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setIsSavingDraftFeedback(false);
+      }
+    }
+  }
+
+  async function handleRegenerateDraft(action: string) {
+    if (!draft) {
+      return;
+    }
+
+    const draftId = draft.id;
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
+    setIsRegeneratingDraft(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const nextDraft = await regenerateProblemDraft(draftId, {
+        action,
+        tags: draftFeedbackTags,
+        notes: draftFeedbackNotes.trim() || undefined
+      });
+      if (!isCurrentDraftAction(draftId, requestId)) {
+        deleteProblemDraft(nextDraft.id).catch(() => {});
+        return;
+      }
+
+      isDraftPreviewRef.current = true;
+      currentDraftIdRef.current = nextDraft.id;
+      setDraft(nextDraft);
+      resetDraftFeedback();
+      resetSubmissionHistory();
+      setCode(nextDraft.problem.starterCode[language]);
+    } catch (err) {
+      if (isCurrentDraftAction(draftId, requestId)) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
+      if (draftRequestRef.current === requestId) {
+        setIsRegeneratingDraft(false);
+      }
+    }
   }
 
   async function handleSelectSubmission(summary: SubmissionSummary) {
@@ -561,8 +655,17 @@ function App() {
         {activeProblem ? (
           <>
             <ProblemStatement
+              draftFeedbackNotes={draftFeedbackNotes}
+              draftFeedbackTags={draftFeedbackTags}
+              generationAttempt={draft?.generationAttempt}
               generationMetadata={draft?.generationMetadata}
               isDraftPreview={isDraftPreview}
+              isRegeneratingDraft={isRegeneratingDraft}
+              isSavingDraftFeedback={isSavingDraftFeedback}
+              onDraftFeedbackNotesChange={setDraftFeedbackNotes}
+              onDraftFeedbackTagToggle={handleDraftFeedbackTagToggle}
+              onRegenerateDraft={handleRegenerateDraft}
+              onSaveDraftFeedback={handleSaveDraftFeedback}
               problem={activeProblem}
               quality={draft?.quality}
             />

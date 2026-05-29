@@ -346,7 +346,7 @@ li {
   min-width: 0;
 }
 
-.draft-metadata dd {
+.draft-metadata-grid dd {
   min-width: 0;
   overflow: hidden;
   margin: 3px 0 0;
@@ -407,6 +407,69 @@ li {
 .draft-quality-checks p {
   font-size: 0.82rem;
   font-weight: 650;
+}
+
+.draft-studio {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.draft-feedback-options,
+.draft-studio-actions div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.draft-feedback-options button,
+.draft-studio-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.draft-feedback-options button {
+  border: 1px solid #d1dfd2;
+  color: #275448;
+  background: #fbfaf1;
+}
+
+.draft-feedback-options button.selected {
+  border-color: #2f6358;
+  color: #f8fff8;
+  background: #2f6358;
+}
+
+.draft-studio textarea {
+  min-width: 0;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d8dcc4;
+  border-radius: 8px;
+  color: #172421;
+  background: #fffef8;
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.draft-studio-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.draft-studio-actions > button {
+  justify-self: start;
+  color: #fafffb;
+  background: #275448;
+}
+
+.draft-studio-actions div button {
+  color: #172421;
+  background: #f6c85f;
 }
 
 .format-grid,

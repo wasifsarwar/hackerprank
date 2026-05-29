@@ -1,8 +1,11 @@
 import type {
+  DraftFeedbackRequest,
   GenerateProblemRequest,
+  GenerationAttempt,
   Problem,
   ProblemDraft,
   ProblemSummary,
+  RegenerateDraftRequest,
   SubmissionRequest,
   SubmissionDetail,
   SubmissionResult,
@@ -64,6 +67,20 @@ export function publishProblemDraft(id: string): Promise<Problem> {
 export function deleteProblemDraft(id: string): Promise<void> {
   return request<void>(`/api/problems/drafts/${id}`, {
     method: "DELETE"
+  });
+}
+
+export function saveDraftFeedback(id: string, payload: DraftFeedbackRequest): Promise<GenerationAttempt> {
+  return request<GenerationAttempt>(`/api/problems/drafts/${id}/feedback`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function regenerateProblemDraft(id: string, payload: RegenerateDraftRequest): Promise<ProblemDraft> {
+  return request<ProblemDraft>(`/api/problems/drafts/${id}/regenerate`, {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 }
 

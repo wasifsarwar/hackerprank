@@ -60,6 +60,24 @@ export interface DraftQuality {
   checks: DraftQualityCheck[];
 }
 
+export interface GenerationAttempt {
+  id: string;
+  outcome: "DRAFTED" | "PUBLISHED" | "DISCARDED" | "REGENERATED";
+  feedbackTags: string[];
+  feedbackNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DraftFeedbackRequest {
+  tags: string[];
+  notes?: string;
+}
+
+export interface RegenerateDraftRequest extends DraftFeedbackRequest {
+  action?: string;
+}
+
 export interface ProblemDraft {
   id: string;
   topic: string;
@@ -68,6 +86,7 @@ export interface ProblemDraft {
   createdAt: string;
   generationMetadata: GenerationMetadata;
   quality: DraftQuality;
+  generationAttempt?: GenerationAttempt | null;
   problem: Problem;
 }
 

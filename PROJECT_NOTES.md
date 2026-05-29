@@ -85,6 +85,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Add opt-in Anthropic/Claude support for generated problem drafts, tutor hints, and tutor follow-up chat
 - Current session - Restore natural page scrolling by removing desktop-only internal statement/results scroll traps
 - Current session - Add ignored local `.env` support plus a committed `.env.example` for Claude/OpenAI provider setup
+- Current session - Add Generation Quality Studio v1 with persisted generation attempts, draft feedback tags/notes, and draft regeneration from critique
 
 ## Current Application Shape
 
@@ -107,6 +108,7 @@ The frontend is a Vite React app. It currently provides:
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft QA panel with provider, model, prompt version, repair signal, example/test counts, validation checks, and intended technique
+- Generation Quality Studio v1 controls for saving draft feedback tags/notes and regenerating revised drafts from critique
 - Submission history tab for the selected published problem
 - Persisted submission detail view with saved code, compile output, and per-test results
 - Load-code action for restoring a saved submission into Monaco
@@ -158,6 +160,7 @@ Important files:
 - `GeneratedProblemValidator.java` - validates generated draft shape and runs Python/Java reference solutions
 - `GenerationMetadata.java` - provider/model/prompt/validation metadata for generated drafts
 - `PublicProblemDraft.java` - public draft response that hides reference solutions and hidden tests
+- `GenerationAttemptRepository.java` - JDBC generation attempt and feedback persistence for draft quality review
 - `ProblemGeneratorService.java` - generated-problem orchestration, AI-provider opt-in routing, deterministic fallback, and validation
 - `OpenAiProblemGenerator.java` - Responses API request builder, structured JSON schema, response parser, and generated-problem mapper
 - `OpenAiProblemGeneratorProperties.java` - OpenAI model, endpoint, timeout, token, and API key config
@@ -186,6 +189,7 @@ Important files:
 - `db/migration/V1__initial_persistence.sql` - normalized persistence schema and indexes
 - `db/migration/V2__generation_metadata.sql` - per-language reference solutions and generation audit metadata
 - `db/migration/V3__tutor_messages.sql` - submission-scoped tutor message persistence and indexes
+- `db/migration/V4__generation_attempts.sql` - generation attempt audit trail plus indexed feedback tags
 
 ## API Surface
 
@@ -227,12 +231,21 @@ Current behavior:
 - Falls back to deterministic templates if the selected model provider is disabled, missing an API key, generation fails, or the returned draft cannot be repaired.
 - Preserves requested target concepts, constraints/notes, and interview style in generation metadata parameters JSON.
 - Stores provider, model id, prompt version, prompt text, parameters JSON, intended technique, validation status, validation errors, and validation summary.
-- Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, and `problem`.
+- Stores a separate generation attempt row for each draft so feedback and outcomes survive publish, discard, and regeneration.
+- Public draft responses include `id`, `topic`, `difficulty`, `validationStatus`, `createdAt`, `generationMetadata`, `quality`, `generationAttempt`, and `problem`.
 - Public draft responses do not expose hidden test cases, prompt text, reference solutions, raw validation errors, or raw parameter JSON.
 
 `GET /api/problems/drafts/{id}`
 
 Returns a public draft preview if the draft still exists.
+
+`POST /api/problems/drafts/{id}/feedback`
+
+Saves quality feedback tags and notes for the active draft generation attempt.
+
+`POST /api/problems/drafts/{id}/regenerate`
+
+Creates a replacement draft from the prior draft's topic, difficulty, concepts, interview style, and feedback. The previous draft is discarded and its generation attempt is marked `REGENERATED`.
 
 `POST /api/problems/drafts/{id}/publish`
 

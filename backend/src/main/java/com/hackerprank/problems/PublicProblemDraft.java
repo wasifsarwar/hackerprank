@@ -10,6 +10,7 @@ public class PublicProblemDraft {
     private final Instant createdAt;
     private final PublicGenerationMetadata generationMetadata;
     private final PublicDraftQuality quality;
+    private final PublicGenerationAttempt generationAttempt;
     private final PublicProblem problem;
 
     public PublicProblemDraft(
@@ -20,6 +21,7 @@ public class PublicProblemDraft {
         Instant createdAt,
         PublicGenerationMetadata generationMetadata,
         PublicDraftQuality quality,
+        PublicGenerationAttempt generationAttempt,
         PublicProblem problem
     ) {
         this.id = id;
@@ -29,10 +31,15 @@ public class PublicProblemDraft {
         this.createdAt = createdAt;
         this.generationMetadata = generationMetadata;
         this.quality = quality;
+        this.generationAttempt = generationAttempt;
         this.problem = problem;
     }
 
     public static PublicProblemDraft from(ProblemDraft draft) {
+        return from(draft, null);
+    }
+
+    public static PublicProblemDraft from(ProblemDraft draft, GenerationAttempt attempt) {
         return new PublicProblemDraft(
             draft.getId(),
             draft.getTopic(),
@@ -41,6 +48,7 @@ public class PublicProblemDraft {
             draft.getCreatedAt(),
             PublicGenerationMetadata.from(draft.getGenerationMetadata()),
             PublicDraftQuality.from(draft),
+            PublicGenerationAttempt.from(attempt),
             PublicProblem.from(draft.getProblem())
         );
     }
@@ -71,6 +79,10 @@ public class PublicProblemDraft {
 
     public PublicDraftQuality getQuality() {
         return quality;
+    }
+
+    public PublicGenerationAttempt getGenerationAttempt() {
+        return generationAttempt;
     }
 
     public PublicProblem getProblem() {

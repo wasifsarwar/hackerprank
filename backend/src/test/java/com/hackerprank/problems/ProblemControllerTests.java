@@ -1,6 +1,7 @@
 package com.hackerprank.problems;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +41,9 @@ class ProblemControllerTests {
     @Autowired
     private ProblemDraftRepository draftRepository;
 
+    @Autowired
+    private GenerationAttemptRepository attemptRepository;
+
     @Test
     void generatesValidatedProblemAndStoresIt() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/problems/generate")
@@ -72,6 +76,8 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.generationMetadata.parametersJson").doesNotExist())
             .andExpect(jsonPath("$.generationMetadata.validationErrors").doesNotExist())
             .andExpect(jsonPath("$.quality.status").value("VALIDATED"))
+            .andExpect(jsonPath("$.generationAttempt.outcome").value("DRAFTED"))
+            .andExpect(jsonPath("$.generationAttempt.feedbackTags").isArray())
             .andExpect(jsonPath("$.quality.repairUsed").value(false))
             .andExpect(jsonPath("$.quality.exampleCount").value(2))
             .andExpect(jsonPath("$.quality.visibleTestCount").value(2))
@@ -96,7 +102,89 @@ class ProblemControllerTests {
         assertEquals("deterministic", persistedDraft.getGenerationMetadata().provider());
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("python"));
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("java"));
+        assertTrue(attemptRepository.findByDraftId(draftId).isPresent());
         assertFalse(repository.findById(problemId).isPresent());
+    }
+
+    @Test
+    void recordsDraftFeedback() throws Exception {
+        MvcResult draftResult = mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"topic\":\"arrays\",\"difficulty\":\"Easy\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        JsonNode draftBody = objectMapper.readTree(draftResult.getResponse().getContentAsString());
+        String draftId = draftBody.get("id").asText();
+        String longTag = "This feedback tag is intentionally longer than eighty characters to exercise truncation";
+
+        mockMvc.perform(post("/api/problems/drafts/" + draftId + "/feedback")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of(
+                    "tags", java.util.List.of("Too easy", "Needs edge cases", longTag),
+                    "notes", "Make the examples more interview-like."
+                ))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.outcome").value("DRAFTED"))
+            .andExpect(jsonPath("$.feedbackTags[0]").value("Needs edge cases"))
+            .andExpect(jsonPath("$.feedbackTags[1]").value(longTag.substring(0, 80)))
+            .andExpect(jsonPath("$.feedbackTags[2]").value("Too easy"))
+            .andExpect(jsonPath("$.feedbackNotes").value("Make the examples more interview-like."));
+
+        GenerationAttempt attempt = attemptRepository.findByDraftId(draftId).orElseThrow();
+        assertEquals("Make the examples more interview-like.", attempt.getFeedbackNotes());
+        assertEquals(3, attempt.getFeedbackTags().size());
+        assertTrue(attempt.getFeedbackTags().stream().allMatch(tag -> tag.length() <= 80));
+    }
+
+    @Test
+    void regeneratesDraftFromFeedbackAndDiscardsPreviousDraft() throws Exception {
+        MvcResult draftResult = mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "topic": "arrays",
+                      "difficulty": "Medium",
+                      "targetConcepts": ["prefix sums"],
+                      "constraintsNotes": "Prefer realistic input names.",
+                      "interviewStyle": "Practical"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        JsonNode draftBody = objectMapper.readTree(draftResult.getResponse().getContentAsString());
+        String previousDraftId = draftBody.get("id").asText();
+
+        MvcResult regeneratedResult = mockMvc.perform(post("/api/problems/drafts/" + previousDraftId + "/regenerate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "action": "Add edge cases",
+                      "tags": ["Needs edge cases"],
+                      "notes": "Use a less template-like setup."
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id", startsWith("draft-")))
+            .andExpect(jsonPath("$.id").value(not(previousDraftId)))
+            .andExpect(jsonPath("$.generationAttempt.outcome").value("DRAFTED"))
+            .andReturn();
+
+        JsonNode regeneratedBody = objectMapper.readTree(regeneratedResult.getResponse().getContentAsString());
+        String nextDraftId = regeneratedBody.get("id").asText();
+
+        assertFalse(draftRepository.findById(previousDraftId).isPresent());
+        assertTrue(draftRepository.findById(nextDraftId).isPresent());
+        assertEquals("REGENERATED", attemptRepository.findByDraftId(previousDraftId).orElseThrow().getOutcome());
+
+        ProblemDraft nextDraft = draftRepository.findById(nextDraftId).orElseThrow();
+        JsonNode parameters = objectMapper.readTree(nextDraft.getGenerationMetadata().parametersJson());
+        assertEquals("arrays", parameters.get("topic").asText());
+        assertEquals("Medium", parameters.get("difficulty").asText());
+        assertEquals("Practical", parameters.get("interviewStyle").asText());
+        assertTrue(parameters.get("constraintsNotes").asText().contains("Regeneration action: Add edge cases"));
+        assertTrue(parameters.get("constraintsNotes").asText().contains("Draft feedback tags: Needs edge cases"));
     }
 
     @Test
@@ -149,6 +237,7 @@ class ProblemControllerTests {
 
         assertTrue(repository.findById(problemId).isPresent());
         assertFalse(draftRepository.findById(draftId).isPresent());
+        assertEquals("PUBLISHED", attemptRepository.findByDraftId(draftId).orElseThrow().getOutcome());
 
         mockMvc.perform(get("/api/problems/drafts/" + draftId))
             .andExpect(status().isNotFound());

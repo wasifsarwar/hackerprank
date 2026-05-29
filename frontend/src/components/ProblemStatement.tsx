@@ -1,14 +1,37 @@
-import type { DraftQuality, GenerationMetadata, Problem } from "../types";
+import type { DraftQuality, GenerationAttempt, GenerationMetadata, Problem } from "../types";
 import { DraftMetadata } from "./DraftMetadata";
 
 interface ProblemStatementProps {
+  draftFeedbackNotes: string;
+  draftFeedbackTags: string[];
+  generationAttempt?: GenerationAttempt | null;
   generationMetadata?: GenerationMetadata;
+  isRegeneratingDraft: boolean;
   quality?: DraftQuality;
   isDraftPreview: boolean;
+  isSavingDraftFeedback: boolean;
+  onDraftFeedbackNotesChange: (notes: string) => void;
+  onDraftFeedbackTagToggle: (tag: string) => void;
+  onRegenerateDraft: (action: string) => void;
+  onSaveDraftFeedback: () => void;
   problem: Problem;
 }
 
-export function ProblemStatement({ generationMetadata, isDraftPreview, problem, quality }: ProblemStatementProps) {
+export function ProblemStatement({
+  draftFeedbackNotes,
+  draftFeedbackTags,
+  generationAttempt,
+  generationMetadata,
+  isDraftPreview,
+  isRegeneratingDraft,
+  isSavingDraftFeedback,
+  onDraftFeedbackNotesChange,
+  onDraftFeedbackTagToggle,
+  onRegenerateDraft,
+  onSaveDraftFeedback,
+  problem,
+  quality
+}: ProblemStatementProps) {
   return (
     <section className="statement">
       <div className="problem-heading">
@@ -27,7 +50,19 @@ export function ProblemStatement({ generationMetadata, isDraftPreview, problem, 
       </div>
 
       {isDraftPreview && generationMetadata && quality ? (
-        <DraftMetadata generationMetadata={generationMetadata} quality={quality} />
+        <DraftMetadata
+          feedbackNotes={draftFeedbackNotes}
+          feedbackTags={draftFeedbackTags}
+          generationAttempt={generationAttempt}
+          generationMetadata={generationMetadata}
+          isRegenerating={isRegeneratingDraft}
+          isSavingFeedback={isSavingDraftFeedback}
+          onFeedbackNotesChange={onDraftFeedbackNotesChange}
+          onFeedbackTagToggle={onDraftFeedbackTagToggle}
+          onRegenerateDraft={onRegenerateDraft}
+          onSaveFeedback={onSaveDraftFeedback}
+          quality={quality}
+        />
       ) : null}
 
       <p>{problem.description}</p>
