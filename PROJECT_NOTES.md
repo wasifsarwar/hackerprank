@@ -807,6 +807,43 @@ The backend validates generated drafts before publishing:
 - Problem statement does not leak hidden test answers
 - No web-derived or copied problem wording
 
+## Java Editor Intelligence
+
+The Java editor now has a backend-backed Eclipse JDT LS completion bridge for real language-server suggestions.
+
+What changed:
+
+- Spring exposes `GET /api/editor/java-lsp/status` and `POST /api/editor/java-lsp/completion`.
+- Spring also exposes `POST /api/editor/java-lsp/hover` and `POST /api/editor/java-lsp/signature-help` so Monaco can show JDT-backed hover docs and method signatures.
+- The backend starts `jdtls` over stdio, creates a scratch Java 21 Maven project under `.hackerprank-jdtls/`, syncs the Monaco buffer into `Main.java`, and forwards completion requests to JDT LS.
+- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, cleans noisy JDT labels for display, and falls back to local hovers/snippets when JDT LS is not installed.
+
+Local setup:
+
+```sh
+brew install jdtls
+```
+
+If `jdtls` is not on `PATH`, set:
+
+```sh
+HACKERPRANK_JAVA_LSP_COMMAND=/path/to/jdtls
+```
+
+Notes:
+
+- JDT LS requires Java 21, which matches the project runtime.
+- `.hackerprank-jdtls/` is ignored because it stores generated workspace/project state.
+- JDT LS can send client requests while HackerPrank is waiting for initialize/completion responses. Keep lifecycle, completion, and protocol write locks separate so the reader thread can answer those requests instead of deadlocking the language server.
+- `workspace/configuration` responses must mirror the number of requested `params.items`, using `null` placeholders for settings HackerPrank does not provide.
+- The Spring service owns the JDT LS child process and must destroy it during bean shutdown to avoid orphan Java processes and stale workspace locks during local/container restarts.
+- If JDT LS startup fails after the process has been spawned, the service must close stdio, complete pending requests, and destroy the child before allowing the next retry. This prevents duplicate language servers from fighting over the same `.hackerprank-jdtls/data` workspace.
+- Completion responses now preserve JDT LS `additionalTextEdits` so Monaco can apply import edits along with selected Java symbols.
+- The frontend treats temporary JDT LS failures as a short retry backoff instead of permanently disabling language-server requests for the rest of the React component lifetime.
+- LSP response mapping lives in `JavaLspProtocolMapper` so protocol edge cases can be unit tested without spawning JDT LS. Keep completion mapping, hover markup, signature help, and `workspace/configuration` shape changes covered there.
+- JDT LS startup timeout is configurable through `HACKERPRANK_JAVA_LSP_STARTUP_TIMEOUT_MS`; production defaults to 20 seconds, while tests can use a short timeout to verify cleanup paths.
+- This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:

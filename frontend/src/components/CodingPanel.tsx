@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
+import { fetchJavaLspCompletions, fetchJavaLspHover, fetchJavaLspSignatureHelp, fetchJavaLspStatus } from "../api";
 import type {
   Language,
   Problem,
@@ -12,7 +13,12 @@ import type {
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
-import { configureMonacoIntelligence } from "../editorIntelligence";
+import {
+  configureMonacoIntelligence,
+  setJavaLspCompletionProvider,
+  setJavaLspHoverProvider,
+  setJavaLspSignatureHelpProvider
+} from "../editorIntelligence";
 import { ResultsPanel } from "./ResultsPanel";
 
 interface CodingPanelProps {
@@ -87,10 +93,107 @@ export function CodingPanel({
   tutorMessagesSubmissionId
 }: CodingPanelProps) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const javaLspRetryAfterRef = useRef(0);
+  const [javaLspStatus, setJavaLspStatus] = useState<"checking" | "enabled" | "disabled">("checking");
 
   const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
   };
+
+  useEffect(() => {
+    let isCurrent = true;
+    const retryDelayMs = 5000;
+
+    function shouldSkipJavaLspRequest() {
+      return Date.now() < javaLspRetryAfterRef.current;
+    }
+
+    function recordJavaLspAvailability(enabled: boolean) {
+      javaLspRetryAfterRef.current = enabled ? 0 : Date.now() + retryDelayMs;
+      if (isCurrent) {
+        setJavaLspStatus(enabled ? "enabled" : "disabled");
+      }
+    }
+
+    function recordJavaLspTransientFailure() {
+      javaLspRetryAfterRef.current = Date.now() + retryDelayMs;
+      if (isCurrent) {
+        setJavaLspStatus("disabled");
+      }
+    }
+
+    setJavaLspCompletionProvider(async (sourceCode, lineNumber, column) => {
+      if (shouldSkipJavaLspRequest()) {
+        return [];
+      }
+      try {
+        const response = await fetchJavaLspCompletions({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled ? response.items : [];
+      } catch {
+        recordJavaLspTransientFailure();
+        return [];
+      }
+    });
+
+    setJavaLspHoverProvider(async (sourceCode, lineNumber, column) => {
+      if (shouldSkipJavaLspRequest()) {
+        return null;
+      }
+      try {
+        const response = await fetchJavaLspHover({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled && response.contents ? { contents: response.contents } : null;
+      } catch {
+        recordJavaLspTransientFailure();
+        return null;
+      }
+    });
+
+    setJavaLspSignatureHelpProvider(async (sourceCode, lineNumber, column) => {
+      if (shouldSkipJavaLspRequest()) {
+        return null;
+      }
+      try {
+        const response = await fetchJavaLspSignatureHelp({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled ? response : null;
+      } catch {
+        recordJavaLspTransientFailure();
+        return null;
+      }
+    });
+
+    fetchJavaLspStatus()
+      .then((response) => {
+        recordJavaLspAvailability(response.enabled);
+      })
+      .catch(() => {
+        javaLspRetryAfterRef.current = Date.now() + retryDelayMs;
+        if (isCurrent) {
+          setJavaLspStatus("disabled");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      setJavaLspCompletionProvider(null);
+      setJavaLspHoverProvider(null);
+      setJavaLspSignatureHelpProvider(null);
+    };
+  }, []);
 
   function handleFormatCode() {
     editorRef.current?.getAction("editor.action.formatDocument")?.run().catch(() => {});
@@ -112,7 +215,13 @@ export function CodingPanel({
               </button>
             ))}
           </div>
-          <span className="runtime-pill">{language === "java" ? "Java 21" : "Python 3.12"}</span>
+          <span className="runtime-pill">
+            {language === "java"
+              ? javaLspStatus === "enabled"
+                ? "Java 21 + JDT LS"
+                : "Java 21"
+              : "Python 3.12"}
+          </span>
         </div>
 
         {isDraftPreview ? (

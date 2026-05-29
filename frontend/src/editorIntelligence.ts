@@ -32,9 +32,68 @@ interface ApiCompletionSpec {
   label: string;
 }
 
+interface JavaLspCompletionSpec extends ApiCompletionSpec {
+  additionalTextEdits?: JavaLspTextEditSpec[];
+  kind: string;
+}
+
+interface JavaLspTextEditSpec {
+  endColumn: number;
+  endLineNumber: number;
+  startColumn: number;
+  startLineNumber: number;
+  text: string;
+}
+
+interface JavaLspHoverSpec {
+  contents: string;
+}
+
+interface JavaLspSignatureSpec {
+  documentation: string;
+  label: string;
+  parameters: string[];
+}
+
+interface JavaLspSignatureHelpSpec {
+  activeParameter: number;
+  activeSignature: number;
+  signatures: JavaLspSignatureSpec[];
+}
+
 interface HoverSpec {
   contents: string;
   word: string;
+}
+
+type JavaLspCompletionProvider = (
+  code: string,
+  lineNumber: number,
+  column: number
+) => Promise<JavaLspCompletionSpec[]>;
+
+type JavaLspHoverProvider = (code: string, lineNumber: number, column: number) => Promise<JavaLspHoverSpec | null>;
+
+type JavaLspSignatureHelpProvider = (
+  code: string,
+  lineNumber: number,
+  column: number
+) => Promise<JavaLspSignatureHelpSpec | null>;
+
+let javaLspCompletionProvider: JavaLspCompletionProvider | null = null;
+let javaLspHoverProvider: JavaLspHoverProvider | null = null;
+let javaLspSignatureHelpProvider: JavaLspSignatureHelpProvider | null = null;
+
+export function setJavaLspCompletionProvider(provider: JavaLspCompletionProvider | null) {
+  javaLspCompletionProvider = provider;
+}
+
+export function setJavaLspHoverProvider(provider: JavaLspHoverProvider | null) {
+  javaLspHoverProvider = provider;
+}
+
+export function setJavaLspSignatureHelpProvider(provider: JavaLspSignatureHelpProvider | null) {
+  javaLspSignatureHelpProvider = provider;
 }
 
 const javaSnippets: SnippetSpec[] = [
@@ -250,12 +309,163 @@ function apiSuggestions(
   }));
 }
 
+function lspKind(monaco: Monaco, kind: string) {
+  switch (kind) {
+    case "5":
+      return monaco.languages.CompletionItemKind.Field;
+    case "6":
+      return monaco.languages.CompletionItemKind.Variable;
+    case "7":
+      return monaco.languages.CompletionItemKind.Class;
+    case "8":
+      return monaco.languages.CompletionItemKind.Interface;
+    case "9":
+      return monaco.languages.CompletionItemKind.Module;
+    case "10":
+      return monaco.languages.CompletionItemKind.Property;
+    case "14":
+      return monaco.languages.CompletionItemKind.Keyword;
+    case "15":
+      return monaco.languages.CompletionItemKind.Snippet;
+    case "21":
+      return monaco.languages.CompletionItemKind.Constant;
+    case "2":
+    case "3":
+    default:
+      return monaco.languages.CompletionItemKind.Method;
+  }
+}
+
+function lspSuggestions(
+  monaco: Monaco,
+  range: ReturnType<typeof rangeForWord>,
+  specs: JavaLspCompletionSpec[]
+) {
+  return specs.map((item, index) => {
+    const label = displayLabel(item.label);
+    const insertText = item.insertText || label;
+    return {
+      detail: item.detail || item.label,
+      documentation: item.detail ? { value: `\`${item.detail}\`` } : undefined,
+      filterText: `${label} ${item.label}`,
+      insertText,
+      insertTextRules: insertText.includes("$")
+        ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+        : undefined,
+      additionalTextEdits: item.additionalTextEdits?.map((edit) => ({
+        range: {
+          endColumn: edit.endColumn,
+          endLineNumber: edit.endLineNumber,
+          startColumn: edit.startColumn,
+          startLineNumber: edit.startLineNumber
+        },
+        text: edit.text
+      })),
+      kind: lspKind(monaco, item.kind),
+      label,
+      range,
+      sortText: `0_lsp_${String(index).padStart(2, "0")}_${label}`
+    };
+  });
+}
+
+function displayLabel(label: string) {
+  const trimmed = label.trim();
+  const methodMatch = trimmed.match(/^([A-Za-z_$][\w$]*)\s*\(/);
+  if (methodMatch) {
+    return methodMatch[1];
+  }
+  const fieldMatch = trimmed.match(/^([A-Za-z_$][\w$]*)\s*:/);
+  if (fieldMatch) {
+    return fieldMatch[1];
+  }
+  return trimmed;
+}
+
+async function javaLspSuggestions(monaco: Monaco, model: CompletionModel, position: EditorPosition) {
+  if (!javaLspCompletionProvider) {
+    return [];
+  }
+
+  try {
+    const codeModel = model as CompletionModel & { getValue?: () => string };
+    const items = await javaLspCompletionProvider(codeModel.getValue?.() ?? "", position.lineNumber, position.column);
+    return lspSuggestions(
+      monaco,
+      startsWithDotContext(model, position) ? rangeAfterDot(model, position) : rangeForWord(model, position),
+      items
+    );
+  } catch {
+    return [];
+  }
+}
+
 function registerHover(monaco: Monaco, language: string, hovers: HoverSpec[]) {
   monaco.languages.registerHoverProvider(language, {
     provideHover(model, position) {
       const word = (model as HoverModel).getWordAtPosition(position)?.word;
       const hover = hovers.find((item) => item.word === word);
       return hover ? { contents: [{ value: `**${hover.word}**` }, { value: hover.contents }] } : null;
+    }
+  });
+}
+
+function registerJavaHover(monaco: Monaco) {
+  monaco.languages.registerHoverProvider("java", {
+    async provideHover(model, position) {
+      const codeModel = model as CompletionModel & HoverModel & { getValue?: () => string };
+      if (javaLspHoverProvider) {
+        try {
+          const hover = await javaLspHoverProvider(codeModel.getValue?.() ?? "", position.lineNumber, position.column);
+          if (hover?.contents) {
+            return { contents: [{ value: hover.contents }] };
+          }
+        } catch {
+          // Fall through to local interview hovers.
+        }
+      }
+
+      const word = codeModel.getWordAtPosition(position)?.word;
+      const hover = javaHovers.find((item) => item.word === word);
+      return hover ? { contents: [{ value: `**${hover.word}**` }, { value: hover.contents }] } : null;
+    }
+  });
+}
+
+function registerJavaSignatureHelp(monaco: Monaco) {
+  monaco.languages.registerSignatureHelpProvider("java", {
+    signatureHelpTriggerCharacters: ["(", ","],
+    async provideSignatureHelp(model, position) {
+      if (!javaLspSignatureHelpProvider) {
+        return null;
+      }
+
+      try {
+        const codeModel = model as CompletionModel & { getValue?: () => string };
+        const help = await javaLspSignatureHelpProvider(
+          codeModel.getValue?.() ?? "",
+          position.lineNumber,
+          position.column
+        );
+        if (!help || help.signatures.length === 0) {
+          return null;
+        }
+
+        return {
+          dispose: () => {},
+          value: {
+            activeParameter: help.activeParameter,
+            activeSignature: help.activeSignature,
+            signatures: help.signatures.map((signature) => ({
+              documentation: signature.documentation ? { value: signature.documentation } : undefined,
+              label: signature.label,
+              parameters: signature.parameters.map((parameter) => ({ label: parameter }))
+            }))
+          }
+        };
+      } catch {
+        return null;
+      }
     }
   });
 }
@@ -269,20 +479,25 @@ export function configureMonacoIntelligence(monaco: Monaco) {
 
   monaco.languages.registerCompletionItemProvider("java", {
     triggerCharacters: [".", "(", "<", " "],
-    provideCompletionItems(model, position) {
+    async provideCompletionItems(model, position) {
       const typedModel = model as CompletionModel;
+      const remoteSuggestions = await javaLspSuggestions(monaco, typedModel, position);
       if (startsWithDotContext(typedModel, position)) {
         const receiver = receiverBeforeDot(typedModel, position);
         const receiverApis = javaApiByReceiver[receiver] ?? javaInstanceApis;
         return {
-          suggestions: apiSuggestions(monaco, rangeAfterDot(typedModel, position), receiverApis)
+          suggestions: [
+            ...remoteSuggestions,
+            ...apiSuggestions(monaco, rangeAfterDot(typedModel, position), receiverApis, "1")
+          ]
         };
       }
 
       return {
         suggestions: [
+          ...remoteSuggestions,
           ...snippetSuggestions(monaco, typedModel, position, javaSnippets),
-          ...apiSuggestions(monaco, rangeForWord(typedModel, position), javaTypes, "1")
+          ...apiSuggestions(monaco, rangeForWord(typedModel, position), javaTypes, "2")
         ]
       };
     }
@@ -306,6 +521,7 @@ export function configureMonacoIntelligence(monaco: Monaco) {
     }
   });
 
-  registerHover(monaco, "java", javaHovers);
+  registerJavaHover(monaco);
+  registerJavaSignatureHelp(monaco);
   registerHover(monaco, "python", pythonHovers);
 }

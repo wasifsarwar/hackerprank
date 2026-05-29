@@ -2,6 +2,11 @@ import type {
   DraftFeedbackRequest,
   GenerateProblemRequest,
   GenerationAttempt,
+  JavaLspCompletionRequest,
+  JavaLspCompletionResponse,
+  JavaLspHoverResponse,
+  JavaLspPositionRequest,
+  JavaLspSignatureHelpResponse,
   Problem,
   ProblemDraft,
   ProblemSummary,
@@ -117,5 +122,30 @@ export function sendTutorMessage(id: string, message: string): Promise<TutorChat
   return request<TutorChatResponse>(`/api/submissions/${id}/tutor/messages`, {
     method: "POST",
     body: JSON.stringify({ message })
+  });
+}
+
+export function fetchJavaLspStatus(): Promise<JavaLspCompletionResponse> {
+  return request<JavaLspCompletionResponse>("/api/editor/java-lsp/status");
+}
+
+export function fetchJavaLspCompletions(payload: JavaLspCompletionRequest): Promise<JavaLspCompletionResponse> {
+  return request<JavaLspCompletionResponse>("/api/editor/java-lsp/completion", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchJavaLspHover(payload: JavaLspPositionRequest): Promise<JavaLspHoverResponse> {
+  return request<JavaLspHoverResponse>("/api/editor/java-lsp/hover", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchJavaLspSignatureHelp(payload: JavaLspPositionRequest): Promise<JavaLspSignatureHelpResponse> {
+  return request<JavaLspSignatureHelpResponse>("/api/editor/java-lsp/signature-help", {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 }

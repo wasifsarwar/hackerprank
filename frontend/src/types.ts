@@ -143,6 +143,59 @@ export interface TutorChatResponse {
   messages: TutorMessage[];
 }
 
+export interface JavaLspCompletionRequest {
+  code: string;
+  lineNumber: number;
+  column: number;
+}
+
+export type JavaLspPositionRequest = JavaLspCompletionRequest;
+
+export interface JavaLspTextEdit {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+  text: string;
+}
+
+export interface JavaLspCompletionItem {
+  label: string;
+  detail: string;
+  insertText: string;
+  kind: string;
+  additionalTextEdits: JavaLspTextEdit[];
+}
+
+export interface JavaLspCompletionResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  items: JavaLspCompletionItem[];
+}
+
+export interface JavaLspHoverResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  contents: string;
+}
+
+export interface JavaLspSignature {
+  label: string;
+  documentation: string;
+  parameters: string[];
+}
+
+export interface JavaLspSignatureHelpResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  activeSignature: number;
+  activeParameter: number;
+  signatures: JavaLspSignature[];
+}
+
 export interface SubmissionSummary {
   id: string;
   problemId: string | null;
