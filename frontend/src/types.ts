@@ -149,6 +149,8 @@ export interface JavaLspCompletionRequest {
   column: number;
 }
 
+export type JavaLspPositionRequest = JavaLspCompletionRequest;
+
 export interface JavaLspCompletionItem {
   label: string;
   detail: string;
@@ -161,6 +163,28 @@ export interface JavaLspCompletionResponse {
   source: string;
   message: string;
   items: JavaLspCompletionItem[];
+}
+
+export interface JavaLspHoverResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  contents: string;
+}
+
+export interface JavaLspSignature {
+  label: string;
+  documentation: string;
+  parameters: string[];
+}
+
+export interface JavaLspSignatureHelpResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  activeSignature: number;
+  activeParameter: number;
+  signatures: JavaLspSignature[];
 }
 
 export interface SubmissionSummary {

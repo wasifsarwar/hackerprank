@@ -105,6 +105,44 @@ public class JavaLspService {
         }
     }
 
+    public JavaLspHoverResponse hover(JavaLspPositionRequest request) {
+        if (!properties.isEnabled()) {
+            return JavaLspHoverResponse.disabled("Java LSP is disabled.");
+        }
+
+        try {
+            ensureStarted();
+            synchronized (completionLock) {
+                writeSource(request.getCode());
+                syncDocument(request.getCode());
+                JsonNode result = request("textDocument/hover", positionParams(request), properties.getRequestTimeoutMs());
+                return JavaLspHoverResponse.enabled(hoverContents(result));
+            }
+        } catch (Exception exception) {
+            disabledReason = exception.getMessage();
+            return JavaLspHoverResponse.disabled(disabledReason == null ? "JDT LS hover failed." : disabledReason);
+        }
+    }
+
+    public JavaLspSignatureHelpResponse signatureHelp(JavaLspPositionRequest request) {
+        if (!properties.isEnabled()) {
+            return JavaLspSignatureHelpResponse.disabled("Java LSP is disabled.");
+        }
+
+        try {
+            ensureStarted();
+            synchronized (completionLock) {
+                writeSource(request.getCode());
+                syncDocument(request.getCode());
+                JsonNode result = request("textDocument/signatureHelp", positionParams(request), properties.getRequestTimeoutMs());
+                return toSignatureHelp(result);
+            }
+        } catch (Exception exception) {
+            disabledReason = exception.getMessage();
+            return JavaLspSignatureHelpResponse.disabled(disabledReason == null ? "JDT LS signature help failed." : disabledReason);
+        }
+    }
+
     private void ensureStarted() throws IOException {
         synchronized (lifecycleLock) {
             if (initialized && process != null && process.isAlive()) {
@@ -197,6 +235,10 @@ public class JavaLspService {
         ObjectNode completionItem = completion.putObject("completionItem");
         completionItem.put("snippetSupport", true);
         completionItem.set("documentationFormat", objectMapper.createArrayNode().add("markdown").add("plaintext"));
+        ObjectNode signatureHelp = textDocument.putObject("signatureHelp");
+        ObjectNode signatureInformation = signatureHelp.putObject("signatureInformation");
+        signatureInformation.set("documentationFormat", objectMapper.createArrayNode().add("markdown").add("plaintext"));
+        signatureInformation.putObject("parameterInformation").put("labelOffsetSupport", true);
         ObjectNode synchronization = textDocument.putObject("synchronization");
         synchronization.put("didSave", true);
         synchronization.put("dynamicRegistration", false);
@@ -204,14 +246,19 @@ public class JavaLspService {
     }
 
     private ObjectNode completionParams(JavaCompletionRequest request) {
+        ObjectNode params = positionParams(request);
+        ObjectNode context = params.putObject("context");
+        context.put("triggerKind", 1);
+        return params;
+    }
+
+    private ObjectNode positionParams(JavaLspPositionRequest request) {
         ObjectNode params = objectMapper.createObjectNode();
         ObjectNode textDocument = params.putObject("textDocument");
         textDocument.put("uri", documentUri);
         ObjectNode position = params.putObject("position");
         position.put("line", Math.max(0, request.getLineNumber() - 1));
         position.put("character", Math.max(0, request.getColumn() - 1));
-        ObjectNode context = params.putObject("context");
-        context.put("triggerKind", 1);
         return params;
     }
 
@@ -396,6 +443,82 @@ public class JavaLspService {
             return item.get("insertText").asText();
         }
         return text(item, "label");
+    }
+
+    private String hoverContents(JsonNode result) {
+        if (result == null || result.isNull()) {
+            return "";
+        }
+        return markup(result.get("contents"));
+    }
+
+    private JavaLspSignatureHelpResponse toSignatureHelp(JsonNode result) {
+        if (result == null || result.isNull()) {
+            return JavaLspSignatureHelpResponse.enabled(0, 0, List.of());
+        }
+
+        List<JavaLspSignature> signatures = new ArrayList<>();
+        JsonNode signatureItems = result.path("signatures");
+        if (signatureItems.isArray()) {
+            for (JsonNode signature : signatureItems) {
+                List<String> parameters = new ArrayList<>();
+                JsonNode parameterItems = signature.path("parameters");
+                if (parameterItems.isArray()) {
+                    for (JsonNode parameter : parameterItems) {
+                        parameters.add(parameterLabel(parameter.path("label")));
+                    }
+                }
+                signatures.add(new JavaLspSignature(
+                    text(signature, "label"),
+                    markup(signature.get("documentation")),
+                    parameters
+                ));
+                if (signatures.size() >= 12) {
+                    break;
+                }
+            }
+        }
+        return JavaLspSignatureHelpResponse.enabled(
+            result.path("activeSignature").asInt(0),
+            result.path("activeParameter").asInt(0),
+            signatures
+        );
+    }
+
+    private String parameterLabel(JsonNode label) {
+        if (label == null || label.isNull()) {
+            return "";
+        }
+        if (label.isArray() && label.size() == 2) {
+            return label.get(0).asInt() + ":" + label.get(1).asInt();
+        }
+        return label.asText("");
+    }
+
+    private String markup(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return "";
+        }
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        if (node.isArray()) {
+            List<String> parts = new ArrayList<>();
+            for (JsonNode item : node) {
+                String part = markup(item);
+                if (!part.isBlank()) {
+                    parts.add(part);
+                }
+            }
+            return String.join("\n\n", parts);
+        }
+        if (node.has("language") && node.has("value")) {
+            return "```" + text(node, "language") + "\n" + text(node, "value") + "\n```";
+        }
+        if (node.has("value")) {
+            return node.get("value").asText("");
+        }
+        return node.toString();
     }
 
     private String text(JsonNode node, String field) {

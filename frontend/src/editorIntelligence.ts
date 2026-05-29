@@ -36,6 +36,22 @@ interface JavaLspCompletionSpec extends ApiCompletionSpec {
   kind: string;
 }
 
+interface JavaLspHoverSpec {
+  contents: string;
+}
+
+interface JavaLspSignatureSpec {
+  documentation: string;
+  label: string;
+  parameters: string[];
+}
+
+interface JavaLspSignatureHelpSpec {
+  activeParameter: number;
+  activeSignature: number;
+  signatures: JavaLspSignatureSpec[];
+}
+
 interface HoverSpec {
   contents: string;
   word: string;
@@ -47,10 +63,28 @@ type JavaLspCompletionProvider = (
   column: number
 ) => Promise<JavaLspCompletionSpec[]>;
 
+type JavaLspHoverProvider = (code: string, lineNumber: number, column: number) => Promise<JavaLspHoverSpec | null>;
+
+type JavaLspSignatureHelpProvider = (
+  code: string,
+  lineNumber: number,
+  column: number
+) => Promise<JavaLspSignatureHelpSpec | null>;
+
 let javaLspCompletionProvider: JavaLspCompletionProvider | null = null;
+let javaLspHoverProvider: JavaLspHoverProvider | null = null;
+let javaLspSignatureHelpProvider: JavaLspSignatureHelpProvider | null = null;
 
 export function setJavaLspCompletionProvider(provider: JavaLspCompletionProvider | null) {
   javaLspCompletionProvider = provider;
+}
+
+export function setJavaLspHoverProvider(provider: JavaLspHoverProvider | null) {
+  javaLspHoverProvider = provider;
+}
+
+export function setJavaLspSignatureHelpProvider(provider: JavaLspSignatureHelpProvider | null) {
+  javaLspSignatureHelpProvider = provider;
 }
 
 const javaSnippets: SnippetSpec[] = [
@@ -298,18 +332,36 @@ function lspSuggestions(
   range: ReturnType<typeof rangeForWord>,
   specs: JavaLspCompletionSpec[]
 ) {
-  return specs.map((item, index) => ({
-    detail: item.detail,
-    filterText: item.label,
-    insertText: item.insertText || item.label,
-    insertTextRules: item.insertText.includes("$")
-      ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-      : undefined,
-    kind: lspKind(monaco, item.kind),
-    label: item.label,
-    range,
-    sortText: `0_lsp_${String(index).padStart(2, "0")}_${item.label}`
-  }));
+  return specs.map((item, index) => {
+    const label = displayLabel(item.label);
+    const insertText = item.insertText || label;
+    return {
+      detail: item.detail || item.label,
+      documentation: item.detail ? { value: `\`${item.detail}\`` } : undefined,
+      filterText: `${label} ${item.label}`,
+      insertText,
+      insertTextRules: insertText.includes("$")
+        ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+        : undefined,
+      kind: lspKind(monaco, item.kind),
+      label,
+      range,
+      sortText: `0_lsp_${String(index).padStart(2, "0")}_${label}`
+    };
+  });
+}
+
+function displayLabel(label: string) {
+  const trimmed = label.trim();
+  const methodMatch = trimmed.match(/^([A-Za-z_$][\w$]*)\s*\(/);
+  if (methodMatch) {
+    return methodMatch[1];
+  }
+  const fieldMatch = trimmed.match(/^([A-Za-z_$][\w$]*)\s*:/);
+  if (fieldMatch) {
+    return fieldMatch[1];
+  }
+  return trimmed;
 }
 
 async function javaLspSuggestions(monaco: Monaco, model: CompletionModel, position: EditorPosition) {
@@ -336,6 +388,66 @@ function registerHover(monaco: Monaco, language: string, hovers: HoverSpec[]) {
       const word = (model as HoverModel).getWordAtPosition(position)?.word;
       const hover = hovers.find((item) => item.word === word);
       return hover ? { contents: [{ value: `**${hover.word}**` }, { value: hover.contents }] } : null;
+    }
+  });
+}
+
+function registerJavaHover(monaco: Monaco) {
+  monaco.languages.registerHoverProvider("java", {
+    async provideHover(model, position) {
+      const codeModel = model as CompletionModel & HoverModel & { getValue?: () => string };
+      if (javaLspHoverProvider) {
+        try {
+          const hover = await javaLspHoverProvider(codeModel.getValue?.() ?? "", position.lineNumber, position.column);
+          if (hover?.contents) {
+            return { contents: [{ value: hover.contents }] };
+          }
+        } catch {
+          // Fall through to local interview hovers.
+        }
+      }
+
+      const word = codeModel.getWordAtPosition(position)?.word;
+      const hover = javaHovers.find((item) => item.word === word);
+      return hover ? { contents: [{ value: `**${hover.word}**` }, { value: hover.contents }] } : null;
+    }
+  });
+}
+
+function registerJavaSignatureHelp(monaco: Monaco) {
+  monaco.languages.registerSignatureHelpProvider("java", {
+    signatureHelpTriggerCharacters: ["(", ","],
+    async provideSignatureHelp(model, position) {
+      if (!javaLspSignatureHelpProvider) {
+        return null;
+      }
+
+      try {
+        const codeModel = model as CompletionModel & { getValue?: () => string };
+        const help = await javaLspSignatureHelpProvider(
+          codeModel.getValue?.() ?? "",
+          position.lineNumber,
+          position.column
+        );
+        if (!help || help.signatures.length === 0) {
+          return null;
+        }
+
+        return {
+          dispose: () => {},
+          value: {
+            activeParameter: help.activeParameter,
+            activeSignature: help.activeSignature,
+            signatures: help.signatures.map((signature) => ({
+              documentation: signature.documentation ? { value: signature.documentation } : undefined,
+              label: signature.label,
+              parameters: signature.parameters.map((parameter) => ({ label: parameter }))
+            }))
+          }
+        };
+      } catch {
+        return null;
+      }
     }
   });
 }
@@ -391,6 +503,7 @@ export function configureMonacoIntelligence(monaco: Monaco) {
     }
   });
 
-  registerHover(monaco, "java", javaHovers);
+  registerJavaHover(monaco);
+  registerJavaSignatureHelp(monaco);
   registerHover(monaco, "python", pythonHovers);
 }

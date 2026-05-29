@@ -814,8 +814,9 @@ The Java editor now has a backend-backed Eclipse JDT LS completion bridge for re
 What changed:
 
 - Spring exposes `GET /api/editor/java-lsp/status` and `POST /api/editor/java-lsp/completion`.
+- Spring also exposes `POST /api/editor/java-lsp/hover` and `POST /api/editor/java-lsp/signature-help` so Monaco can show JDT-backed hover docs and method signatures.
 - The backend starts `jdtls` over stdio, creates a scratch Java 21 Maven project under `.hackerprank-jdtls/`, syncs the Monaco buffer into `Main.java`, and forwards completion requests to JDT LS.
-- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, so the editor still has useful fallback suggestions when JDT LS is not installed.
+- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, cleans noisy JDT labels for display, and falls back to local hovers/snippets when JDT LS is not installed.
 
 Local setup:
 

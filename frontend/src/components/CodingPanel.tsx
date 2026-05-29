@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
-import { fetchJavaLspCompletions, fetchJavaLspStatus } from "../api";
+import { fetchJavaLspCompletions, fetchJavaLspHover, fetchJavaLspSignatureHelp, fetchJavaLspStatus } from "../api";
 import type {
   Language,
   Problem,
@@ -13,7 +13,12 @@ import type {
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
-import { configureMonacoIntelligence, setJavaLspCompletionProvider } from "../editorIntelligence";
+import {
+  configureMonacoIntelligence,
+  setJavaLspCompletionProvider,
+  setJavaLspHoverProvider,
+  setJavaLspSignatureHelpProvider
+} from "../editorIntelligence";
 import { ResultsPanel } from "./ResultsPanel";
 
 interface CodingPanelProps {
@@ -114,6 +119,38 @@ export function CodingPanel({
       return response.enabled ? response.items : [];
     });
 
+    setJavaLspHoverProvider(async (sourceCode, lineNumber, column) => {
+      if (!javaLspEnabledRef.current) {
+        return null;
+      }
+      const response = await fetchJavaLspHover({
+        code: sourceCode,
+        lineNumber,
+        column
+      });
+      javaLspEnabledRef.current = response.enabled;
+      if (isCurrent) {
+        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      }
+      return response.enabled && response.contents ? { contents: response.contents } : null;
+    });
+
+    setJavaLspSignatureHelpProvider(async (sourceCode, lineNumber, column) => {
+      if (!javaLspEnabledRef.current) {
+        return null;
+      }
+      const response = await fetchJavaLspSignatureHelp({
+        code: sourceCode,
+        lineNumber,
+        column
+      });
+      javaLspEnabledRef.current = response.enabled;
+      if (isCurrent) {
+        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      }
+      return response.enabled ? response : null;
+    });
+
     fetchJavaLspStatus()
       .then((response) => {
         javaLspEnabledRef.current = response.enabled;
@@ -131,6 +168,8 @@ export function CodingPanel({
     return () => {
       isCurrent = false;
       setJavaLspCompletionProvider(null);
+      setJavaLspHoverProvider(null);
+      setJavaLspSignatureHelpProvider(null);
     };
   }, []);
 

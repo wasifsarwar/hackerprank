@@ -24,4 +24,14 @@ public class JavaLspController {
     public JavaCompletionResponse completion(@RequestBody JavaCompletionRequest request) {
         return javaLspService.complete(request);
     }
+
+    @PostMapping("/hover")
+    public JavaLspHoverResponse hover(@RequestBody JavaLspPositionRequest request) {
+        return javaLspService.hover(request);
+    }
+
+    @PostMapping("/signature-help")
+    public JavaLspSignatureHelpResponse signatureHelp(@RequestBody JavaLspPositionRequest request) {
+        return javaLspService.signatureHelp(request);
+    }
 }
