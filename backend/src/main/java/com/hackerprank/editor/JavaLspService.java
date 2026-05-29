@@ -261,12 +261,26 @@ public class JavaLspService {
         response.put("jsonrpc", "2.0");
         response.set("id", message.get("id"));
         String method = text(message, "method");
-        if ("workspace/configuration".equals(method) || "workspace/workspaceFolders".equals(method)) {
+        if ("workspace/configuration".equals(method)) {
+            response.set("result", emptyConfigurationResult(message));
+        } else if ("workspace/workspaceFolders".equals(method)) {
             response.set("result", objectMapper.createArrayNode());
         } else {
             response.putNull("result");
         }
         writeMessage(response);
+    }
+
+    private ArrayNode emptyConfigurationResult(JsonNode message) {
+        ArrayNode result = objectMapper.createArrayNode();
+        JsonNode items = message.path("params").path("items");
+        if (!items.isArray()) {
+            return result;
+        }
+        for (int index = 0; index < items.size(); index += 1) {
+            result.addNull();
+        }
+        return result;
     }
 
     private JsonNode readMessage(BufferedInputStream output) throws IOException {
