@@ -807,6 +807,34 @@ The backend validates generated drafts before publishing:
 - Problem statement does not leak hidden test answers
 - No web-derived or copied problem wording
 
+## Java Editor Intelligence
+
+The Java editor now has a backend-backed Eclipse JDT LS completion bridge for real language-server suggestions.
+
+What changed:
+
+- Spring exposes `GET /api/editor/java-lsp/status` and `POST /api/editor/java-lsp/completion`.
+- The backend starts `jdtls` over stdio, creates a scratch Java 21 Maven project under `.hackerprank-jdtls/`, syncs the Monaco buffer into `Main.java`, and forwards completion requests to JDT LS.
+- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, so the editor still has useful fallback suggestions when JDT LS is not installed.
+
+Local setup:
+
+```sh
+brew install jdtls
+```
+
+If `jdtls` is not on `PATH`, set:
+
+```sh
+HACKERPRANK_JAVA_LSP_COMMAND=/path/to/jdtls
+```
+
+Notes:
+
+- JDT LS requires Java 21, which matches the project runtime.
+- `.hackerprank-jdtls/` is ignored because it stores generated workspace/project state.
+- This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:

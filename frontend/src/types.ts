@@ -143,6 +143,26 @@ export interface TutorChatResponse {
   messages: TutorMessage[];
 }
 
+export interface JavaLspCompletionRequest {
+  code: string;
+  lineNumber: number;
+  column: number;
+}
+
+export interface JavaLspCompletionItem {
+  label: string;
+  detail: string;
+  insertText: string;
+  kind: string;
+}
+
+export interface JavaLspCompletionResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  items: JavaLspCompletionItem[];
+}
+
 export interface SubmissionSummary {
   id: string;
   problemId: string | null;

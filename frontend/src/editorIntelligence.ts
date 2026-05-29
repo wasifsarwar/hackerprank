@@ -32,9 +32,25 @@ interface ApiCompletionSpec {
   label: string;
 }
 
+interface JavaLspCompletionSpec extends ApiCompletionSpec {
+  kind: string;
+}
+
 interface HoverSpec {
   contents: string;
   word: string;
+}
+
+type JavaLspCompletionProvider = (
+  code: string,
+  lineNumber: number,
+  column: number
+) => Promise<JavaLspCompletionSpec[]>;
+
+let javaLspCompletionProvider: JavaLspCompletionProvider | null = null;
+
+export function setJavaLspCompletionProvider(provider: JavaLspCompletionProvider | null) {
+  javaLspCompletionProvider = provider;
 }
 
 const javaSnippets: SnippetSpec[] = [
@@ -250,6 +266,70 @@ function apiSuggestions(
   }));
 }
 
+function lspKind(monaco: Monaco, kind: string) {
+  switch (kind) {
+    case "5":
+      return monaco.languages.CompletionItemKind.Field;
+    case "6":
+      return monaco.languages.CompletionItemKind.Variable;
+    case "7":
+      return monaco.languages.CompletionItemKind.Class;
+    case "8":
+      return monaco.languages.CompletionItemKind.Interface;
+    case "9":
+      return monaco.languages.CompletionItemKind.Module;
+    case "10":
+      return monaco.languages.CompletionItemKind.Property;
+    case "14":
+      return monaco.languages.CompletionItemKind.Keyword;
+    case "15":
+      return monaco.languages.CompletionItemKind.Snippet;
+    case "21":
+      return monaco.languages.CompletionItemKind.Constant;
+    case "2":
+    case "3":
+    default:
+      return monaco.languages.CompletionItemKind.Method;
+  }
+}
+
+function lspSuggestions(
+  monaco: Monaco,
+  range: ReturnType<typeof rangeForWord>,
+  specs: JavaLspCompletionSpec[]
+) {
+  return specs.map((item, index) => ({
+    detail: item.detail,
+    filterText: item.label,
+    insertText: item.insertText || item.label,
+    insertTextRules: item.insertText.includes("$")
+      ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+      : undefined,
+    kind: lspKind(monaco, item.kind),
+    label: item.label,
+    range,
+    sortText: `0_lsp_${String(index).padStart(2, "0")}_${item.label}`
+  }));
+}
+
+async function javaLspSuggestions(monaco: Monaco, model: CompletionModel, position: EditorPosition) {
+  if (!javaLspCompletionProvider) {
+    return [];
+  }
+
+  try {
+    const codeModel = model as CompletionModel & { getValue?: () => string };
+    const items = await javaLspCompletionProvider(codeModel.getValue?.() ?? "", position.lineNumber, position.column);
+    return lspSuggestions(
+      monaco,
+      startsWithDotContext(model, position) ? rangeAfterDot(model, position) : rangeForWord(model, position),
+      items
+    );
+  } catch {
+    return [];
+  }
+}
+
 function registerHover(monaco: Monaco, language: string, hovers: HoverSpec[]) {
   monaco.languages.registerHoverProvider(language, {
     provideHover(model, position) {
@@ -269,20 +349,25 @@ export function configureMonacoIntelligence(monaco: Monaco) {
 
   monaco.languages.registerCompletionItemProvider("java", {
     triggerCharacters: [".", "(", "<", " "],
-    provideCompletionItems(model, position) {
+    async provideCompletionItems(model, position) {
       const typedModel = model as CompletionModel;
+      const remoteSuggestions = await javaLspSuggestions(monaco, typedModel, position);
       if (startsWithDotContext(typedModel, position)) {
         const receiver = receiverBeforeDot(typedModel, position);
         const receiverApis = javaApiByReceiver[receiver] ?? javaInstanceApis;
         return {
-          suggestions: apiSuggestions(monaco, rangeAfterDot(typedModel, position), receiverApis)
+          suggestions: [
+            ...remoteSuggestions,
+            ...apiSuggestions(monaco, rangeAfterDot(typedModel, position), receiverApis, "1")
+          ]
         };
       }
 
       return {
         suggestions: [
+          ...remoteSuggestions,
           ...snippetSuggestions(monaco, typedModel, position, javaSnippets),
-          ...apiSuggestions(monaco, rangeForWord(typedModel, position), javaTypes, "1")
+          ...apiSuggestions(monaco, rangeForWord(typedModel, position), javaTypes, "2")
         ]
       };
     }

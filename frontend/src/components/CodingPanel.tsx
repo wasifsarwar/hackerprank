@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
+import { fetchJavaLspCompletions, fetchJavaLspStatus } from "../api";
 import type {
   Language,
   Problem,
@@ -12,7 +13,7 @@ import type {
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
-import { configureMonacoIntelligence } from "../editorIntelligence";
+import { configureMonacoIntelligence, setJavaLspCompletionProvider } from "../editorIntelligence";
 import { ResultsPanel } from "./ResultsPanel";
 
 interface CodingPanelProps {
@@ -87,10 +88,51 @@ export function CodingPanel({
   tutorMessagesSubmissionId
 }: CodingPanelProps) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const javaLspEnabledRef = useRef(true);
+  const [javaLspStatus, setJavaLspStatus] = useState<"checking" | "enabled" | "disabled">("checking");
 
   const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
   };
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    setJavaLspCompletionProvider(async (sourceCode, lineNumber, column) => {
+      if (!javaLspEnabledRef.current) {
+        return [];
+      }
+      const response = await fetchJavaLspCompletions({
+        code: sourceCode,
+        lineNumber,
+        column
+      });
+      javaLspEnabledRef.current = response.enabled;
+      if (isCurrent) {
+        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      }
+      return response.enabled ? response.items : [];
+    });
+
+    fetchJavaLspStatus()
+      .then((response) => {
+        javaLspEnabledRef.current = response.enabled;
+        if (isCurrent) {
+          setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+        }
+      })
+      .catch(() => {
+        javaLspEnabledRef.current = false;
+        if (isCurrent) {
+          setJavaLspStatus("disabled");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      setJavaLspCompletionProvider(null);
+    };
+  }, []);
 
   function handleFormatCode() {
     editorRef.current?.getAction("editor.action.formatDocument")?.run().catch(() => {});
@@ -112,7 +154,13 @@ export function CodingPanel({
               </button>
             ))}
           </div>
-          <span className="runtime-pill">{language === "java" ? "Java 21" : "Python 3.12"}</span>
+          <span className="runtime-pill">
+            {language === "java"
+              ? javaLspStatus === "enabled"
+                ? "Java 21 + JDT LS"
+                : "Java 21"
+              : "Python 3.12"}
+          </span>
         </div>
 
         {isDraftPreview ? (

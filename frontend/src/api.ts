@@ -2,6 +2,8 @@ import type {
   DraftFeedbackRequest,
   GenerateProblemRequest,
   GenerationAttempt,
+  JavaLspCompletionRequest,
+  JavaLspCompletionResponse,
   Problem,
   ProblemDraft,
   ProblemSummary,
@@ -117,5 +119,16 @@ export function sendTutorMessage(id: string, message: string): Promise<TutorChat
   return request<TutorChatResponse>(`/api/submissions/${id}/tutor/messages`, {
     method: "POST",
     body: JSON.stringify({ message })
+  });
+}
+
+export function fetchJavaLspStatus(): Promise<JavaLspCompletionResponse> {
+  return request<JavaLspCompletionResponse>("/api/editor/java-lsp/status");
+}
+
+export function fetchJavaLspCompletions(payload: JavaLspCompletionRequest): Promise<JavaLspCompletionResponse> {
+  return request<JavaLspCompletionResponse>("/api/editor/java-lsp/completion", {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 }
