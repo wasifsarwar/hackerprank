@@ -199,6 +199,7 @@ public class GenerationAttemptRepository {
         return tags.stream()
             .map(tag -> tag == null ? "" : tag.trim())
             .filter(tag -> !tag.isBlank())
+            .map(tag -> tag.length() > 80 ? tag.substring(0, 80) : tag)
             .distinct()
             .limit(12)
             .toList();

@@ -116,24 +116,25 @@ class ProblemControllerTests {
 
         JsonNode draftBody = objectMapper.readTree(draftResult.getResponse().getContentAsString());
         String draftId = draftBody.get("id").asText();
+        String longTag = "This feedback tag is intentionally longer than eighty characters to exercise truncation";
 
         mockMvc.perform(post("/api/problems/drafts/" + draftId + "/feedback")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "tags": ["Too easy", "Needs edge cases"],
-                      "notes": "Make the examples more interview-like."
-                    }
-                    """))
+                .content(objectMapper.writeValueAsString(java.util.Map.of(
+                    "tags", java.util.List.of("Too easy", "Needs edge cases", longTag),
+                    "notes", "Make the examples more interview-like."
+                ))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.outcome").value("DRAFTED"))
             .andExpect(jsonPath("$.feedbackTags[0]").value("Needs edge cases"))
-            .andExpect(jsonPath("$.feedbackTags[1]").value("Too easy"))
+            .andExpect(jsonPath("$.feedbackTags[1]").value(longTag.substring(0, 80)))
+            .andExpect(jsonPath("$.feedbackTags[2]").value("Too easy"))
             .andExpect(jsonPath("$.feedbackNotes").value("Make the examples more interview-like."));
 
         GenerationAttempt attempt = attemptRepository.findByDraftId(draftId).orElseThrow();
         assertEquals("Make the examples more interview-like.", attempt.getFeedbackNotes());
-        assertEquals(2, attempt.getFeedbackTags().size());
+        assertEquals(3, attempt.getFeedbackTags().size());
+        assertTrue(attempt.getFeedbackTags().stream().allMatch(tag -> tag.length() <= 80));
     }
 
     @Test
