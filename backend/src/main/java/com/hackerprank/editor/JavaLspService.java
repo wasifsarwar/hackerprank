@@ -38,6 +38,7 @@ public class JavaLspService {
     private final Object completionLock = new Object();
     private final Object writeLock = new Object();
     private final Map<String, List<JavaLspDiagnostic>> diagnosticsByUri = new ConcurrentHashMap<>();
+    private final Map<String, Integer> latestDocumentVersionsByUri = new ConcurrentHashMap<>();
 
     private Process process;
     private BufferedOutputStream input;
@@ -205,6 +206,7 @@ public class JavaLspService {
         documentOpened = false;
         documentVersion.set(0);
         diagnosticsByUri.clear();
+        latestDocumentVersionsByUri.clear();
     }
 
     boolean hasRunningProcess() {
@@ -243,13 +245,15 @@ public class JavaLspService {
     }
 
     private void syncDocument(String code) throws IOException {
+        int version = nextDocumentVersion();
+        latestDocumentVersionsByUri.put(documentUri, version);
         diagnosticsByUri.put(documentUri, List.of());
         ObjectNode params = objectMapper.createObjectNode();
         if (!documentOpened) {
             ObjectNode textDocument = params.putObject("textDocument");
             textDocument.put("uri", documentUri);
             textDocument.put("languageId", DOCUMENT_LANGUAGE);
-            textDocument.put("version", nextDocumentVersion());
+            textDocument.put("version", version);
             textDocument.put("text", code == null ? "" : code);
             notify("textDocument/didOpen", params);
             documentOpened = true;
@@ -258,7 +262,7 @@ public class JavaLspService {
 
         ObjectNode textDocument = params.putObject("textDocument");
         textDocument.put("uri", documentUri);
-        textDocument.put("version", nextDocumentVersion());
+        textDocument.put("version", version);
         ArrayNode changes = params.putArray("contentChanges");
         changes.addObject().put("text", code == null ? "" : code);
         notify("textDocument/didChange", params);
@@ -426,9 +430,31 @@ public class JavaLspService {
         }
         JsonNode params = message.path("params");
         String uri = protocolMapper.text(params, "uri");
-        if (!uri.isBlank()) {
+        if (!uri.isBlank() && isCurrentDiagnosticsNotification(uri, params)) {
             diagnosticsByUri.put(uri, protocolMapper.toDiagnostics(params));
         }
+    }
+
+    private boolean isCurrentDiagnosticsNotification(String uri, JsonNode params) {
+        JsonNode version = params.path("version");
+        if (!version.canConvertToInt()) {
+            return true;
+        }
+
+        Integer latestVersion = latestDocumentVersionsByUri.get(uri);
+        return latestVersion == null || version.asInt() >= latestVersion;
+    }
+
+    void setLatestDocumentVersionForTesting(String uri, int version) {
+        latestDocumentVersionsByUri.put(uri, version);
+    }
+
+    List<JavaLspDiagnostic> diagnosticsForTesting(String uri) {
+        return diagnosticsByUri.getOrDefault(uri, List.of());
+    }
+
+    void handleServerNotificationForTesting(JsonNode message) {
+        handleServerNotification(message);
     }
 
     private JsonNode readMessage(BufferedInputStream output) throws IOException {
