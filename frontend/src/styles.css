@@ -1466,6 +1466,11 @@ pre {
     padding: 18px;
   }
 
+  .statement-tabs {
+    margin: -18px -18px 18px;
+    padding: 0 18px;
+  }
+
   .problem-heading,
   .toolbar,
   .result-summary,
@@ -1516,6 +1521,17 @@ pre {
     align-items: stretch;
     gap: 8px;
     grid-template-columns: 1fr;
+  }
+
+  .statement-tabs {
+    flex-wrap: wrap;
+    gap: 0 12px;
+    padding-bottom: 6px;
+  }
+
+  .statement-tabs a {
+    min-height: 36px;
+    white-space: nowrap;
   }
 
   h2 {
