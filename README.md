@@ -86,6 +86,21 @@ mvn spring-boot:run
 
 The backend is configured for Spring Boot 3 and Java 21. It uses PostgreSQL by default with Flyway migrations and HikariCP pooling. Tests use H2 in PostgreSQL compatibility mode.
 
+Local secrets can live in a root `.env` file, which is ignored by git. Start from the checked-in example:
+
+```sh
+cp .env.example .env
+```
+
+Paste your real API key into `.env`, then load it before starting the backend:
+
+```sh
+set -a
+source ../.env
+set +a
+mvn spring-boot:run
+```
+
 OpenAI-backed generation is opt-in. The backend keeps deterministic templates as the default and fallback so local development and tests never require network access:
 
 ```sh
@@ -114,7 +129,7 @@ export ANTHROPIC_API_KEY=...
 Optional Anthropic generator settings:
 
 ```sh
-export HACKERPRANK_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 export HACKERPRANK_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
 export HACKERPRANK_ANTHROPIC_VERSION=2023-06-01
 export HACKERPRANK_ANTHROPIC_TIMEOUT_SECONDS=45
@@ -148,7 +163,7 @@ export ANTHROPIC_API_KEY=...
 Optional Anthropic tutor settings:
 
 ```sh
-export HACKERPRANK_TUTOR_ANTHROPIC_MODEL=claude-sonnet-4-6
+export HACKERPRANK_TUTOR_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 export HACKERPRANK_TUTOR_ANTHROPIC_MESSAGES_URL=https://api.anthropic.com/v1/messages
 export HACKERPRANK_TUTOR_ANTHROPIC_VERSION=2023-06-01
 export HACKERPRANK_TUTOR_ANTHROPIC_TIMEOUT_SECONDS=30
