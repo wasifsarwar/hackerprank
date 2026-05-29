@@ -53,23 +53,7 @@ public class JavaLspService {
     @PreDestroy
     public void shutdown() {
         synchronized (lifecycleLock) {
-            pendingRequests.values().forEach(future -> future.completeExceptionally(new IOException("JDT LS stopped.")));
-            pendingRequests.clear();
-            closeInput();
-            if (process != null && process.isAlive()) {
-                process.destroy();
-                try {
-                    if (!process.waitFor(2, TimeUnit.SECONDS)) {
-                        process.destroyForcibly();
-                    }
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    process.destroyForcibly();
-                }
-            }
-            process = null;
-            initialized = false;
-            documentOpened = false;
+            stopProcess();
         }
     }
 
@@ -159,15 +143,42 @@ public class JavaLspService {
             processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
             process = processBuilder.start();
             input = new BufferedOutputStream(process.getOutputStream());
-            Thread reader = new Thread(() -> readMessages(process), "jdtls-lsp-reader");
-            reader.setDaemon(true);
-            reader.start();
+            Process startedProcess = process;
 
-            request("initialize", initializeParams(), Duration.ofSeconds(20).toMillis());
-            notify("initialized", objectMapper.createObjectNode());
-            initialized = true;
-            documentOpened = false;
+            try {
+                Thread reader = new Thread(() -> readMessages(startedProcess), "jdtls-lsp-reader");
+                reader.setDaemon(true);
+                reader.start();
+
+                request("initialize", initializeParams(), Duration.ofSeconds(20).toMillis());
+                notify("initialized", objectMapper.createObjectNode());
+                initialized = true;
+                documentOpened = false;
+            } catch (IOException | RuntimeException exception) {
+                stopProcess();
+                throw exception;
+            }
         }
+    }
+
+    private void stopProcess() {
+        pendingRequests.values().forEach(future -> future.completeExceptionally(new IOException("JDT LS stopped.")));
+        pendingRequests.clear();
+        closeInput();
+        if (process != null && process.isAlive()) {
+            process.destroy();
+            try {
+                if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                    process.destroyForcibly();
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                process.destroyForcibly();
+            }
+        }
+        process = null;
+        initialized = false;
+        documentOpened = false;
     }
 
     private void prepareProject() throws IOException {
@@ -425,7 +436,8 @@ public class JavaLspService {
                 text(item, "label"),
                 text(item, "detail"),
                 insertText(item),
-                String.valueOf(item.path("kind").asInt(0))
+                String.valueOf(item.path("kind").asInt(0)),
+                additionalTextEdits(item)
             ));
             if (completions.size() >= 60) {
                 break;
@@ -443,6 +455,28 @@ public class JavaLspService {
             return item.get("insertText").asText();
         }
         return text(item, "label");
+    }
+
+    private List<JavaLspTextEdit> additionalTextEdits(JsonNode item) {
+        JsonNode edits = item.get("additionalTextEdits");
+        if (edits == null || !edits.isArray()) {
+            return List.of();
+        }
+
+        List<JavaLspTextEdit> mappedEdits = new ArrayList<>();
+        for (JsonNode edit : edits) {
+            JsonNode range = edit.path("range");
+            JsonNode start = range.path("start");
+            JsonNode end = range.path("end");
+            mappedEdits.add(new JavaLspTextEdit(
+                start.path("line").asInt(0) + 1,
+                start.path("character").asInt(0) + 1,
+                end.path("line").asInt(0) + 1,
+                end.path("character").asInt(0) + 1,
+                text(edit, "newText")
+            ));
+        }
+        return mappedEdits;
     }
 
     private String hoverContents(JsonNode result) {

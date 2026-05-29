@@ -837,6 +837,9 @@ Notes:
 - JDT LS can send client requests while HackerPrank is waiting for initialize/completion responses. Keep lifecycle, completion, and protocol write locks separate so the reader thread can answer those requests instead of deadlocking the language server.
 - `workspace/configuration` responses must mirror the number of requested `params.items`, using `null` placeholders for settings HackerPrank does not provide.
 - The Spring service owns the JDT LS child process and must destroy it during bean shutdown to avoid orphan Java processes and stale workspace locks during local/container restarts.
+- If JDT LS startup fails after the process has been spawned, the service must close stdio, complete pending requests, and destroy the child before allowing the next retry. This prevents duplicate language servers from fighting over the same `.hackerprank-jdtls/data` workspace.
+- Completion responses now preserve JDT LS `additionalTextEdits` so Monaco can apply import edits along with selected Java symbols.
+- The frontend treats temporary JDT LS failures as a short retry backoff instead of permanently disabling language-server requests for the rest of the React component lifetime.
 - This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
 
 ## How To Keep These Notes Useful

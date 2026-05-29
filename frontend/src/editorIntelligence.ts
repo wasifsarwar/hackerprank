@@ -33,7 +33,16 @@ interface ApiCompletionSpec {
 }
 
 interface JavaLspCompletionSpec extends ApiCompletionSpec {
+  additionalTextEdits?: JavaLspTextEditSpec[];
   kind: string;
+}
+
+interface JavaLspTextEditSpec {
+  endColumn: number;
+  endLineNumber: number;
+  startColumn: number;
+  startLineNumber: number;
+  text: string;
 }
 
 interface JavaLspHoverSpec {
@@ -343,6 +352,15 @@ function lspSuggestions(
       insertTextRules: insertText.includes("$")
         ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
         : undefined,
+      additionalTextEdits: item.additionalTextEdits?.map((edit) => ({
+        range: {
+          endColumn: edit.endColumn,
+          endLineNumber: edit.endLineNumber,
+          startColumn: edit.startColumn,
+          startLineNumber: edit.startLineNumber
+        },
+        text: edit.text
+      })),
       kind: lspKind(monaco, item.kind),
       label,
       range,

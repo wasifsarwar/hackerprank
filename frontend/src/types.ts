@@ -151,11 +151,20 @@ export interface JavaLspCompletionRequest {
 
 export type JavaLspPositionRequest = JavaLspCompletionRequest;
 
+export interface JavaLspTextEdit {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+  text: string;
+}
+
 export interface JavaLspCompletionItem {
   label: string;
   detail: string;
   insertText: string;
   kind: string;
+  additionalTextEdits: JavaLspTextEdit[];
 }
 
 export interface JavaLspCompletionResponse {

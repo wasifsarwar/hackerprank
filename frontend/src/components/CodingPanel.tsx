@@ -93,7 +93,7 @@ export function CodingPanel({
   tutorMessagesSubmissionId
 }: CodingPanelProps) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const javaLspEnabledRef = useRef(true);
+  const javaLspRetryAfterRef = useRef(0);
   const [javaLspStatus, setJavaLspStatus] = useState<"checking" | "enabled" | "disabled">("checking");
 
   const handleEditorMount: OnMount = (editor) => {
@@ -102,64 +102,86 @@ export function CodingPanel({
 
   useEffect(() => {
     let isCurrent = true;
+    const retryDelayMs = 5000;
+
+    function shouldSkipJavaLspRequest() {
+      return Date.now() < javaLspRetryAfterRef.current;
+    }
+
+    function recordJavaLspAvailability(enabled: boolean) {
+      javaLspRetryAfterRef.current = enabled ? 0 : Date.now() + retryDelayMs;
+      if (isCurrent) {
+        setJavaLspStatus(enabled ? "enabled" : "disabled");
+      }
+    }
+
+    function recordJavaLspTransientFailure() {
+      javaLspRetryAfterRef.current = Date.now() + retryDelayMs;
+      if (isCurrent) {
+        setJavaLspStatus("disabled");
+      }
+    }
 
     setJavaLspCompletionProvider(async (sourceCode, lineNumber, column) => {
-      if (!javaLspEnabledRef.current) {
+      if (shouldSkipJavaLspRequest()) {
         return [];
       }
-      const response = await fetchJavaLspCompletions({
-        code: sourceCode,
-        lineNumber,
-        column
-      });
-      javaLspEnabledRef.current = response.enabled;
-      if (isCurrent) {
-        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      try {
+        const response = await fetchJavaLspCompletions({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled ? response.items : [];
+      } catch {
+        recordJavaLspTransientFailure();
+        return [];
       }
-      return response.enabled ? response.items : [];
     });
 
     setJavaLspHoverProvider(async (sourceCode, lineNumber, column) => {
-      if (!javaLspEnabledRef.current) {
+      if (shouldSkipJavaLspRequest()) {
         return null;
       }
-      const response = await fetchJavaLspHover({
-        code: sourceCode,
-        lineNumber,
-        column
-      });
-      javaLspEnabledRef.current = response.enabled;
-      if (isCurrent) {
-        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      try {
+        const response = await fetchJavaLspHover({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled && response.contents ? { contents: response.contents } : null;
+      } catch {
+        recordJavaLspTransientFailure();
+        return null;
       }
-      return response.enabled && response.contents ? { contents: response.contents } : null;
     });
 
     setJavaLspSignatureHelpProvider(async (sourceCode, lineNumber, column) => {
-      if (!javaLspEnabledRef.current) {
+      if (shouldSkipJavaLspRequest()) {
         return null;
       }
-      const response = await fetchJavaLspSignatureHelp({
-        code: sourceCode,
-        lineNumber,
-        column
-      });
-      javaLspEnabledRef.current = response.enabled;
-      if (isCurrent) {
-        setJavaLspStatus(response.enabled ? "enabled" : "disabled");
+      try {
+        const response = await fetchJavaLspSignatureHelp({
+          code: sourceCode,
+          lineNumber,
+          column
+        });
+        recordJavaLspAvailability(response.enabled);
+        return response.enabled ? response : null;
+      } catch {
+        recordJavaLspTransientFailure();
+        return null;
       }
-      return response.enabled ? response : null;
     });
 
     fetchJavaLspStatus()
       .then((response) => {
-        javaLspEnabledRef.current = response.enabled;
-        if (isCurrent) {
-          setJavaLspStatus(response.enabled ? "enabled" : "disabled");
-        }
+        recordJavaLspAvailability(response.enabled);
       })
       .catch(() => {
-        javaLspEnabledRef.current = false;
+        javaLspRetryAfterRef.current = Date.now() + retryDelayMs;
         if (isCurrent) {
           setJavaLspStatus("disabled");
         }
