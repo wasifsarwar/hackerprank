@@ -11,6 +11,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,46 +25,83 @@ public class ProblemGeneratorService {
 
     private final ProblemRepository problemRepository;
     private final ProblemDraftRepository draftRepository;
+    private final GenerationAttemptRepository attemptRepository;
     private final GeneratedProblemValidator generatedProblemValidator;
     private final ProblemGenerationProperties generationProperties;
     private final OpenAiProblemGenerator openAiProblemGenerator;
     private final AnthropicProblemGenerator anthropicProblemGenerator;
+    private final ObjectMapper objectMapper;
 
     public ProblemGeneratorService(
         ProblemRepository problemRepository,
         ProblemDraftRepository draftRepository,
+        GenerationAttemptRepository attemptRepository,
         GeneratedProblemValidator generatedProblemValidator,
         ProblemGenerationProperties generationProperties,
         OpenAiProblemGenerator openAiProblemGenerator,
-        AnthropicProblemGenerator anthropicProblemGenerator
+        AnthropicProblemGenerator anthropicProblemGenerator,
+        ObjectMapper objectMapper
     ) {
         this.problemRepository = problemRepository;
         this.draftRepository = draftRepository;
+        this.attemptRepository = attemptRepository;
         this.generatedProblemValidator = generatedProblemValidator;
         this.generationProperties = generationProperties;
         this.openAiProblemGenerator = openAiProblemGenerator;
         this.anthropicProblemGenerator = anthropicProblemGenerator;
+        this.objectMapper = objectMapper;
     }
 
     public PublicProblem generate(GenerateProblemRequest request) {
         ProblemDraft draft = createDraftEntity(request);
         draftRepository.publishById(draft.getId());
+        attemptRepository.updateOutcomeByDraftId(draft.getId(), "PUBLISHED");
 
         return PublicProblem.from(draft.getProblem());
     }
 
     public PublicProblemDraft createDraft(GenerateProblemRequest request) {
-        return PublicProblemDraft.from(createDraftEntity(request));
+        ProblemDraft draft = createDraftEntity(request);
+        return PublicProblemDraft.from(draft, attemptRepository.findByDraftId(draft.getId()).orElse(null));
     }
 
     public Optional<PublicProblemDraft> findDraft(String draftId) {
-        return draftRepository.findById(draftId).map(PublicProblemDraft::from);
+        return draftRepository.findById(draftId)
+            .map(draft -> PublicProblemDraft.from(draft, attemptRepository.findByDraftId(draft.getId()).orElse(null)));
+    }
+
+    public Optional<PublicGenerationAttempt> saveDraftFeedback(String draftId, DraftFeedbackRequest request) {
+        if (draftRepository.findById(draftId).isEmpty()) {
+            return Optional.empty();
+        }
+
+        DraftFeedbackRequest safeRequest = request == null ? new DraftFeedbackRequest() : request;
+        return attemptRepository
+            .replaceFeedbackByDraftId(draftId, safeRequest.getTags(), safeRequest.getNotes())
+            .map(PublicGenerationAttempt::from);
+    }
+
+    public Optional<PublicProblemDraft> regenerateDraft(String draftId, RegenerateDraftRequest request) {
+        return draftRepository.findById(draftId)
+            .map(previousDraft -> {
+                RegenerateDraftRequest safeRequest = request == null ? new RegenerateDraftRequest() : request;
+                saveDraftFeedback(previousDraft.getId(), safeRequest);
+                GenerateProblemRequest regenerationRequest = requestFromDraft(previousDraft, safeRequest);
+                ProblemDraft nextDraft = createDraftEntity(regenerationRequest);
+                attemptRepository.updateOutcomeByDraftId(previousDraft.getId(), "REGENERATED");
+                draftRepository.deleteById(previousDraft.getId());
+                return PublicProblemDraft.from(
+                    nextDraft,
+                    attemptRepository.findByDraftId(nextDraft.getId()).orElse(null)
+                );
+            });
     }
 
     public Optional<PublicProblem> publishDraft(String draftId) {
         return draftRepository.findById(draftId)
             .map(draft -> {
                 draftRepository.publishById(draft.getId());
+                attemptRepository.updateOutcomeByDraftId(draft.getId(), "PUBLISHED");
                 return PublicProblem.from(draft.getProblem());
             });
     }
@@ -69,6 +109,7 @@ public class ProblemGeneratorService {
     public boolean deleteDraft(String draftId) {
         boolean exists = draftRepository.findById(draftId).isPresent();
         if (exists) {
+            attemptRepository.updateOutcomeByDraftId(draftId, "DISCARDED");
             draftRepository.deleteById(draftId);
         }
         return exists;
@@ -91,7 +132,108 @@ public class ProblemGeneratorService {
             Instant.now()
         );
 
-        return draftRepository.save(draft);
+        ProblemDraft savedDraft = draftRepository.save(draft);
+        attemptRepository.save(attemptFor(savedDraft));
+        return savedDraft;
+    }
+
+    private GenerationAttempt attemptFor(ProblemDraft draft) {
+        GenerationMetadata metadata = draft.getGenerationMetadata() == null
+            ? GenerationMetadata.empty()
+            : draft.getGenerationMetadata();
+        Instant now = Instant.now();
+        return new GenerationAttempt(
+            uniqueAttemptId(),
+            draft.getId(),
+            draft.getProblem().getId(),
+            metadata.provider(),
+            metadata.modelId(),
+            metadata.promptVersion(),
+            draft.getTopic(),
+            draft.getDifficulty(),
+            "DRAFTED",
+            List.of(),
+            "",
+            now,
+            now
+        );
+    }
+
+    private GenerateProblemRequest requestFromDraft(ProblemDraft draft, RegenerateDraftRequest request) {
+        GenerateProblemRequest nextRequest = new GenerateProblemRequest();
+        GenerationRequestParameters parameters = parametersFrom(draft.getGenerationMetadata());
+
+        nextRequest.setTopic(parameters.topic().isBlank() ? draft.getTopic() : parameters.topic());
+        nextRequest.setDifficulty(parameters.difficulty().isBlank() ? draft.getDifficulty() : parameters.difficulty());
+        nextRequest.setTargetConcepts(parameters.targetConcepts());
+        nextRequest.setInterviewStyle(parameters.interviewStyle().isBlank() ? "Classic" : parameters.interviewStyle());
+        nextRequest.setConstraintsNotes(regenerationConstraints(parameters.constraintsNotes(), request));
+        return nextRequest;
+    }
+
+    private GenerationRequestParameters parametersFrom(GenerationMetadata metadata) {
+        if (metadata == null || metadata.parametersJson() == null || metadata.parametersJson().isBlank()) {
+            return new GenerationRequestParameters("", "", List.of(), "", "");
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(metadata.parametersJson());
+            return new GenerationRequestParameters(
+                textValue(root, "topic"),
+                textValue(root, "difficulty"),
+                stringList(root.get("targetConcepts")),
+                textValue(root, "constraintsNotes"),
+                textValue(root, "interviewStyle")
+            );
+        } catch (Exception exception) {
+            LOGGER.warn("Could not parse generation parameters for draft regeneration", exception);
+            return new GenerationRequestParameters("", "", List.of(), "", "");
+        }
+    }
+
+    private String regenerationConstraints(String currentNotes, RegenerateDraftRequest request) {
+        List<String> parts = new ArrayList<>();
+        String normalizedCurrentNotes = normalizeText(currentNotes);
+        if (!normalizedCurrentNotes.isBlank()) {
+            parts.add(normalizedCurrentNotes);
+        }
+
+        String action = normalizeText(request.getAction());
+        if (!action.isBlank()) {
+            parts.add("Regeneration action: " + action);
+        }
+
+        List<String> tags = normalizeTargetConcepts(request.getTags());
+        if (!tags.isEmpty()) {
+            parts.add("Draft feedback tags: " + String.join(", ", tags));
+        }
+
+        String notes = normalizeText(request.getNotes());
+        if (!notes.isBlank()) {
+            parts.add("Draft feedback notes: " + notes);
+        }
+
+        return String.join("\n", parts);
+    }
+
+    private String textValue(JsonNode root, String fieldName) {
+        JsonNode value = root == null ? null : root.get(fieldName);
+        return value == null || value.isNull() ? "" : value.asText("");
+    }
+
+    private List<String> stringList(JsonNode node) {
+        if (node == null || !node.isArray()) {
+            return List.of();
+        }
+
+        List<String> values = new ArrayList<>();
+        node.forEach(value -> {
+            String text = value == null || value.isNull() ? "" : value.asText("");
+            if (!text.isBlank()) {
+                values.add(text.trim());
+            }
+        });
+        return List.copyOf(values);
     }
 
     private ValidatedGeneratedProblem draftFor(GenerateProblemRequest request) {
@@ -682,6 +824,10 @@ public class ProblemGeneratorService {
         throw new IllegalStateException("Could not allocate a generated draft id");
     }
 
+    private String uniqueAttemptId() {
+        return "attempt-" + UUID.randomUUID().toString().substring(0, 12);
+    }
+
     private String slugBase(String preferred, String fallback) {
         String source = preferred == null || preferred.isBlank() ? fallback : preferred;
         String slug = NON_SLUG_CHARACTERS.matcher(source.trim().toLowerCase(Locale.ROOT)).replaceAll("-");
@@ -690,6 +836,14 @@ public class ProblemGeneratorService {
     }
 
     private record NormalizedGenerationRequest(
+        String topic,
+        String difficulty,
+        List<String> targetConcepts,
+        String constraintsNotes,
+        String interviewStyle
+    ) {}
+
+    private record GenerationRequestParameters(
         String topic,
         String difficulty,
         List<String> targetConcepts,

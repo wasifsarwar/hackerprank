@@ -52,6 +52,26 @@ public class ProblemController {
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/drafts/{id}/feedback")
+    public ResponseEntity<PublicGenerationAttempt> saveDraftFeedback(
+        @PathVariable String id,
+        @RequestBody(required = false) DraftFeedbackRequest request
+    ) {
+        return generatorService.saveDraftFeedback(id, request)
+            .map(attempt -> ResponseEntity.ok(attempt))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/drafts/{id}/regenerate")
+    public ResponseEntity<PublicProblemDraft> regenerateDraft(
+        @PathVariable String id,
+        @RequestBody(required = false) RegenerateDraftRequest request
+    ) {
+        return generatorService.regenerateDraft(id, request)
+            .map(draft -> ResponseEntity.ok(draft))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/drafts/{id}/publish")
     public ResponseEntity<PublicProblem> publishDraft(@PathVariable String id) {
         return generatorService.publishDraft(id)

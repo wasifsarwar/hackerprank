@@ -21,6 +21,8 @@ The generator panel captures topic, difficulty, target concepts, constraints/not
 
 Generated draft previews show safe metadata such as provider, model id, prompt version, validation summary, and intended technique. Private generation details such as prompt text, reference solutions, hidden tests, raw validation errors, and raw parameters stay server-side.
 
+Draft previews also include a lightweight generation quality studio. Feedback tags and notes are saved to a generation-attempt audit trail, and draft variants can be regenerated from the current topic, difficulty, concepts, style, and critique without publishing the earlier draft.
+
 ## Local Commands
 
 Prerequisites:
