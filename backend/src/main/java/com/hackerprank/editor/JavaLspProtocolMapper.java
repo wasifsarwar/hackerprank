@@ -91,6 +91,31 @@ class JavaLspProtocolMapper {
         return markup(result.get("contents"));
     }
 
+    List<JavaLspDiagnostic> toDiagnostics(JsonNode params) {
+        JsonNode diagnostics = params.path("diagnostics");
+        if (!diagnostics.isArray()) {
+            return List.of();
+        }
+
+        List<JavaLspDiagnostic> mappedDiagnostics = new ArrayList<>();
+        for (JsonNode diagnostic : diagnostics) {
+            JsonNode range = diagnostic.path("range");
+            JsonNode start = range.path("start");
+            JsonNode end = range.path("end");
+            mappedDiagnostics.add(new JavaLspDiagnostic(
+                start.path("line").asInt(0) + 1,
+                start.path("character").asInt(0) + 1,
+                end.path("line").asInt(0) + 1,
+                end.path("character").asInt(0) + 1,
+                diagnostic.path("severity").asInt(3),
+                text(diagnostic, "message"),
+                text(diagnostic, "source"),
+                diagnosticCode(diagnostic.path("code"))
+            ));
+        }
+        return mappedDiagnostics;
+    }
+
     private String insertText(JsonNode item) {
         JsonNode textEdit = item.get("textEdit");
         if (textEdit != null && textEdit.has("newText")) {
@@ -163,5 +188,15 @@ class JavaLspProtocolMapper {
     String text(JsonNode node, String field) {
         JsonNode value = node.get(field);
         return value == null || value.isNull() ? "" : value.asText();
+    }
+
+    private String diagnosticCode(JsonNode code) {
+        if (code == null || code.isNull()) {
+            return "";
+        }
+        if (code.isObject()) {
+            return text(code, "value");
+        }
+        return code.asText("");
     }
 }

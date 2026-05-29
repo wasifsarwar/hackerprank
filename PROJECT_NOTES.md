@@ -815,8 +815,9 @@ What changed:
 
 - Spring exposes `GET /api/editor/java-lsp/status` and `POST /api/editor/java-lsp/completion`.
 - Spring also exposes `POST /api/editor/java-lsp/hover` and `POST /api/editor/java-lsp/signature-help` so Monaco can show JDT-backed hover docs and method signatures.
+- Java LSP v2 adds `POST /api/editor/java-lsp/diagnostics`. The backend listens for JDT LS `textDocument/publishDiagnostics`, caches diagnostics by document URI, and returns Monaco-friendly ranges after a short settle window.
 - The backend starts `jdtls` over stdio, creates a scratch Java 21 Maven project under `.hackerprank-jdtls/`, syncs the Monaco buffer into `Main.java`, and forwards completion requests to JDT LS.
-- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, cleans noisy JDT labels for display, and falls back to local hovers/snippets when JDT LS is not installed.
+- Monaco merges JDT LS completion items with the local HackerPrank interview snippets, cleans noisy JDT labels for display, applies JDT diagnostics as editor markers, and falls back to local hovers/snippets when JDT LS is not installed.
 
 Local setup:
 
@@ -842,7 +843,8 @@ Notes:
 - The frontend treats temporary JDT LS failures as a short retry backoff instead of permanently disabling language-server requests for the rest of the React component lifetime.
 - LSP response mapping lives in `JavaLspProtocolMapper` so protocol edge cases can be unit tested without spawning JDT LS. Keep completion mapping, hover markup, signature help, and `workspace/configuration` shape changes covered there.
 - JDT LS startup timeout is configurable through `HACKERPRANK_JAVA_LSP_STARTUP_TIMEOUT_MS`; production defaults to 20 seconds, while tests can use a short timeout to verify cleanup paths.
-- This is editor intelligence v1: real completions are available through REST. A future v2 can add a full Monaco language-client/WebSocket bridge for diagnostics, imports, code actions, and richer hover behavior.
+- JDT LS diagnostics settle time is configurable through `HACKERPRANK_JAVA_LSP_DIAGNOSTICS_SETTLE_MS`; production defaults to 1200ms so publishDiagnostics has a chance to arrive after didOpen/didChange, especially on the first cold JDT startup.
+- This is still a REST bridge, not a full Monaco language-client/WebSocket bridge. Future editor work can add code actions, organize imports, rename, and richer diagnostics streaming.
 
 ## How To Keep These Notes Useful
 

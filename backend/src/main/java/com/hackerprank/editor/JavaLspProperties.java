@@ -11,6 +11,7 @@ class JavaLspProperties {
     private String workspaceRoot = ".hackerprank-jdtls";
     private long requestTimeoutMs = 6000;
     private long startupTimeoutMs = 20000;
+    private long diagnosticsSettleMs = 1200;
 
     public boolean isEnabled() {
         return enabled;
@@ -50,5 +51,13 @@ class JavaLspProperties {
 
     public void setStartupTimeoutMs(long startupTimeoutMs) {
         this.startupTimeoutMs = Math.max(100, startupTimeoutMs);
+    }
+
+    public long getDiagnosticsSettleMs() {
+        return diagnosticsSettleMs;
+    }
+
+    public void setDiagnosticsSettleMs(long diagnosticsSettleMs) {
+        this.diagnosticsSettleMs = Math.max(0, diagnosticsSettleMs);
     }
 }

@@ -35,6 +35,7 @@ public class JavaLspService {
     private final Object lifecycleLock = new Object();
     private final Object completionLock = new Object();
     private final Object writeLock = new Object();
+    private final Map<String, List<JavaLspDiagnostic>> diagnosticsByUri = new ConcurrentHashMap<>();
 
     private Process process;
     private BufferedOutputStream input;
@@ -128,6 +129,25 @@ public class JavaLspService {
         }
     }
 
+    public JavaLspDiagnosticsResponse diagnostics(JavaCompletionRequest request) {
+        if (!properties.isEnabled()) {
+            return JavaLspDiagnosticsResponse.disabled("Java LSP is disabled.");
+        }
+
+        try {
+            ensureStarted();
+            synchronized (completionLock) {
+                writeSource(request.getCode());
+                syncDocument(request.getCode());
+                waitForDiagnostics();
+                return JavaLspDiagnosticsResponse.enabled(diagnosticsByUri.getOrDefault(documentUri, List.of()));
+            }
+        } catch (Exception exception) {
+            disabledReason = exception.getMessage();
+            return JavaLspDiagnosticsResponse.disabled(disabledReason == null ? "JDT LS diagnostics failed." : disabledReason);
+        }
+    }
+
     private void ensureStarted() throws IOException {
         synchronized (lifecycleLock) {
             if (initialized && process != null && process.isAlive()) {
@@ -180,6 +200,7 @@ public class JavaLspService {
         process = null;
         initialized = false;
         documentOpened = false;
+        diagnosticsByUri.clear();
     }
 
     boolean hasRunningProcess() {
@@ -218,6 +239,7 @@ public class JavaLspService {
     }
 
     private void syncDocument(String code) throws IOException {
+        diagnosticsByUri.put(documentUri, List.of());
         ObjectNode params = objectMapper.createObjectNode();
         if (!documentOpened) {
             ObjectNode textDocument = params.putObject("textDocument");
@@ -236,6 +258,18 @@ public class JavaLspService {
         ArrayNode changes = params.putArray("contentChanges");
         changes.addObject().put("text", code == null ? "" : code);
         notify("textDocument/didChange", params);
+    }
+
+    private void waitForDiagnostics() {
+        long settleMs = properties.getDiagnosticsSettleMs();
+        if (settleMs <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(settleMs);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private ObjectNode initializeParams() {
@@ -352,6 +386,8 @@ public class JavaLspService {
                     }
                 } else if (idNode != null && idNode.canConvertToLong() && message.has("method")) {
                     respondToServerRequest(message);
+                } else if (message.has("method")) {
+                    handleServerNotification(message);
                 }
             }
         } catch (Exception ignored) {
@@ -373,6 +409,18 @@ public class JavaLspService {
             response.putNull("result");
         }
         writeMessage(response);
+    }
+
+    private void handleServerNotification(JsonNode message) {
+        String method = protocolMapper.text(message, "method");
+        if (!"textDocument/publishDiagnostics".equals(method)) {
+            return;
+        }
+        JsonNode params = message.path("params");
+        String uri = protocolMapper.text(params, "uri");
+        if (!uri.isBlank()) {
+            diagnosticsByUri.put(uri, protocolMapper.toDiagnostics(params));
+        }
     }
 
     private JsonNode readMessage(BufferedInputStream output) throws IOException {
