@@ -1,22 +1,11 @@
-import type { Difficulty, InterviewStyle, ProblemDraft, ProblemSummary } from "../types";
-import { difficultyOptions, interviewStyleOptions } from "../ui";
+import { useMemo, useState } from "react";
+import type { Difficulty, ProblemDraft, ProblemSummary } from "../types";
+import { difficultyOptions } from "../ui";
 
 interface ProblemRailProps {
   draft: ProblemDraft | null;
-  generatorConstraintsNotes: string;
-  generatorDifficulty: Difficulty;
-  generatorInterviewStyle: InterviewStyle;
-  generatorTargetConcepts: string;
-  generatorTopic: string;
-  isGenerating: boolean;
   isPublishing: boolean;
   onDiscardDraft: () => void;
-  onGenerate: () => void;
-  onGeneratorConstraintsNotesChange: (constraintsNotes: string) => void;
-  onGeneratorDifficultyChange: (difficulty: Difficulty) => void;
-  onGeneratorInterviewStyleChange: (interviewStyle: InterviewStyle) => void;
-  onGeneratorTargetConceptsChange: (targetConcepts: string) => void;
-  onGeneratorTopicChange: (topic: string) => void;
   onPublishDraft: () => void;
   onSelectProblem: (id: string) => void;
   problems: ProblemSummary[];
@@ -25,25 +14,27 @@ interface ProblemRailProps {
 
 export function ProblemRail({
   draft,
-  generatorConstraintsNotes,
-  generatorDifficulty,
-  generatorInterviewStyle,
-  generatorTargetConcepts,
-  generatorTopic,
-  isGenerating,
   isPublishing,
   onDiscardDraft,
-  onGenerate,
-  onGeneratorConstraintsNotesChange,
-  onGeneratorDifficultyChange,
-  onGeneratorInterviewStyleChange,
-  onGeneratorTargetConceptsChange,
-  onGeneratorTopicChange,
   onPublishDraft,
   onSelectProblem,
   problems,
   selectedId
 }: ProblemRailProps) {
+  const [search, setSearch] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState<"All" | Difficulty>("All");
+  const filteredProblems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return problems.filter((problem) => {
+      const matchesQuery =
+        query.length === 0 ||
+        problem.title.toLowerCase().includes(query) ||
+        problem.tags.some((tag) => tag.toLowerCase().includes(query));
+      const matchesDifficulty = difficultyFilter === "All" || problem.difficulty === difficultyFilter;
+      return matchesQuery && matchesDifficulty;
+    });
+  }, [difficultyFilter, problems, search]);
+
   return (
     <aside className="problem-rail" aria-label="Problems">
       <div className="brand">
@@ -55,74 +46,10 @@ export function ProblemRail({
       </div>
 
       <nav className="rail-menu" aria-label="Workspace">
-        <span className="selected">Studio</span>
-        <span>Problems</span>
-        <span>Drafts</span>
-        <span>Submissions</span>
+        <span className="selected">
+          Studio
+        </span>
       </nav>
-
-      <form
-        className="generator-panel"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onGenerate();
-        }}
-      >
-        <label>
-          <span>Topic</span>
-          <input
-            onChange={(event) => onGeneratorTopicChange(event.target.value)}
-            placeholder="arrays, stacks, strings"
-            value={generatorTopic}
-          />
-        </label>
-        <label>
-          <span>Difficulty</span>
-          <select
-            onChange={(event) => onGeneratorDifficultyChange(event.target.value as Difficulty)}
-            value={generatorDifficulty}
-          >
-            {difficultyOptions.map((difficulty) => (
-              <option key={difficulty} value={difficulty}>
-                {difficulty}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Concepts</span>
-          <input
-            onChange={(event) => onGeneratorTargetConceptsChange(event.target.value)}
-            placeholder="two pointers, prefix sums"
-            value={generatorTargetConcepts}
-          />
-        </label>
-        <label>
-          <span>Style</span>
-          <select
-            onChange={(event) => onGeneratorInterviewStyleChange(event.target.value as InterviewStyle)}
-            value={generatorInterviewStyle}
-          >
-            {interviewStyleOptions.map((style) => (
-              <option key={style} value={style}>
-                {style}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Notes</span>
-          <textarea
-            onChange={(event) => onGeneratorConstraintsNotesChange(event.target.value)}
-            placeholder="must include edge cases"
-            rows={3}
-            value={generatorConstraintsNotes}
-          />
-        </label>
-        <button className="generate-action" disabled={isGenerating} type="submit">
-          {isGenerating ? "Generating..." : "Generate Draft"}
-        </button>
-      </form>
 
       {draft && (
         <section className="draft-card">
@@ -145,8 +72,29 @@ export function ProblemRail({
       <div className="problem-list-header">
         <span>Problem List</span>
       </div>
+      <div className="problem-search">
+        <input
+          aria-label="Search problems"
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search problems..."
+          type="search"
+          value={search}
+        />
+      </div>
+      <div className="problem-filters" aria-label="Problem difficulty filter">
+        {(["All", ...difficultyOptions] as Array<"All" | Difficulty>).map((difficulty) => (
+          <button
+            className={difficultyFilter === difficulty ? "selected" : ""}
+            key={difficulty}
+            onClick={() => setDifficultyFilter(difficulty)}
+            type="button"
+          >
+            {difficulty}
+          </button>
+        ))}
+      </div>
       <nav className="problem-list">
-        {problems.map((item) => (
+        {filteredProblems.map((item) => (
           <button
             className={item.id === selectedId ? "problem-item active" : "problem-item"}
             key={item.id}
@@ -157,7 +105,12 @@ export function ProblemRail({
             <small>{item.difficulty}</small>
           </button>
         ))}
+        {filteredProblems.length === 0 && <p className="rail-empty">No matching problems.</p>}
       </nav>
+      <div className="rail-footer">
+        <span>Local Mode</span>
+        <small>v0.9.0</small>
+      </div>
     </aside>
   );
 }

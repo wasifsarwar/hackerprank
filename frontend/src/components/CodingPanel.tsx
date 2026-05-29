@@ -1,4 +1,5 @@
-import Editor from "@monaco-editor/react";
+import { useRef } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import type {
   Language,
   Problem,
@@ -11,6 +12,7 @@ import type {
 } from "../types";
 import type { ResultView } from "../ui";
 import { editorLanguages, languageLabels } from "../ui";
+import { configureMonacoIntelligence } from "../editorIntelligence";
 import { ResultsPanel } from "./ResultsPanel";
 
 interface CodingPanelProps {
@@ -31,6 +33,7 @@ interface CodingPanelProps {
   onLanguageChange: (language: Language) => void;
   onLoadSubmissionCode: () => void;
   onPublishDraft: () => void;
+  onResetCode: () => void;
   onResultViewChange: (view: ResultView) => void;
   onRun: (runHiddenTests: boolean) => void;
   onRequestTutorHint: (submissionId: string) => void;
@@ -66,6 +69,7 @@ export function CodingPanel({
   onLanguageChange,
   onLoadSubmissionCode,
   onPublishDraft,
+  onResetCode,
   onResultViewChange,
   onRun,
   onRequestTutorHint,
@@ -82,20 +86,33 @@ export function CodingPanel({
   tutorMessages,
   tutorMessagesSubmissionId
 }: CodingPanelProps) {
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
+  const handleEditorMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  function handleFormatCode() {
+    editorRef.current?.getAction("editor.action.formatDocument")?.run().catch(() => {});
+  }
+
   return (
     <section className="coding-panel">
       <div className="toolbar">
-        <div className="language-tabs" aria-label="Language">
-          {(Object.keys(languageLabels) as Language[]).map((item) => (
-            <button
-              className={item === language ? "selected" : ""}
-              key={item}
-              onClick={() => onLanguageChange(item)}
-              type="button"
-            >
-              {languageLabels[item]}
-            </button>
-          ))}
+        <div className="editor-toolbar-left">
+          <div className="language-tabs" aria-label="Language">
+            {(Object.keys(languageLabels) as Language[]).map((item) => (
+              <button
+                className={item === language ? "selected" : ""}
+                key={item}
+                onClick={() => onLanguageChange(item)}
+                type="button"
+              >
+                {languageLabels[item]}
+              </button>
+            ))}
+          </div>
+          <span className="runtime-pill">{language === "java" ? "Java 21" : "Python 3.12"}</span>
         </div>
 
         {isDraftPreview ? (
@@ -109,6 +126,12 @@ export function CodingPanel({
           </div>
         ) : (
           <div className="run-actions">
+            <button className="editor-action" onClick={onResetCode} type="button">
+              Reset
+            </button>
+            <button className="editor-action" onClick={handleFormatCode} type="button">
+              Format
+            </button>
             <button disabled={isRunning} onClick={() => onRun(false)} type="button">
               Run Samples
             </button>
@@ -126,16 +149,33 @@ export function CodingPanel({
           defaultLanguage={editorLanguages[language]}
           language={editorLanguages[language]}
           loading={<div className="code-editor-loading">Loading editor...</div>}
+          beforeMount={configureMonacoIntelligence}
+          onMount={handleEditorMount}
           onChange={(value) => onCodeChange(value ?? "")}
           options={{
             automaticLayout: true,
+            bracketPairColorization: { enabled: true },
+            cursorBlinking: "smooth",
+            cursorSmoothCaretAnimation: "on",
             fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
-            fontSize: 15,
+            fontSize: 13,
             formatOnPaste: true,
+            guides: { bracketPairs: true, indentation: true },
+            lineHeight: 21,
             minimap: { enabled: false },
             padding: { top: 16, bottom: 16 },
+            quickSuggestions: { comments: false, other: true, strings: true },
             renderLineHighlight: "all",
             scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            suggest: {
+              showClasses: true,
+              showFunctions: true,
+              showKeywords: true,
+              showMethods: true,
+              showSnippets: true
+            },
+            suggestOnTriggerCharacters: true,
             tabSize: 4,
             wordWrap: "on"
           }}
