@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "hackerprank.anthropic")
 class AnthropicProblemGeneratorProperties {
     private String apiKey = "";
-    private String model = "claude-sonnet-4-6";
+    private String model = "claude-sonnet-4-20250514";
     private String messagesUrl = "https://api.anthropic.com/v1/messages";
     private String version = "2023-06-01";
     private int timeoutSeconds = 45;
