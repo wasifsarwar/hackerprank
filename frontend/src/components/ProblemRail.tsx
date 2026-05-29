@@ -50,9 +50,16 @@ export function ProblemRail({
         <span className="brand-mark">HP</span>
         <div>
           <h1>HackerPrank</h1>
-          <p>Local coding practice</p>
+          <p>Interview practice studio</p>
         </div>
       </div>
+
+      <nav className="rail-menu" aria-label="Workspace">
+        <span className="selected">Studio</span>
+        <span>Problems</span>
+        <span>Drafts</span>
+        <span>Submissions</span>
+      </nav>
 
       <form
         className="generator-panel"
@@ -135,6 +142,9 @@ export function ProblemRail({
         </section>
       )}
 
+      <div className="problem-list-header">
+        <span>Problem List</span>
+      </div>
       <nav className="problem-list">
         {problems.map((item) => (
           <button
