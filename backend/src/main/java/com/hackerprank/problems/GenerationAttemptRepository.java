@@ -36,6 +36,12 @@ public class GenerationAttemptRepository {
                     difficulty = ?,
                     outcome = ?,
                     feedback_notes = ?,
+                    prompt_hash = ?,
+                    response_hash = ?,
+                    prompt_char_count = ?,
+                    response_char_count = ?,
+                    estimated_prompt_tokens = ?,
+                    estimated_response_tokens = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
@@ -47,6 +53,12 @@ public class GenerationAttemptRepository {
             attempt.getDifficulty(),
             normalizeOutcome(attempt.getOutcome()),
             attempt.getFeedbackNotes(),
+            attempt.getUsageMetrics().promptHash(),
+            attempt.getUsageMetrics().responseHash(),
+            attempt.getUsageMetrics().promptCharCount(),
+            attempt.getUsageMetrics().responseCharCount(),
+            attempt.getUsageMetrics().estimatedPromptTokens(),
+            attempt.getUsageMetrics().estimatedResponseTokens(),
             attempt.getId()
         );
 
@@ -64,10 +76,16 @@ public class GenerationAttemptRepository {
                         difficulty,
                         outcome,
                         feedback_notes,
+                        prompt_hash,
+                        response_hash,
+                        prompt_char_count,
+                        response_char_count,
+                        estimated_prompt_tokens,
+                        estimated_response_tokens,
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                 attempt.getId(),
                 attempt.getDraftId(),
@@ -79,6 +97,12 @@ public class GenerationAttemptRepository {
                 attempt.getDifficulty(),
                 normalizeOutcome(attempt.getOutcome()),
                 attempt.getFeedbackNotes(),
+                attempt.getUsageMetrics().promptHash(),
+                attempt.getUsageMetrics().responseHash(),
+                attempt.getUsageMetrics().promptCharCount(),
+                attempt.getUsageMetrics().responseCharCount(),
+                attempt.getUsageMetrics().estimatedPromptTokens(),
+                attempt.getUsageMetrics().estimatedResponseTokens(),
                 Timestamp.from(attempt.getCreatedAt()),
                 Timestamp.from(attempt.getUpdatedAt())
             );
@@ -92,7 +116,8 @@ public class GenerationAttemptRepository {
         return jdbcTemplate.query(
             """
                 SELECT id, draft_id, problem_id, provider, model_id, prompt_version, topic, difficulty,
-                       outcome, feedback_notes, created_at, updated_at
+                       outcome, feedback_notes, prompt_hash, response_hash, prompt_char_count, response_char_count,
+                       estimated_prompt_tokens, estimated_response_tokens, created_at, updated_at
                 FROM generation_attempts
                 WHERE draft_id = ?
                 ORDER BY created_at DESC
@@ -107,7 +132,8 @@ public class GenerationAttemptRepository {
         return jdbcTemplate.query(
             """
                 SELECT id, draft_id, problem_id, provider, model_id, prompt_version, topic, difficulty,
-                       outcome, feedback_notes, created_at, updated_at
+                       outcome, feedback_notes, prompt_hash, response_hash, prompt_char_count, response_char_count,
+                       estimated_prompt_tokens, estimated_response_tokens, created_at, updated_at
                 FROM generation_attempts
                 WHERE id = ?
                 """,
@@ -181,6 +207,14 @@ public class GenerationAttemptRepository {
             rs.getString("outcome"),
             tagsForAttempt(id),
             rs.getString("feedback_notes"),
+            new GenerationUsageMetrics(
+                rs.getString("prompt_hash"),
+                rs.getString("response_hash"),
+                rs.getInt("prompt_char_count"),
+                rs.getInt("response_char_count"),
+                rs.getInt("estimated_prompt_tokens"),
+                rs.getInt("estimated_response_tokens")
+            ),
             instant(rs, "created_at"),
             instant(rs, "updated_at")
         );

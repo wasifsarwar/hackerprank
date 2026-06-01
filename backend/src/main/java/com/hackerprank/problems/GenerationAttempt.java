@@ -15,6 +15,7 @@ public class GenerationAttempt {
     private final String outcome;
     private final List<String> feedbackTags;
     private final String feedbackNotes;
+    private final GenerationUsageMetrics usageMetrics;
     private final Instant createdAt;
     private final Instant updatedAt;
 
@@ -30,6 +31,7 @@ public class GenerationAttempt {
         String outcome,
         List<String> feedbackTags,
         String feedbackNotes,
+        GenerationUsageMetrics usageMetrics,
         Instant createdAt,
         Instant updatedAt
     ) {
@@ -44,6 +46,7 @@ public class GenerationAttempt {
         this.outcome = outcome;
         this.feedbackTags = feedbackTags == null ? List.of() : List.copyOf(feedbackTags);
         this.feedbackNotes = feedbackNotes == null ? "" : feedbackNotes;
+        this.usageMetrics = usageMetrics == null ? GenerationUsageMetrics.empty() : usageMetrics;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -90,6 +93,10 @@ public class GenerationAttempt {
 
     public String getFeedbackNotes() {
         return feedbackNotes;
+    }
+
+    public GenerationUsageMetrics getUsageMetrics() {
+        return usageMetrics;
     }
 
     public Instant getCreatedAt() {

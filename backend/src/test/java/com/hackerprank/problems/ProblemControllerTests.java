@@ -109,6 +109,12 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.quality.status").value("VALIDATED"))
             .andExpect(jsonPath("$.generationAttempt.outcome").value("DRAFTED"))
             .andExpect(jsonPath("$.generationAttempt.feedbackTags").isArray())
+            .andExpect(jsonPath("$.generationAttempt.promptHash").isString())
+            .andExpect(jsonPath("$.generationAttempt.responseHash").isString())
+            .andExpect(jsonPath("$.generationAttempt.promptCharCount").isNumber())
+            .andExpect(jsonPath("$.generationAttempt.responseCharCount").isNumber())
+            .andExpect(jsonPath("$.generationAttempt.estimatedPromptTokens").isNumber())
+            .andExpect(jsonPath("$.generationAttempt.estimatedResponseTokens").isNumber())
             .andExpect(jsonPath("$.quality.repairUsed").value(false))
             .andExpect(jsonPath("$.quality.exampleCount").value(2))
             .andExpect(jsonPath("$.quality.visibleTestCount").value(2))
@@ -135,7 +141,11 @@ class ProblemControllerTests {
         assertEquals("deterministic", persistedDraft.getGenerationMetadata().provider());
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("python"));
         assertTrue(persistedDraft.getReferenceSolutions().containsKey("java"));
-        assertTrue(attemptRepository.findByDraftId(draftId).isPresent());
+        GenerationAttempt attempt = attemptRepository.findByDraftId(draftId).orElseThrow();
+        assertFalse(attempt.getUsageMetrics().promptHash().isBlank());
+        assertFalse(attempt.getUsageMetrics().responseHash().isBlank());
+        assertTrue(attempt.getUsageMetrics().estimatedPromptTokens() > 0);
+        assertTrue(attempt.getUsageMetrics().estimatedResponseTokens() > 0);
         assertFalse(repository.findById(problemId).isPresent());
     }
 
