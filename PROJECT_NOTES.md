@@ -817,10 +817,11 @@ What changed:
 - Generated starter code must call a named TODO helper/function where the candidate implements the core algorithm.
 - Generator prompts explicitly forbid leaving `main` as only `Scanner` setup plus generic TODO comments.
 - Deterministic local fallback problems now follow the same pattern: `main` parses input, calls a helper, and prints the helper result.
+- `V7__starter_code_harness_backfill.sql` updates existing persisted seeded/fallback starter-code rows so local databases created before this change get the same helper-call scaffolds.
 
 Verification:
 
-- `mvn clean -Dtest=OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests test`
+- `mvn clean -Dtest=ProblemControllerTests,OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests test`
 
 ## Java Editor Intelligence
 
