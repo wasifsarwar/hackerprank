@@ -848,6 +848,23 @@ Notes:
 - Diagnostics notifications are accepted only when their `params.version` is current for the synced document URI. This prevents an older asynchronous JDT LS publish from repopulating Monaco markers after the user has already edited or fixed the code.
 - This is still a REST bridge, not a full Monaco language-client/WebSocket bridge. Future editor work can add code actions, organize imports, rename, and richer diagnostics streaming.
 
+## Backend Optimization Notes
+
+The backend is still intentionally simple Spring Boot plus JdbcTemplate, but some repository paths have been tightened so persistence does not become the first bottleneck as generated problems, submissions, and tutor sessions grow.
+
+What changed:
+
+- `ProblemRepository.findAll()` now hydrates full problems in batches instead of calling `findById()` for each problem. This avoids a classic N+1 pattern across tags, constraints, examples, test cases, and starter code.
+- `SubmissionRepository.findById()` now loads the submission and ordered test-case results with one left-joined query instead of a parent query plus a second child query.
+- Draft generation feedback tags are written with `batchUpdate`, and draft delete/regenerate paths avoid duplicate draft lookups.
+- `V6__generation_attempt_lookup_indexes.sql` adds a composite index for the “latest generation attempt by draft” query: `(draft_id, created_at DESC, id)`.
+- JDBC timestamp handling now lives in `JdbcInstant` so repository mappers do not duplicate driver-specific `OffsetDateTime` / `Timestamp` handling.
+
+Verification:
+
+- `mvn -Dtest=ProblemControllerTests,SubmissionControllerTests,SubmissionServiceTests test`
+- `mvn clean test`
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:

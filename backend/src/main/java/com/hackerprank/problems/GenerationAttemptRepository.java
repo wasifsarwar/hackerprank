@@ -4,10 +4,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+
+import com.hackerprank.persistence.JdbcInstant;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -118,7 +120,7 @@ public class GenerationAttemptRepository {
     public Optional<GenerationAttempt> replaceFeedbackByDraftId(String draftId, List<String> tags, String notes) {
         Optional<GenerationAttempt> attempt = findByDraftId(draftId);
         attempt.ifPresent(value -> replaceFeedback(value.getId(), tags, notes));
-        return findByDraftId(draftId);
+        return attempt.map(value -> findById(value.getId()).orElse(value));
     }
 
     @Transactional
@@ -147,16 +149,22 @@ public class GenerationAttemptRepository {
         );
         jdbcTemplate.update("DELETE FROM generation_attempt_feedback_tags WHERE attempt_id = ?", attemptId);
 
-        for (String tag : normalizeTags(tags)) {
-            jdbcTemplate.update(
-                """
-                    INSERT INTO generation_attempt_feedback_tags (attempt_id, tag)
-                    VALUES (?, ?)
-                    """,
-                attemptId,
-                tag
-            );
+        List<String> normalizedTags = normalizeTags(tags);
+        if (normalizedTags.isEmpty()) {
+            return;
         }
+
+        List<Object[]> batch = new ArrayList<>();
+        for (String tag : normalizedTags) {
+            batch.add(new Object[] { attemptId, tag });
+        }
+        jdbcTemplate.batchUpdate(
+            """
+                INSERT INTO generation_attempt_feedback_tags (attempt_id, tag)
+                VALUES (?, ?)
+                """,
+            batch
+        );
     }
 
     private GenerationAttempt attemptFromRow(ResultSet rs) throws SQLException {
@@ -219,16 +227,6 @@ public class GenerationAttemptRepository {
     }
 
     private Instant instant(ResultSet rs, String columnName) throws SQLException {
-        Object value = rs.getObject(columnName);
-        if (value instanceof OffsetDateTime offsetDateTime) {
-            return offsetDateTime.toInstant();
-        }
-        if (value instanceof Timestamp timestamp) {
-            return timestamp.toInstant();
-        }
-        if (value instanceof Instant instant) {
-            return instant;
-        }
-        throw new SQLException("Unsupported timestamp value for " + columnName + ": " + value);
+        return JdbcInstant.from(rs, columnName);
     }
 }

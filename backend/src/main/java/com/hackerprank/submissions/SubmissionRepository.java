@@ -6,13 +6,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.hackerprank.persistence.JdbcInstant;
+
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -120,26 +122,67 @@ public class SubmissionRepository {
     }
 
     public Optional<SubmissionDetail> findById(String id) {
-        return jdbcTemplate.query(
+        SubmissionDetailRow[] submission = new SubmissionDetailRow[1];
+        List<TestCaseResult> results = new ArrayList<>();
+        jdbcTemplate.query(
             """
-                SELECT id,
-                       problem_id,
-                       problem_title,
-                       problem_difficulty,
-                       language,
-                       code,
-                       run_hidden_tests,
-                       status,
-                       passed_count,
-                       total_count,
-                       compile_output,
-                       created_at
-                FROM submissions
-                WHERE id = ?
+                SELECT s.id,
+                       s.problem_id,
+                       s.problem_title,
+                       s.problem_difficulty,
+                       s.language,
+                       s.code,
+                       s.run_hidden_tests,
+                       s.status,
+                       s.passed_count,
+                       s.total_count,
+                       s.compile_output,
+                       s.created_at,
+                       r.display_order AS result_display_order,
+                       r.test_name,
+                       r.hidden,
+                       r.passed,
+                       r.expected_output,
+                       r.actual_output,
+                       r.stderr,
+                       r.timed_out,
+                       r.exit_code,
+                       r.runtime_ms
+                FROM submissions s
+                LEFT JOIN submission_test_results r ON r.submission_id = s.id
+                WHERE s.id = ?
+                ORDER BY r.display_order
                 """,
-            (rs, rowNum) -> detailFromRow(rs),
+            (RowCallbackHandler) rs -> {
+                if (submission[0] == null) {
+                    submission[0] = submissionDetailRow(rs);
+                }
+                if (rs.getObject("result_display_order") != null) {
+                    results.add(testCaseResultFromRow(rs));
+                }
+            },
             id
-        ).stream().findFirst();
+        );
+        if (submission[0] == null) {
+            return Optional.empty();
+        }
+
+        SubmissionDetailRow row = submission[0];
+        return Optional.of(new SubmissionDetail(
+            row.id(),
+            row.problemId(),
+            row.problemTitle(),
+            row.problemDifficulty(),
+            row.language(),
+            row.code(),
+            row.runHiddenTests(),
+            row.status(),
+            row.passedCount(),
+            row.totalCount(),
+            row.compileOutput(),
+            row.createdAt(),
+            results
+        ));
     }
 
     private void insertTestResults(String submissionId, List<TestCaseResult> results) {
@@ -200,10 +243,9 @@ public class SubmissionRepository {
         );
     }
 
-    private SubmissionDetail detailFromRow(ResultSet rs) throws SQLException {
-        String id = rs.getString("id");
-        return new SubmissionDetail(
-            id,
+    private SubmissionDetailRow submissionDetailRow(ResultSet rs) throws SQLException {
+        return new SubmissionDetailRow(
+            rs.getString("id"),
             rs.getString("problem_id"),
             rs.getString("problem_title"),
             rs.getString("problem_difficulty"),
@@ -214,39 +256,21 @@ public class SubmissionRepository {
             rs.getInt("passed_count"),
             rs.getInt("total_count"),
             rs.getString("compile_output"),
-            instant(rs, "created_at"),
-            findTestResults(id)
+            instant(rs, "created_at")
         );
     }
 
-    private List<TestCaseResult> findTestResults(String submissionId) {
-        return jdbcTemplate.query(
-            """
-                SELECT test_name,
-                       hidden,
-                       passed,
-                       expected_output,
-                       actual_output,
-                       stderr,
-                       timed_out,
-                       exit_code,
-                       runtime_ms
-                FROM submission_test_results
-                WHERE submission_id = ?
-                ORDER BY display_order
-                """,
-            (rs, rowNum) -> new TestCaseResult(
-                rs.getString("test_name"),
-                rs.getBoolean("hidden"),
-                rs.getBoolean("passed"),
-                rs.getString("expected_output"),
-                rs.getString("actual_output"),
-                rs.getString("stderr"),
-                rs.getBoolean("timed_out"),
-                rs.getInt("exit_code"),
-                rs.getLong("runtime_ms")
-            ),
-            submissionId
+    private TestCaseResult testCaseResultFromRow(ResultSet rs) throws SQLException {
+        return new TestCaseResult(
+            rs.getString("test_name"),
+            rs.getBoolean("hidden"),
+            rs.getBoolean("passed"),
+            rs.getString("expected_output"),
+            rs.getString("actual_output"),
+            rs.getString("stderr"),
+            rs.getBoolean("timed_out"),
+            rs.getInt("exit_code"),
+            rs.getLong("runtime_ms")
         );
     }
 
@@ -258,16 +282,22 @@ public class SubmissionRepository {
     }
 
     private Instant instant(ResultSet rs, String columnName) throws SQLException {
-        Object value = rs.getObject(columnName);
-        if (value instanceof OffsetDateTime offsetDateTime) {
-            return offsetDateTime.toInstant();
-        }
-        if (value instanceof Timestamp timestamp) {
-            return timestamp.toInstant();
-        }
-        if (value instanceof Instant instant) {
-            return instant;
-        }
-        throw new SQLException("Unsupported timestamp value for " + columnName + ": " + value);
+        return JdbcInstant.from(rs, columnName);
+    }
+
+    private record SubmissionDetailRow(
+        String id,
+        String problemId,
+        String problemTitle,
+        String problemDifficulty,
+        String language,
+        String code,
+        boolean runHiddenTests,
+        String status,
+        int passedCount,
+        int totalCount,
+        String compileOutput,
+        Instant createdAt
+    ) {
     }
 }
