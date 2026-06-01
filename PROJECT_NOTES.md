@@ -876,6 +876,7 @@ What changed:
 - Problem statement, examples, editor toolbar, and results areas were rebalanced to better match the concept proportions while keeping existing functionality intact.
 - The desktop and mobile layouts were visually checked with Playwright captures after the CSS pass.
 - Problem statement section tabs are now honest anchors: `Draft QA` only appears when a generated draft has QA metadata, empty sections are omitted, and the selected tab follows the clicked section instead of pretending the first tab is always active.
+- The single-column workspace breakpoint is set above the combined rail and two-column workspace minimums so small laptop/tablet-landscape widths do not clip the editor.
 
 Verification:
 
