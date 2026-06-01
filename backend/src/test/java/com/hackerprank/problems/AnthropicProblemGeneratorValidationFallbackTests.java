@@ -173,6 +173,7 @@ class AnthropicProblemGeneratorValidationFallbackTests {
 
     private static String fixedProblemJson(ObjectMapper objectMapper) throws Exception {
         ObjectNode root = sumProblemJson(objectMapper, "fixed-anthropic-sum", "Fixed Anthropic Sum");
+        useHelperStarterCode(root);
 
         ObjectNode referenceSolutions = root.putObject("referenceSolutions");
         referenceSolutions.put("python", """
@@ -232,6 +233,46 @@ class AnthropicProblemGeneratorValidationFallbackTests {
         starterCode.put("python", "import sys\n# TODO: sum values\nprint(0)\n");
         starterCode.put("java", "public class Main { public static void main(String[] args) { System.out.println(0); } }\n");
         return root;
+    }
+
+    private static void useHelperStarterCode(ObjectNode root) {
+        ObjectNode starterCode = (ObjectNode) root.path("problem").path("starterCode");
+        starterCode.put("python", """
+            import sys
+
+            def main():
+                tokens = list(map(int, sys.stdin.read().strip().split()))
+                n = tokens[0] if tokens else 0
+                values = tokens[1:1 + n]
+                print(sum_values(values))
+
+            def sum_values(values):
+                # TODO: return the sum of the values
+                return 0
+
+            if __name__ == "__main__":
+                main()
+            """);
+        starterCode.put("java", """
+            import java.util.*;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Scanner scanner = new Scanner(System.in);
+                    int n = scanner.hasNextInt() ? scanner.nextInt() : 0;
+                    int[] values = new int[n];
+                    for (int i = 0; i < n; i++) {
+                        values[i] = scanner.nextInt();
+                    }
+                    System.out.println(sumValues(values));
+                }
+
+                static int sumValues(int[] values) {
+                    // TODO: return the sum of the values
+                    return 0;
+                }
+            }
+            """);
     }
 
     private static ObjectNode example(ObjectMapper objectMapper, String input, String output, String explanation) {

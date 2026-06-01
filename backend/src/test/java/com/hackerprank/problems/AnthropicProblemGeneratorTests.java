@@ -43,6 +43,8 @@ class AnthropicProblemGeneratorTests {
         assertEquals("anthropic-problem-v1", spec.generationMetadata().promptVersion());
         assertTrue(spec.generationMetadata().promptText().contains("Requested topic: graphs"));
         assertTrue(spec.generationMetadata().promptText().contains("Target concepts: reachability, edge cases"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must include the complete stdin parsing"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must call a named TODO helper/function"));
         assertFalse(spec.generationMetadata().parametersJson().contains("sk-ant-test"));
         assertTrue(spec.referenceSolutions().get("python").contains("print(total)"));
         assertTrue(spec.referenceSolutions().get("java").contains("class Main"));
@@ -60,6 +62,7 @@ class AnthropicProblemGeneratorTests {
         assertEquals("user", request.path("messages").get(0).path("role").asText());
         String userContent = request.path("messages").get(0).path("content").asText();
         assertTrue(userContent.contains("Requested topic: graphs"));
+        assertTrue(userContent.contains("Starter code must call a named TODO helper/function"));
         assertTrue(userContent.contains("JSON schema:"));
         assertTrue(userContent.contains("\"referenceSolutions\""));
         assertEquals("sk-ant-test", transport.apiKey);
@@ -120,8 +123,14 @@ class AnthropicProblemGeneratorTests {
         testCases.add(testCase("Hidden 3", "1 0\n", "1\n", true));
 
         ObjectNode starterCode = problem.putObject("starterCode");
-        starterCode.put("python", "import sys\n# TODO: count reachable checkpoints\nprint(0)\n");
-        starterCode.put("java", "public class Main { public static void main(String[] args) { System.out.println(0); } }\n");
+        starterCode.put(
+            "python",
+            "import sys\n\ndef main():\n    tokens = list(map(int, sys.stdin.read().strip().split()))\n    n = tokens[0] if tokens else 0\n    m = tokens[1] if len(tokens) > 1 else 0\n    edges = []\n    cursor = 2\n    for _ in range(m):\n        edges.append((tokens[cursor], tokens[cursor + 1]))\n        cursor += 2\n    print(count_reachable(n, edges))\n\ndef count_reachable(n, edges):\n    # TODO: count reachable checkpoints\n    return 0\n\nif __name__ == \"__main__\":\n    main()\n"
+        );
+        starterCode.put(
+            "java",
+            "import java.util.*;\n\npublic class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); int n = scanner.hasNextInt() ? scanner.nextInt() : 0; int m = scanner.hasNextInt() ? scanner.nextInt() : 0; int[][] edges = new int[m][2]; for (int i = 0; i < m; i++) { edges[i][0] = scanner.nextInt(); edges[i][1] = scanner.nextInt(); } System.out.println(countReachable(n, edges)); } private static int countReachable(int n, int[][] edges) { return 0; } }\n"
+        );
 
         ObjectNode referenceSolutions = root.putObject("referenceSolutions");
         referenceSolutions.put("python", "import sys\ntotal = 1\nprint(total)\n");

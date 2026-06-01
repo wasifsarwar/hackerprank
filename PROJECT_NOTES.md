@@ -807,6 +807,25 @@ The backend validates generated drafts before publishing:
 - Problem statement does not leak hidden test answers
 - No web-derived or copied problem wording
 
+## Starter Code Harness Contract
+
+Generated starter code should scaffold the boring I/O and leave the candidate focused on the intended algorithm.
+
+What changed:
+
+- OpenAI and Anthropic problem-generation prompts now require starter code to include complete stdin parsing and output wiring for the problem input format.
+- Generated starter code must call a named TODO helper/function where the candidate implements the core algorithm.
+- Generator prompts explicitly forbid leaving `main` as only `Scanner` setup plus generic TODO comments.
+- `GeneratedProblemValidator` enforces the helper-call starter contract after generation so prompt drift triggers repair/fallback instead of accepting an unscaffolded draft.
+- The validator also requires recognizable stdin reads before the helper call, preventing fake scaffolds such as `print(solve([]))`, and accepts idiomatic Java helpers with access modifiers like `private static`.
+- Deterministic local fallback problems now follow the same pattern: `main` parses input, calls a helper, and prints the helper result.
+- `V7__starter_code_harness_backfill.sql` updates existing persisted seeded/fallback starter-code rows so local databases created before this change get the same helper-call scaffolds.
+
+Verification:
+
+- `mvn -Dtest=GeneratedProblemFixtureValidationTests,OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests test`
+- `mvn test`
+
 ## Java Editor Intelligence
 
 The Java editor now has a backend-backed Eclipse JDT LS completion bridge for real language-server suggestions.

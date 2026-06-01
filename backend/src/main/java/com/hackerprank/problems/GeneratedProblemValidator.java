@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import org.springframework.stereotype.Component;
@@ -14,6 +15,18 @@ import org.springframework.stereotype.Component;
 @Component
 class GeneratedProblemValidator {
     private static final List<String> REQUIRED_LANGUAGES = List.of("python", "java");
+    private static final Pattern PYTHON_HELPER_DEFINITION = Pattern.compile("(?m)^\\s*def\\s+(?!main\\b)[A-Za-z_]\\w*\\s*\\(");
+    private static final Pattern PYTHON_PRINTS_HELPER_RESULT = Pattern.compile("print\\s*\\([^\\n]*[A-Za-z_]\\w*\\s*\\(");
+    private static final Pattern PYTHON_STDIN_READ = Pattern.compile(
+        "(?s)(sys\\.stdin\\.read\\s*\\(|sys\\.stdin\\.readline\\s*\\(|input\\s*\\()"
+    );
+    private static final Pattern JAVA_HELPER_DEFINITION = Pattern.compile(
+        "(?s)(?:public|private|protected)?\\s*static\\s+(?!void\\s+main\\b)[A-Za-z_<>, ?\\[\\]]+\\s+[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*\\{"
+    );
+    private static final Pattern JAVA_PRINTS_HELPER_RESULT = Pattern.compile("System\\.out\\.println\\s*\\(\\s*[A-Za-z_]\\w*\\s*\\(");
+    private static final Pattern JAVA_STDIN_READ = Pattern.compile(
+        "(?s)(new\\s+Scanner\\s*\\(\\s*System\\.in\\s*\\)|new\\s+BufferedReader\\s*\\([^;]*System\\.in|System\\.in\\.read\\s*\\()"
+    );
 
     private final SubmissionService submissionService;
 
@@ -30,6 +43,7 @@ class GeneratedProblemValidator {
 
         validateExamples(spec, errors);
         validateReferenceSolutions(spec, errors);
+        validateStarterCodeContract(spec, errors);
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Generated problem failed reference validation: " + String.join("; ", errors));
         }
@@ -115,6 +129,53 @@ class GeneratedProblemValidator {
             if (!"ACCEPTED".equals(result.getStatus())) {
                 errors.add(language + " reference solution returned " + result.getStatus() + " for examples");
             }
+        }
+    }
+
+    private void validateStarterCodeContract(GeneratedProblemSpec spec, List<String> errors) {
+        Map<String, String> starterCode = spec.problem().getStarterCode();
+        validatePythonStarterCode(starterCode.get("python"), errors);
+        validateJavaStarterCode(starterCode.get("java"), errors);
+    }
+
+    private void validatePythonStarterCode(String code, List<String> errors) {
+        if (code == null || code.isBlank()) {
+            return;
+        }
+
+        if (!code.contains("def main(")) {
+            errors.add("starterCode.python must include a main function that handles stdin/stdout");
+        }
+        if (!code.contains("__main__")) {
+            errors.add("starterCode.python must call main from the __main__ guard");
+        }
+        if (!PYTHON_STDIN_READ.matcher(code).find()) {
+            errors.add("starterCode.python main must read stdin before calling the TODO helper function");
+        }
+        if (!PYTHON_HELPER_DEFINITION.matcher(code).find()) {
+            errors.add("starterCode.python must include a named TODO helper function");
+        }
+        if (!PYTHON_PRINTS_HELPER_RESULT.matcher(code).find()) {
+            errors.add("starterCode.python main must print the result of the TODO helper function");
+        }
+    }
+
+    private void validateJavaStarterCode(String code, List<String> errors) {
+        if (code == null || code.isBlank()) {
+            return;
+        }
+
+        if (!code.contains("public static void main(String[] args)")) {
+            errors.add("starterCode.java must include public static void main(String[] args)");
+        }
+        if (!JAVA_STDIN_READ.matcher(code).find()) {
+            errors.add("starterCode.java main must read System.in before calling the TODO helper method");
+        }
+        if (!JAVA_HELPER_DEFINITION.matcher(code).find()) {
+            errors.add("starterCode.java must include a named static TODO helper method");
+        }
+        if (!JAVA_PRINTS_HELPER_RESULT.matcher(code).find()) {
+            errors.add("starterCode.java main must print the result of the TODO helper method");
         }
     }
 

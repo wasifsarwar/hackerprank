@@ -67,6 +67,10 @@ class ProblemControllerTests {
         assertEquals(4, addPair.getTestCases().size());
         assertTrue(addPair.getStarterCode().containsKey("python"));
         assertTrue(addPair.getStarterCode().containsKey("java"));
+        assertTrue(addPair.getStarterCode().get("java").contains("System.out.println(sumPair(a, b));"));
+        assertTrue(addPair.getStarterCode().get("java").contains("static int sumPair(int a, int b)"));
+        assertTrue(addPair.getStarterCode().get("python").contains("print(sum_pair(a, b))"));
+        assertTrue(addPair.getStarterCode().get("python").contains("def sum_pair(a, b):"));
     }
 
     @Test
@@ -78,6 +82,8 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.id", startsWith("signal-peaks-")))
             .andExpect(jsonPath("$.title").value("Signal Peaks"))
             .andExpect(jsonPath("$.starterCode.python").exists())
+            .andExpect(jsonPath("$.starterCode.python", containsString("print(count_peaks(readings))")))
+            .andExpect(jsonPath("$.starterCode.java", containsString("System.out.println(countPeaks(readings));")))
             .andReturn();
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -112,6 +118,8 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.quality.checks[0].status").value("PASSED"))
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
+            .andExpect(jsonPath("$.problem.starterCode.python", containsString("print(\"YES\" if is_balanced(text) else \"NO\")")))
+            .andExpect(jsonPath("$.problem.starterCode.java", containsString("System.out.println(isBalanced(text) ? \"YES\" : \"NO\");")))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())
             .andExpect(jsonPath("$.referenceSolutions").doesNotExist())
             .andExpect(jsonPath("$.quality.validationErrors").doesNotExist())

@@ -670,8 +670,11 @@ public class ProblemRepository {
             "import sys\n\n" +
             "def main():\n" +
             "    numbers = list(map(int, sys.stdin.read().strip().split()))\n" +
-            "    # TODO: print the sum of the two numbers\n" +
-            "    print(0)\n\n" +
+            "    a, b = numbers[0], numbers[1]\n" +
+            "    print(sum_pair(a, b))\n\n" +
+            "def sum_pair(a, b):\n" +
+            "    # TODO: return the sum of a and b\n" +
+            "    return 0\n\n" +
             "if __name__ == \"__main__\":\n" +
             "    main()\n");
         starterCode.put("java",
@@ -681,8 +684,11 @@ public class ProblemRepository {
             "        Scanner scanner = new Scanner(System.in);\n" +
             "        int a = scanner.nextInt();\n" +
             "        int b = scanner.nextInt();\n" +
-            "        // TODO: print the sum of a and b\n" +
-            "        System.out.println(0);\n" +
+            "        System.out.println(sumPair(a, b));\n" +
+            "    }\n\n" +
+            "    static int sumPair(int a, int b) {\n" +
+            "        // TODO: return the sum of a and b\n" +
+            "        return 0;\n" +
             "    }\n" +
             "}\n");
 
@@ -716,9 +722,11 @@ public class ProblemRepository {
             "def main():\n" +
             "    tokens = sys.stdin.read().strip().split()\n" +
             "    n = int(tokens[0])\n" +
-            "    words = tokens[1:]\n" +
-            "    # TODO: print the word that appears most often\n" +
-            "    print(words[0] if words else \"\")\n\n" +
+            "    words = tokens[1:1 + n]\n" +
+            "    print(most_frequent_word(words))\n\n" +
+            "def most_frequent_word(words):\n" +
+            "    # TODO: return the word with the highest frequency, breaking ties by earliest appearance\n" +
+            "    return words[0] if words else \"\"\n\n" +
             "if __name__ == \"__main__\":\n" +
             "    main()\n");
         starterCode.put("java",
@@ -727,15 +735,15 @@ public class ProblemRepository {
             "    public static void main(String[] args) {\n" +
             "        Scanner scanner = new Scanner(System.in);\n" +
             "        int n = scanner.nextInt();\n" +
-            "        String answer = \"\";\n" +
+            "        String[] words = new String[n];\n" +
             "        for (int i = 0; i < n; i++) {\n" +
-            "            String word = scanner.next();\n" +
-            "            if (i == 0) {\n" +
-            "                answer = word;\n" +
-            "            }\n" +
+            "            words[i] = scanner.next();\n" +
             "        }\n" +
-            "        // TODO: print the word with the highest frequency\n" +
-            "        System.out.println(answer);\n" +
+            "        System.out.println(mostFrequentWord(words));\n" +
+            "    }\n\n" +
+            "    static String mostFrequentWord(String[] words) {\n" +
+            "        // TODO: return the word with the highest frequency, breaking ties by earliest appearance\n" +
+            "        return words.length == 0 ? \"\" : words[0];\n" +
             "    }\n" +
             "}\n");
 
