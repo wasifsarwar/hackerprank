@@ -807,6 +807,21 @@ The backend validates generated drafts before publishing:
 - Problem statement does not leak hidden test answers
 - No web-derived or copied problem wording
 
+## Starter Code Harness Contract
+
+Generated starter code should scaffold the boring I/O and leave the candidate focused on the intended algorithm.
+
+What changed:
+
+- OpenAI and Anthropic problem-generation prompts now require starter code to include complete stdin parsing and output wiring for the problem input format.
+- Generated starter code must call a named TODO helper/function where the candidate implements the core algorithm.
+- Generator prompts explicitly forbid leaving `main` as only `Scanner` setup plus generic TODO comments.
+- Deterministic local fallback problems now follow the same pattern: `main` parses input, calls a helper, and prints the helper result.
+
+Verification:
+
+- `mvn clean -Dtest=OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests test`
+
 ## Java Editor Intelligence
 
 The Java editor now has a backend-backed Eclipse JDT LS completion bridge for real language-server suggestions.

@@ -43,6 +43,8 @@ class AnthropicProblemGeneratorTests {
         assertEquals("anthropic-problem-v1", spec.generationMetadata().promptVersion());
         assertTrue(spec.generationMetadata().promptText().contains("Requested topic: graphs"));
         assertTrue(spec.generationMetadata().promptText().contains("Target concepts: reachability, edge cases"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must include the complete stdin parsing"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must call a named TODO helper/function"));
         assertFalse(spec.generationMetadata().parametersJson().contains("sk-ant-test"));
         assertTrue(spec.referenceSolutions().get("python").contains("print(total)"));
         assertTrue(spec.referenceSolutions().get("java").contains("class Main"));
@@ -60,6 +62,7 @@ class AnthropicProblemGeneratorTests {
         assertEquals("user", request.path("messages").get(0).path("role").asText());
         String userContent = request.path("messages").get(0).path("content").asText();
         assertTrue(userContent.contains("Requested topic: graphs"));
+        assertTrue(userContent.contains("Starter code must call a named TODO helper/function"));
         assertTrue(userContent.contains("JSON schema:"));
         assertTrue(userContent.contains("\"referenceSolutions\""));
         assertEquals("sk-ant-test", transport.apiKey);

@@ -241,6 +241,9 @@ class AnthropicProblemGenerator {
             - Include at least two examples.
             - Include at least two visible tests and at least three hidden tests.
             - Include Python starter code and Java starter code with TODO comments.
+            - Starter code must include the complete stdin parsing and output loop for the stated input format.
+            - Starter code must call a named TODO helper/function where the candidate implements the intended algorithm.
+            - Do not leave main as only Scanner setup or generic TODO comments; main should pass parsed values into the helper and print its return value.
             - Include complete Python and Java reference solutions that pass every test case.
             - Keep the Java reference solution and starter code in a public class named Main.
             - Make the intended technique clear enough for a tutor to explain later.

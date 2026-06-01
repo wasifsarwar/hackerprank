@@ -43,6 +43,8 @@ class OpenAiProblemGeneratorTests {
         assertEquals("openai-problem-v1", spec.generationMetadata().promptVersion());
         assertTrue(spec.generationMetadata().promptText().contains("Requested topic: graphs"));
         assertTrue(spec.generationMetadata().promptText().contains("Target concepts: reachability, edge cases"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must include the complete stdin parsing"));
+        assertTrue(spec.generationMetadata().promptText().contains("Starter code must call a named TODO helper/function"));
         assertFalse(spec.generationMetadata().parametersJson().contains("sk-test"));
         assertTrue(spec.referenceSolutions().get("python").contains("print(total)"));
         assertTrue(spec.referenceSolutions().get("java").contains("class Main"));
