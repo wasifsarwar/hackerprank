@@ -885,6 +885,24 @@ Verification:
 - Mobile capture at `390x844`
 - Playwright DOM check that published problems show only real `Problem`, `Examples`, and `Constraints` links and that clicked section state updates.
 
+## Real Problem Tabs
+
+Problem statement tabs are now stateful panels instead of anchor links over one long document.
+
+What changed:
+
+- `Problem` shows only the title, difficulty, tags, description, and input/output format.
+- `Examples` shows only visible examples and their explanations.
+- `Constraints` shows formal constraints plus a lightweight validation-focus note to clarify how hidden tests should relate to the stated limits.
+- `Draft QA` remains conditional and only appears when a draft has generation metadata and quality checks.
+- Selecting a new problem resets the statement area back to the `Problem` tab.
+
+Verification:
+
+- `npm run build` from `frontend`
+- `git diff --check`
+- Playwright DOM check that each tab mounts a distinct panel and updates `aria-selected`.
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:
