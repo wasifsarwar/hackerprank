@@ -875,12 +875,14 @@ What changed:
 - The generation composer remains first-class because live custom problem generation is the core job-to-be-done, but it has been reduced into a compact command bar instead of a large form block.
 - Problem statement, examples, editor toolbar, and results areas were rebalanced to better match the concept proportions while keeping existing functionality intact.
 - The desktop and mobile layouts were visually checked with Playwright captures after the CSS pass.
+- Problem statement section tabs are now honest anchors: `Draft QA` only appears when a generated draft has QA metadata, empty sections are omitted, and the selected tab follows the clicked section instead of pretending the first tab is always active.
 
 Verification:
 
 - `npm run build` from `frontend`
 - Desktop capture at `1536x960`
 - Mobile capture at `390x844`
+- Playwright DOM check that published problems show only real `Problem`, `Examples`, and `Constraints` links and that clicked section state updates.
 
 ## How To Keep These Notes Useful
 

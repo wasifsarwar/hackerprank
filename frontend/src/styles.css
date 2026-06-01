@@ -558,9 +558,17 @@ button:disabled {
   text-decoration: none;
 }
 
-.statement-tabs a:first-child {
+.statement-tabs a:hover,
+.statement-tabs a[aria-current="location"] {
   border-color: var(--ink);
   color: var(--ink);
+}
+
+#problem-overview,
+#problem-examples,
+#problem-constraints,
+#draft-quality {
+  scroll-margin-top: 108px;
 }
 
 .problem-heading {
