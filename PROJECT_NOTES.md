@@ -865,6 +865,23 @@ Verification:
 - `mvn -Dtest=ProblemControllerTests,SubmissionControllerTests,SubmissionServiceTests test`
 - `mvn clean test`
 
+## Studio Concept Polish
+
+The frontend is being tightened toward `concept.png`: a quieter interview-workbench shell with a left problem rail, compact generation command bar, split problem/editor workspace, restrained typography, and a darker editor surface.
+
+What changed:
+
+- The Studio shell now uses lighter borders, softer type weights, a wider rail, and denser spacing so it feels closer to a production coding platform than a prototype.
+- The generation composer remains first-class because live custom problem generation is the core job-to-be-done, but it has been reduced into a compact command bar instead of a large form block.
+- Problem statement, examples, editor toolbar, and results areas were rebalanced to better match the concept proportions while keeping existing functionality intact.
+- The desktop and mobile layouts were visually checked with Playwright captures after the CSS pass.
+
+Verification:
+
+- `npm run build` from `frontend`
+- Desktop capture at `1536x960`
+- Mobile capture at `390x844`
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:
