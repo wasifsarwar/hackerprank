@@ -865,6 +865,26 @@ Verification:
 - `mvn -Dtest=ProblemControllerTests,SubmissionControllerTests,SubmissionServiceTests test`
 - `mvn clean test`
 
+## Studio Concept Polish
+
+The frontend is being tightened toward `concept.png`: a quieter interview-workbench shell with a left problem rail, compact generation command bar, split problem/editor workspace, restrained typography, and a darker editor surface.
+
+What changed:
+
+- The Studio shell now uses lighter borders, softer type weights, a wider rail, and denser spacing so it feels closer to a production coding platform than a prototype.
+- The generation composer remains first-class because live custom problem generation is the core job-to-be-done, but it has been reduced into a compact command bar instead of a large form block.
+- Problem statement, examples, editor toolbar, and results areas were rebalanced to better match the concept proportions while keeping existing functionality intact.
+- The desktop and mobile layouts were visually checked with Playwright captures after the CSS pass.
+- Problem statement section tabs are now honest anchors: `Draft QA` only appears when a generated draft has QA metadata, empty sections are omitted, and the selected tab follows the clicked section instead of pretending the first tab is always active.
+- The single-column workspace breakpoint is set above the combined rail and two-column workspace minimums so small laptop/tablet-landscape widths do not clip the editor.
+
+Verification:
+
+- `npm run build` from `frontend`
+- Desktop capture at `1536x960`
+- Mobile capture at `390x844`
+- Playwright DOM check that published problems show only real `Problem`, `Examples`, and `Constraints` links and that clicked section state updates.
+
 ## How To Keep These Notes Useful
 
 When making a meaningful project change, update this file with:

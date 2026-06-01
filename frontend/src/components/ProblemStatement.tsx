@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import type { DraftQuality, GenerationAttempt, GenerationMetadata, Problem } from "../types";
 import { DraftMetadata } from "./DraftMetadata";
 
@@ -32,13 +33,40 @@ export function ProblemStatement({
   problem,
   quality
 }: ProblemStatementProps) {
+  const [activeSection, setActiveSection] = useState("#problem-overview");
+  const hasExamples = problem.examples.length > 0;
+  const hasConstraints = problem.constraints.length > 0;
+  const hasDraftQuality = isDraftPreview && generationMetadata !== undefined && quality !== undefined;
+  const sections = useMemo(
+    () =>
+      [
+        { href: "#problem-overview", label: "Problem", show: true },
+        { href: "#problem-examples", label: "Examples", show: hasExamples },
+        { href: "#problem-constraints", label: "Constraints", show: hasConstraints },
+        { href: "#draft-quality", label: "Draft QA", show: hasDraftQuality }
+      ].filter((section) => section.show),
+    [hasConstraints, hasDraftQuality, hasExamples]
+  );
+
+  useEffect(() => {
+    if (!sections.some((section) => section.href === activeSection)) {
+      setActiveSection("#problem-overview");
+    }
+  }, [activeSection, sections]);
+
   return (
     <section className="statement">
       <nav className="statement-tabs" aria-label="Problem sections">
-        <a href="#problem-overview">Problem</a>
-        <a href="#problem-examples">Examples</a>
-        <a href="#problem-constraints">Constraints</a>
-        <a href="#draft-quality">Draft QA</a>
+        {sections.map((section) => (
+          <a
+            aria-current={activeSection === section.href ? "location" : undefined}
+            href={section.href}
+            key={section.href}
+            onClick={() => setActiveSection(section.href)}
+          >
+            {section.label}
+          </a>
+        ))}
       </nav>
       <div className="problem-heading">
         <div id="problem-overview">
@@ -68,16 +96,39 @@ export function ProblemStatement({
         </section>
       </div>
 
-      <section id="problem-constraints">
-        <h3>Constraints</h3>
-        <ul>
-          {problem.constraints.map((constraint) => (
-            <li key={constraint}>{constraint}</li>
+      {hasExamples ? (
+        <div id="problem-examples" className="examples-stack">
+          {problem.examples.map((example, index) => (
+            <section className="example" key={`${example.input}-${index}`}>
+              <h3>Example {index + 1}</h3>
+              <div className="example-grid">
+                <div>
+                  <span>Input</span>
+                  <pre>{example.input}</pre>
+                </div>
+                <div>
+                  <span>Output</span>
+                  <pre>{example.output}</pre>
+                </div>
+              </div>
+              <p>{example.explanation}</p>
+            </section>
           ))}
-        </ul>
-      </section>
+        </div>
+      ) : null}
 
-      {isDraftPreview && generationMetadata && quality ? (
+      {hasConstraints ? (
+        <section id="problem-constraints">
+          <h3>Constraints</h3>
+          <ul>
+            {problem.constraints.map((constraint) => (
+              <li key={constraint}>{constraint}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {hasDraftQuality ? (
         <DraftMetadata
           feedbackNotes={draftFeedbackNotes}
           feedbackTags={draftFeedbackTags}
@@ -92,25 +143,6 @@ export function ProblemStatement({
           quality={quality}
         />
       ) : null}
-
-      <div id="problem-examples" className="examples-stack">
-        {problem.examples.map((example, index) => (
-          <section className="example" key={`${example.input}-${index}`}>
-            <h3>Example {index + 1}</h3>
-            <div className="example-grid">
-              <div>
-                <span>Input</span>
-                <pre>{example.input}</pre>
-              </div>
-              <div>
-                <span>Output</span>
-                <pre>{example.output}</pre>
-              </div>
-            </div>
-            <p>{example.explanation}</p>
-          </section>
-        ))}
-      </div>
     </section>
   );
 }
