@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -47,6 +49,25 @@ class ProblemControllerTests {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Test
+    void findAllHydratesNestedProblemDataInRepositoryOrder() {
+        List<Problem> problems = repository.findAll();
+
+        assertFalse(problems.isEmpty());
+        Problem addPair = problems.stream()
+            .filter(problem -> problem.getId().equals("add-a-pair"))
+            .findFirst()
+            .orElseThrow();
+
+        assertEquals("Add a Pair", addPair.getTitle());
+        assertEquals(2, addPair.getTags().size());
+        assertEquals(1, addPair.getConstraints().size());
+        assertEquals(2, addPair.getExamples().size());
+        assertEquals(4, addPair.getTestCases().size());
+        assertTrue(addPair.getStarterCode().containsKey("python"));
+        assertTrue(addPair.getStarterCode().containsKey("java"));
+    }
 
     @Test
     void generatesValidatedProblemAndStoresIt() throws Exception {

@@ -64,21 +64,25 @@ public class ProblemRepository {
     }
 
     public List<Problem> findAll() {
-        List<String> ids = jdbcTemplate.query(
+        List<ProblemRow> rows = jdbcTemplate.query(
             """
-                SELECT id
+                SELECT id, title, difficulty, description, input_format, output_format
                 FROM problems
                 WHERE publication_status = ?
                 ORDER BY sort_order, id
                 """,
-            (rs, rowNum) -> rs.getString("id"),
+            (rs, rowNum) -> new ProblemRow(
+                rs.getString("id"),
+                rs.getString("title"),
+                rs.getString("difficulty"),
+                rs.getString("description"),
+                rs.getString("input_format"),
+                rs.getString("output_format")
+            ),
             PUBLISHED
         );
 
-        return ids.stream()
-            .map(this::findById)
-            .flatMap(Optional::stream)
-            .collect(Collectors.toList());
+        return hydrateProblems(rows);
     }
 
     public Optional<Problem> findById(String id) {
@@ -378,36 +382,36 @@ public class ProblemRepository {
             args
         ).stream()
             .findFirst()
-            .map(this::hydrateProblem);
+            .map(row -> hydrateProblems(List.of(row)).getFirst());
     }
 
-    private Problem hydrateProblem(ProblemRow row) {
-        return new Problem(
-            row.id(),
-            row.title(),
-            row.difficulty(),
-            findTags(row.id()),
-            row.description(),
-            row.inputFormat(),
-            row.outputFormat(),
-            findConstraints(row.id()),
-            findExamples(row.id()),
-            findTestCases(row.id()),
-            findStarterCode(row.id())
-        );
-    }
+    private List<Problem> hydrateProblems(List<ProblemRow> rows) {
+        if (rows.isEmpty()) {
+            return List.of();
+        }
 
-    private List<String> findTags(String problemId) {
-        return jdbcTemplate.query(
-            """
-                SELECT tag
-                FROM problem_tags
-                WHERE problem_id = ?
-                ORDER BY display_order
-                """,
-            (rs, rowNum) -> rs.getString("tag"),
-            problemId
-        );
+        List<String> problemIds = rows.stream().map(ProblemRow::id).toList();
+        Map<String, List<String>> tagsByProblemId = findTagsForProblemIds(problemIds);
+        Map<String, List<String>> constraintsByProblemId = findConstraintsForProblemIds(problemIds);
+        Map<String, List<Example>> examplesByProblemId = findExamplesForProblemIds(problemIds);
+        Map<String, List<TestCase>> testCasesByProblemId = findTestCasesForProblemIds(problemIds);
+        Map<String, Map<String, String>> starterCodeByProblemId = findStarterCodeForProblemIds(problemIds);
+
+        return rows.stream()
+            .map(row -> new Problem(
+                row.id(),
+                row.title(),
+                row.difficulty(),
+                tagsByProblemId.getOrDefault(row.id(), List.of()),
+                row.description(),
+                row.inputFormat(),
+                row.outputFormat(),
+                constraintsByProblemId.getOrDefault(row.id(), List.of()),
+                examplesByProblemId.getOrDefault(row.id(), List.of()),
+                testCasesByProblemId.getOrDefault(row.id(), List.of()),
+                starterCodeByProblemId.getOrDefault(row.id(), Map.of())
+            ))
+            .toList();
     }
 
     private Map<String, List<String>> findTagsForProblemIds(List<String> problemIds) {
@@ -415,14 +419,13 @@ public class ProblemRepository {
             return Map.of();
         }
 
-        String placeholders = String.join(",", Collections.nCopies(problemIds.size(), "?"));
         Map<String, List<String>> tagsByProblemId = new LinkedHashMap<>();
         jdbcTemplate.query(
             """
                 SELECT problem_id, tag
                 FROM problem_tags
                 WHERE problem_id IN (
-                """ + placeholders + """
+                """ + placeholders(problemIds) + """
                 )
                 ORDER BY problem_id, display_order
                 """,
@@ -434,67 +437,109 @@ public class ProblemRepository {
         return tagsByProblemId;
     }
 
-    private List<String> findConstraints(String problemId) {
-        return jdbcTemplate.query(
-            """
-                SELECT constraint_text
-                FROM problem_constraints
-                WHERE problem_id = ?
-                ORDER BY display_order
-                """,
-            (rs, rowNum) -> rs.getString("constraint_text"),
-            problemId
-        );
-    }
+    private Map<String, List<String>> findConstraintsForProblemIds(List<String> problemIds) {
+        if (problemIds.isEmpty()) {
+            return Map.of();
+        }
 
-    private List<Example> findExamples(String problemId) {
-        return jdbcTemplate.query(
-            """
-                SELECT input_text, output_text, explanation
-                FROM problem_examples
-                WHERE problem_id = ?
-                ORDER BY display_order
-                """,
-            (rs, rowNum) -> new Example(
-                rs.getString("input_text"),
-                rs.getString("output_text"),
-                rs.getString("explanation")
-            ),
-            problemId
-        );
-    }
-
-    private List<TestCase> findTestCases(String problemId) {
-        return jdbcTemplate.query(
-            """
-                SELECT name, input_text, expected_output, hidden
-                FROM problem_test_cases
-                WHERE problem_id = ?
-                ORDER BY display_order
-                """,
-            (rs, rowNum) -> new TestCase(
-                rs.getString("name"),
-                rs.getString("input_text"),
-                rs.getString("expected_output"),
-                rs.getBoolean("hidden")
-            ),
-            problemId
-        );
-    }
-
-    private Map<String, String> findStarterCode(String problemId) {
-        Map<String, String> starterCode = new LinkedHashMap<>();
+        Map<String, List<String>> constraintsByProblemId = new LinkedHashMap<>();
         jdbcTemplate.query(
             """
-                SELECT language, code
-                FROM problem_starter_code
-                WHERE problem_id = ?
-                ORDER BY language
+                SELECT problem_id, constraint_text
+                FROM problem_constraints
+                WHERE problem_id IN (
+                """ + placeholders(problemIds) + """
+                )
+                ORDER BY problem_id, display_order
                 """,
-            (RowCallbackHandler) rs -> starterCode.put(rs.getString("language"), rs.getString("code")),
-            problemId
+            (RowCallbackHandler) rs -> constraintsByProblemId
+                .computeIfAbsent(rs.getString("problem_id"), ignored -> new ArrayList<>())
+                .add(rs.getString("constraint_text")),
+            problemIds.toArray()
         );
-        return starterCode;
+        return constraintsByProblemId;
+    }
+
+    private Map<String, List<Example>> findExamplesForProblemIds(List<String> problemIds) {
+        if (problemIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<Example>> examplesByProblemId = new LinkedHashMap<>();
+        jdbcTemplate.query(
+            """
+                SELECT problem_id, input_text, output_text, explanation
+                FROM problem_examples
+                WHERE problem_id IN (
+                """ + placeholders(problemIds) + """
+                )
+                ORDER BY problem_id, display_order
+                """,
+            (RowCallbackHandler) rs -> examplesByProblemId
+                .computeIfAbsent(rs.getString("problem_id"), ignored -> new ArrayList<>())
+                .add(new Example(
+                    rs.getString("input_text"),
+                    rs.getString("output_text"),
+                    rs.getString("explanation")
+                )),
+            problemIds.toArray()
+        );
+        return examplesByProblemId;
+    }
+
+    private Map<String, List<TestCase>> findTestCasesForProblemIds(List<String> problemIds) {
+        if (problemIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<TestCase>> testCasesByProblemId = new LinkedHashMap<>();
+        jdbcTemplate.query(
+            """
+                SELECT problem_id, name, input_text, expected_output, hidden
+                FROM problem_test_cases
+                WHERE problem_id IN (
+                """ + placeholders(problemIds) + """
+                )
+                ORDER BY problem_id, display_order
+                """,
+            (RowCallbackHandler) rs -> testCasesByProblemId
+                .computeIfAbsent(rs.getString("problem_id"), ignored -> new ArrayList<>())
+                .add(new TestCase(
+                    rs.getString("name"),
+                    rs.getString("input_text"),
+                    rs.getString("expected_output"),
+                    rs.getBoolean("hidden")
+                )),
+            problemIds.toArray()
+        );
+        return testCasesByProblemId;
+    }
+
+    private Map<String, Map<String, String>> findStarterCodeForProblemIds(List<String> problemIds) {
+        if (problemIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, Map<String, String>> starterCodeByProblemId = new LinkedHashMap<>();
+        jdbcTemplate.query(
+            """
+                SELECT problem_id, language, code
+                FROM problem_starter_code
+                WHERE problem_id IN (
+                """ + placeholders(problemIds) + """
+                )
+                ORDER BY problem_id, language
+                """,
+            (RowCallbackHandler) rs -> starterCodeByProblemId
+                .computeIfAbsent(rs.getString("problem_id"), ignored -> new LinkedHashMap<>())
+                .put(rs.getString("language"), rs.getString("code")),
+            problemIds.toArray()
+        );
+        return starterCodeByProblemId;
+    }
+
+    private String placeholders(List<String> values) {
+        return String.join(",", Collections.nCopies(values.size(), "?"));
     }
 
     private void replaceChildren(Problem problem) {

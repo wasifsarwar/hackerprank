@@ -72,21 +72,14 @@ public class ProblemGeneratorService {
 
     public Optional<PublicGenerationAttempt> saveDraftFeedback(String draftId, DraftFeedbackRequest request) {
         return draftRepository.findById(draftId)
-            .map(draft -> {
-                DraftFeedbackRequest safeRequest = request == null ? new DraftFeedbackRequest() : request;
-                ensureAttemptForDraft(draft);
-                return attemptRepository
-                    .replaceFeedbackByDraftId(draftId, safeRequest.getTags(), safeRequest.getNotes())
-                    .map(PublicGenerationAttempt::from)
-                    .orElseThrow(() -> new IllegalStateException("Could not record draft feedback"));
-            });
+            .map(draft -> saveDraftFeedback(draft, request));
     }
 
     public Optional<PublicProblemDraft> regenerateDraft(String draftId, RegenerateDraftRequest request) {
         return draftRepository.findById(draftId)
             .map(previousDraft -> {
                 RegenerateDraftRequest safeRequest = request == null ? new RegenerateDraftRequest() : request;
-                saveDraftFeedback(previousDraft.getId(), safeRequest);
+                saveDraftFeedback(previousDraft, safeRequest);
                 GenerateProblemRequest regenerationRequest = requestFromDraft(previousDraft, safeRequest);
                 ProblemDraft nextDraft = createDraftEntity(regenerationRequest);
                 attemptRepository.updateOutcomeByDraftId(previousDraft.getId(), "REGENERATED");
@@ -109,13 +102,14 @@ public class ProblemGeneratorService {
     }
 
     public boolean deleteDraft(String draftId) {
-        boolean exists = draftRepository.findById(draftId).isPresent();
-        if (exists) {
-            draftRepository.findById(draftId).ifPresent(this::ensureAttemptForDraft);
-            attemptRepository.updateOutcomeByDraftId(draftId, "DISCARDED");
-            draftRepository.deleteById(draftId);
-        }
-        return exists;
+        return draftRepository.findById(draftId)
+            .map(draft -> {
+                ensureAttemptForDraft(draft);
+                attemptRepository.updateOutcomeByDraftId(draftId, "DISCARDED");
+                draftRepository.deleteById(draftId);
+                return true;
+            })
+            .orElse(false);
     }
 
     private ProblemDraft createDraftEntity(GenerateProblemRequest request) {
@@ -143,6 +137,15 @@ public class ProblemGeneratorService {
     private GenerationAttempt ensureAttemptForDraft(ProblemDraft draft) {
         return attemptRepository.findByDraftId(draft.getId())
             .orElseGet(() -> attemptRepository.save(attemptFor(draft)));
+    }
+
+    private PublicGenerationAttempt saveDraftFeedback(ProblemDraft draft, DraftFeedbackRequest request) {
+        DraftFeedbackRequest safeRequest = request == null ? new DraftFeedbackRequest() : request;
+        ensureAttemptForDraft(draft);
+        return attemptRepository
+            .replaceFeedbackByDraftId(draft.getId(), safeRequest.getTags(), safeRequest.getNotes())
+            .map(PublicGenerationAttempt::from)
+            .orElseThrow(() -> new IllegalStateException("Could not record draft feedback"));
     }
 
     private GenerationAttempt attemptFor(ProblemDraft draft) {
