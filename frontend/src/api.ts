@@ -4,6 +4,7 @@ import type {
   GenerationAttempt,
   JavaLspCompletionRequest,
   JavaLspCompletionResponse,
+  JavaLspDiagnosticsResponse,
   JavaLspHoverResponse,
   JavaLspPositionRequest,
   JavaLspSignatureHelpResponse,
@@ -131,6 +132,13 @@ export function fetchJavaLspStatus(): Promise<JavaLspCompletionResponse> {
 
 export function fetchJavaLspCompletions(payload: JavaLspCompletionRequest): Promise<JavaLspCompletionResponse> {
   return request<JavaLspCompletionResponse>("/api/editor/java-lsp/completion", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchJavaLspDiagnostics(payload: JavaLspCompletionRequest): Promise<JavaLspDiagnosticsResponse> {
+  return request<JavaLspDiagnosticsResponse>("/api/editor/java-lsp/diagnostics", {
     method: "POST",
     body: JSON.stringify(payload)
   });

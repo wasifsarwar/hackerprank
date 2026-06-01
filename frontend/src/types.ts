@@ -167,11 +167,29 @@ export interface JavaLspCompletionItem {
   additionalTextEdits: JavaLspTextEdit[];
 }
 
+export interface JavaLspDiagnostic {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+  severity: number;
+  message: string;
+  source: string;
+  code: string;
+}
+
 export interface JavaLspCompletionResponse {
   enabled: boolean;
   source: string;
   message: string;
   items: JavaLspCompletionItem[];
+}
+
+export interface JavaLspDiagnosticsResponse {
+  enabled: boolean;
+  source: string;
+  message: string;
+  diagnostics: JavaLspDiagnostic[];
 }
 
 export interface JavaLspHoverResponse {

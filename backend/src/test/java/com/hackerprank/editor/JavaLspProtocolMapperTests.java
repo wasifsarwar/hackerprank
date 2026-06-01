@@ -74,4 +74,32 @@ class JavaLspProtocolMapperTests {
 
         assertEquals(60, mapper.toCompletionItems(result).size());
     }
+
+    @Test
+    void mapsPublishDiagnosticsToMonacoCoordinates() {
+        ObjectNode params = objectMapper.createObjectNode();
+        params.put("uri", "file:///tmp/Main.java");
+        ArrayNode diagnostics = params.putArray("diagnostics");
+        ObjectNode diagnostic = diagnostics.addObject();
+        diagnostic.put("severity", 1);
+        diagnostic.put("message", "The method nope() is undefined");
+        diagnostic.put("source", "Java");
+        diagnostic.put("code", "67108964");
+        ObjectNode range = diagnostic.putObject("range");
+        range.putObject("start").put("line", 3).put("character", 4);
+        range.putObject("end").put("line", 3).put("character", 10);
+
+        List<JavaLspDiagnostic> mappedDiagnostics = mapper.toDiagnostics(params);
+
+        assertEquals(1, mappedDiagnostics.size());
+        JavaLspDiagnostic mapped = mappedDiagnostics.get(0);
+        assertEquals(4, mapped.startLineNumber());
+        assertEquals(5, mapped.startColumn());
+        assertEquals(4, mapped.endLineNumber());
+        assertEquals(11, mapped.endColumn());
+        assertEquals(1, mapped.severity());
+        assertEquals("The method nope() is undefined", mapped.message());
+        assertEquals("Java", mapped.source());
+        assertEquals("67108964", mapped.code());
+    }
 }
