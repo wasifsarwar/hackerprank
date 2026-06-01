@@ -118,8 +118,14 @@ class OpenAiProblemGeneratorTests {
         testCases.add(testCase("Hidden 3", "1 0\n", "1\n", true));
 
         ObjectNode starterCode = problem.putObject("starterCode");
-        starterCode.put("python", "import sys\n# TODO: count reachable checkpoints\nprint(0)\n");
-        starterCode.put("java", "public class Main { public static void main(String[] args) { System.out.println(0); } }\n");
+        starterCode.put(
+            "python",
+            "import sys\n\ndef main():\n    print(count_reachable([]))\n\ndef count_reachable(edges):\n    # TODO: count reachable checkpoints\n    return 0\n\nif __name__ == \"__main__\":\n    main()\n"
+        );
+        starterCode.put(
+            "java",
+            "public class Main { public static void main(String[] args) { System.out.println(countReachable()); } static int countReachable() { return 0; } }\n"
+        );
 
         ObjectNode referenceSolutions = root.putObject("referenceSolutions");
         referenceSolutions.put("python", "import sys\ntotal = 1\nprint(total)\n");
