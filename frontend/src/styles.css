@@ -547,28 +547,29 @@ button:disabled {
   backdrop-filter: blur(12px);
 }
 
-.statement-tabs a {
+.statement-tabs button {
   display: inline-flex;
   align-items: center;
   min-height: 42px;
+  padding: 0;
   border-bottom: 2px solid transparent;
   color: var(--muted);
+  background: transparent;
   font-size: 0.74rem;
   font-weight: 560;
   text-decoration: none;
 }
 
-.statement-tabs a:hover,
-.statement-tabs a[aria-current="location"] {
+.statement-tabs button:hover,
+.statement-tabs button[aria-selected="true"] {
   border-color: var(--ink);
   color: var(--ink);
 }
 
-#problem-overview,
-#problem-examples,
-#problem-constraints,
-#draft-quality {
-  scroll-margin-top: 108px;
+.statement-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 
 .problem-heading {
@@ -846,7 +847,7 @@ li {
 }
 
 .format-grid {
-  margin: 16px 0;
+  margin: 0;
 }
 
 .examples-stack {
@@ -863,7 +864,29 @@ li {
 }
 
 .example {
-  margin-top: 12px;
+  margin: 0;
+}
+
+.constraints-panel {
+  align-content: start;
+}
+
+.constraints-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.constraints-note {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.constraints-note p {
+  margin: 0;
 }
 
 pre {
@@ -1559,7 +1582,7 @@ pre {
     padding-bottom: 6px;
   }
 
-  .statement-tabs a {
+  .statement-tabs button {
     min-height: 36px;
     white-space: nowrap;
   }
