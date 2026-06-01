@@ -17,10 +17,16 @@ class GeneratedProblemValidator {
     private static final List<String> REQUIRED_LANGUAGES = List.of("python", "java");
     private static final Pattern PYTHON_HELPER_DEFINITION = Pattern.compile("(?m)^\\s*def\\s+(?!main\\b)[A-Za-z_]\\w*\\s*\\(");
     private static final Pattern PYTHON_PRINTS_HELPER_RESULT = Pattern.compile("print\\s*\\([^\\n]*[A-Za-z_]\\w*\\s*\\(");
+    private static final Pattern PYTHON_STDIN_READ = Pattern.compile(
+        "(?s)(sys\\.stdin\\.read\\s*\\(|sys\\.stdin\\.readline\\s*\\(|input\\s*\\()"
+    );
     private static final Pattern JAVA_HELPER_DEFINITION = Pattern.compile(
-        "(?s)static\\s+(?!void\\s+main\\b)[A-Za-z_<>, ?\\[\\]]+\\s+[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*\\{"
+        "(?s)(?:public|private|protected)?\\s*static\\s+(?!void\\s+main\\b)[A-Za-z_<>, ?\\[\\]]+\\s+[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*\\{"
     );
     private static final Pattern JAVA_PRINTS_HELPER_RESULT = Pattern.compile("System\\.out\\.println\\s*\\(\\s*[A-Za-z_]\\w*\\s*\\(");
+    private static final Pattern JAVA_STDIN_READ = Pattern.compile(
+        "(?s)(new\\s+Scanner\\s*\\(\\s*System\\.in\\s*\\)|new\\s+BufferedReader\\s*\\([^;]*System\\.in|System\\.in\\.read\\s*\\()"
+    );
 
     private final SubmissionService submissionService;
 
@@ -143,6 +149,9 @@ class GeneratedProblemValidator {
         if (!code.contains("__main__")) {
             errors.add("starterCode.python must call main from the __main__ guard");
         }
+        if (!PYTHON_STDIN_READ.matcher(code).find()) {
+            errors.add("starterCode.python main must read stdin before calling the TODO helper function");
+        }
         if (!PYTHON_HELPER_DEFINITION.matcher(code).find()) {
             errors.add("starterCode.python must include a named TODO helper function");
         }
@@ -158,6 +167,9 @@ class GeneratedProblemValidator {
 
         if (!code.contains("public static void main(String[] args)")) {
             errors.add("starterCode.java must include public static void main(String[] args)");
+        }
+        if (!JAVA_STDIN_READ.matcher(code).find()) {
+            errors.add("starterCode.java main must read System.in before calling the TODO helper method");
         }
         if (!JAVA_HELPER_DEFINITION.matcher(code).find()) {
             errors.add("starterCode.java must include a named static TODO helper method");

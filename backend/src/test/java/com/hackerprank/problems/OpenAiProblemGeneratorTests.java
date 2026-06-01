@@ -120,11 +120,11 @@ class OpenAiProblemGeneratorTests {
         ObjectNode starterCode = problem.putObject("starterCode");
         starterCode.put(
             "python",
-            "import sys\n\ndef main():\n    print(count_reachable([]))\n\ndef count_reachable(edges):\n    # TODO: count reachable checkpoints\n    return 0\n\nif __name__ == \"__main__\":\n    main()\n"
+            "import sys\n\ndef main():\n    tokens = list(map(int, sys.stdin.read().strip().split()))\n    n = tokens[0] if tokens else 0\n    m = tokens[1] if len(tokens) > 1 else 0\n    edges = []\n    cursor = 2\n    for _ in range(m):\n        edges.append((tokens[cursor], tokens[cursor + 1]))\n        cursor += 2\n    print(count_reachable(n, edges))\n\ndef count_reachable(n, edges):\n    # TODO: count reachable checkpoints\n    return 0\n\nif __name__ == \"__main__\":\n    main()\n"
         );
         starterCode.put(
             "java",
-            "public class Main { public static void main(String[] args) { System.out.println(countReachable()); } static int countReachable() { return 0; } }\n"
+            "import java.util.*;\n\npublic class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); int n = scanner.hasNextInt() ? scanner.nextInt() : 0; int m = scanner.hasNextInt() ? scanner.nextInt() : 0; int[][] edges = new int[m][2]; for (int i = 0; i < m; i++) { edges[i][0] = scanner.nextInt(); edges[i][1] = scanner.nextInt(); } System.out.println(countReachable(n, edges)); } private static int countReachable(int n, int[][] edges) { return 0; } }\n"
         );
 
         ObjectNode referenceSolutions = root.putObject("referenceSolutions");
