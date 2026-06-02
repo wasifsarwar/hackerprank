@@ -884,6 +884,26 @@ Verification:
 - `mvn -Dtest=ProblemControllerTests,SubmissionControllerTests,SubmissionServiceTests test`
 - `mvn clean test`
 
+## Generation Usage Persistence
+
+Generation attempts now record lightweight usage telemetry so the product can optimize prompt cost without persisting raw provider prompts or generated payloads in the query path.
+
+What changed:
+
+- `V8__generation_attempt_usage_metrics.sql` adds prompt/response hashes, character counts, and estimated token counts to `generation_attempts`.
+- `GenerationUsageEstimator` approximates tokens as `ceil(characters / 4)` and stores SHA-256 hashes for prompt/response dedupe analysis.
+- `ProblemGeneratorService` computes metrics from `GenerationMetadata.promptText()` and a serialized generated response payload when drafts are created or backfilled into attempts.
+- `PublicGenerationAttempt` exposes only counts/hashes, not raw prompt text, and Draft QA shows compact estimated-token/prompt-character metrics.
+
+Why:
+
+- This supports the user's goal of reducing token usage while keeping persistence strong and queryable.
+- Keeping raw prompt text out of `generation_attempts` avoids turning the attempt ledger into a sensitive blob table; richer private generation artifacts remain separate.
+
+Verification:
+
+- `mvn -Dtest=GenerationUsageEstimatorTests,ProblemControllerTests test`
+
 ## Studio Concept Polish
 
 The frontend is being tightened toward `concept.png`: a quieter interview-workbench shell with a left problem rail, compact generation command bar, split problem/editor workspace, restrained typography, and a darker editor surface.

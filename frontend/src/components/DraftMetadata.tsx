@@ -42,6 +42,10 @@ function formatStatus(status: string | null | undefined) {
   return displayValue(formatted);
 }
 
+function formatNumber(value: number | null | undefined) {
+  return typeof value === "number" ? new Intl.NumberFormat().format(value) : "Not recorded";
+}
+
 export function DraftMetadata({
   feedbackNotes,
   feedbackTags,
@@ -55,11 +59,15 @@ export function DraftMetadata({
   onSaveFeedback,
   quality
 }: DraftMetadataProps) {
+  const estimatedTokens =
+    (generationAttempt?.estimatedPromptTokens ?? 0) + (generationAttempt?.estimatedResponseTokens ?? 0);
   const metrics = [
     { label: "Provider", value: displayValue(generationMetadata.provider) },
     { label: "Model", value: displayValue(generationMetadata.modelId) },
     { label: "Prompt", value: displayValue(generationMetadata.promptVersion) },
     { label: "Attempt", value: generationAttempt?.outcome ?? "Drafted" },
+    { label: "Est. Tokens", value: estimatedTokens > 0 ? formatNumber(estimatedTokens) : "Not recorded" },
+    { label: "Prompt Chars", value: formatNumber(generationAttempt?.promptCharCount) },
     { label: "Repair", value: quality.repairUsed ? "Used" : "Not used" },
     { label: "Examples", value: String(quality.exampleCount) },
     { label: "Visible", value: String(quality.visibleTestCount) },

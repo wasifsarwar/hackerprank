@@ -65,6 +65,12 @@ export interface GenerationAttempt {
   outcome: "DRAFTED" | "PUBLISHED" | "DISCARDED" | "REGENERATED";
   feedbackTags: string[];
   feedbackNotes: string;
+  promptHash: string;
+  responseHash: string;
+  promptCharCount: number;
+  responseCharCount: number;
+  estimatedPromptTokens: number;
+  estimatedResponseTokens: number;
   createdAt: string;
   updatedAt: string;
 }

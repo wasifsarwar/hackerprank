@@ -165,9 +165,30 @@ public class ProblemGeneratorService {
             "DRAFTED",
             List.of(),
             "",
+            usageMetricsFor(draft, metadata),
             now,
             now
         );
+    }
+
+    private GenerationUsageMetrics usageMetricsFor(ProblemDraft draft, GenerationMetadata metadata) {
+        String promptText = metadata == null ? "" : metadata.promptText();
+        String responseText = generatedResponseText(draft);
+        return GenerationUsageEstimator.from(promptText, responseText);
+    }
+
+    private String generatedResponseText(ProblemDraft draft) {
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                "problem",
+                draft.getProblem(),
+                "referenceSolutions",
+                draft.getReferenceSolutions()
+            ));
+        } catch (Exception exception) {
+            LOGGER.warn("Could not serialize generated draft response for usage metrics", exception);
+            return "";
+        }
     }
 
     private GenerateProblemRequest requestFromDraft(ProblemDraft draft, RegenerateDraftRequest request) {
