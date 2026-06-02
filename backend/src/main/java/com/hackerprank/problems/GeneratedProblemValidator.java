@@ -29,7 +29,7 @@ class GeneratedProblemValidator {
         "(?s)(?:public|private|protected)?\\s*static\\s+([A-Za-z_<>, ?\\[\\]]+)\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)\\s*\\{"
     );
     private static final Pattern PYTHON_FUNCTION_DEFINITION = Pattern.compile(
-        "(?m)^\\s*def\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)\\s*:"
+        "(?m)^\\s*def\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)\\s*(?:->\\s*[^:]+)?\\s*:"
     );
 
     private final SubmissionService submissionService;

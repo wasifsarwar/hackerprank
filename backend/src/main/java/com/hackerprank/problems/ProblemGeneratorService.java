@@ -405,6 +405,10 @@ public class ProblemGeneratorService {
             return bracketBalanceProblem(normalizedRequest);
         }
 
+        if (containsAny(selectionText, "sliding", "window", "two pointer", "two-pointer", "scan")) {
+            return signalPeaksProblem(normalizedRequest);
+        }
+
         if (containsAny(selectionText, "string", "map", "hash", "count", "anagram", "word", "frequency")) {
             return firstSoloWordProblem(normalizedRequest);
         }

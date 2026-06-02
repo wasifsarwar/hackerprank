@@ -100,14 +100,14 @@ class ProblemControllerTests {
                       "topic": "Generate a realistic Axon-style interview problem",
                       "difficulty": "Easy",
                       "targetConcepts": ["sliding window", "hash map"],
-                      "constraintsNotes": "Avoid the telemetry peak-count template."
+                      "constraintsNotes": "Prefer a window-scanning problem over a pure frequency-map problem."
                     }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
-            .andExpect(jsonPath("$.problem.title").value("First Solo Word"))
-            .andExpect(jsonPath("$.problem.id", startsWith("first-solo-word-")))
-            .andExpect(jsonPath("$.problem.title", not("Signal Peaks")));
+            .andExpect(jsonPath("$.problem.title").value("Signal Peaks"))
+            .andExpect(jsonPath("$.problem.id", startsWith("signal-peaks-")))
+            .andExpect(jsonPath("$.problem.title", not("First Solo Word")));
     }
 
     @Test
