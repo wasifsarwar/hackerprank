@@ -79,8 +79,8 @@ class OpenAiProblemGeneratorValidationFallbackTests {
         assertEquals("openai", draft.getGenerationMetadata().provider());
         assertEquals(2, openAiTransport.calls);
         assertTrue(openAiTransport.requestBodies.get(1).contains("previous draft failed validation"));
-        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.java must call"));
-        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.python must call"));
+        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.java must define"));
+        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.python must define"));
     }
 
     @Test

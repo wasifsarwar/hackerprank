@@ -25,6 +25,12 @@ class GeneratedProblemValidator {
     private static final Pattern JAVA_STDIN_READ = Pattern.compile(
         "(?s)(new\\s+Scanner\\s*\\(\\s*System\\.in\\s*\\)|new\\s+BufferedReader\\s*\\([^;]*System\\.in|System\\.in\\.read\\s*\\()"
     );
+    private static final Pattern JAVA_METHOD_DEFINITION = Pattern.compile(
+        "(?s)(?:public|private|protected)?\\s*static\\s+([A-Za-z_<>, ?\\[\\]]+)\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)\\s*\\{"
+    );
+    private static final Pattern PYTHON_FUNCTION_DEFINITION = Pattern.compile(
+        "(?m)^\\s*def\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)\\s*:"
+    );
 
     private final SubmissionService submissionService;
 
@@ -153,38 +159,194 @@ class GeneratedProblemValidator {
             return;
         }
 
-        String javaMethodName = methodName(problem.getJavaSignature());
-        if (!javaMethodName.isBlank() && callCount(starterCode.getOrDefault("java", ""), javaMethodName) < 2) {
-            errors.add("starterCode.java must call the declared javaSignature helper method");
+        String javaCode = starterCode.getOrDefault("java", "");
+        JavaHelperSignature javaSignature = parseJavaSignature(problem.getJavaSignature());
+        if (javaSignature != null) {
+            if (!hasMatchingJavaDefinition(javaCode, javaSignature)) {
+                errors.add("starterCode.java must define the declared javaSignature helper method");
+            } else if (!hasInvocationWithArity(javaCode, javaSignature.methodName(), javaSignature.parameterTypes().size())) {
+                errors.add("starterCode.java must call the declared javaSignature helper method");
+            }
         }
 
-        String pythonFunctionName = methodName(problem.getPythonSignature());
-        if (!pythonFunctionName.isBlank() && callCount(starterCode.getOrDefault("python", ""), pythonFunctionName) < 2) {
-            errors.add("starterCode.python must call the declared pythonSignature helper function");
+        String pythonCode = starterCode.getOrDefault("python", "");
+        PythonHelperSignature pythonSignature = parsePythonSignature(problem.getPythonSignature());
+        if (pythonSignature != null) {
+            if (!hasMatchingPythonDefinition(pythonCode, pythonSignature)) {
+                errors.add("starterCode.python must define the declared pythonSignature helper function");
+            } else if (!hasInvocationWithArity(pythonCode, pythonSignature.functionName(), pythonSignature.parameters().size())) {
+                errors.add("starterCode.python must call the declared pythonSignature helper function");
+            }
         }
     }
 
-    private int callCount(String code, String methodName) {
-        if (code == null || code.isBlank() || methodName == null || methodName.isBlank()) {
-            return 0;
-        }
-
-        return code.split("\\b" + Pattern.quote(methodName) + "\\s*\\(", -1).length - 1;
-    }
-
-    private String methodName(String signature) {
+    private JavaHelperSignature parseJavaSignature(String signature) {
         if (signature == null || signature.isBlank()) {
-            return "";
+            return null;
         }
 
         int openParen = signature.indexOf('(');
-        if (openParen <= 0) {
-            return "";
+        int closeParen = signature.lastIndexOf(')');
+        if (openParen <= 0 || closeParen <= openParen) {
+            return null;
         }
 
         String beforeParen = signature.substring(0, openParen).trim();
-        int lastSpace = Math.max(beforeParen.lastIndexOf(' '), beforeParen.lastIndexOf('\t'));
-        return lastSpace >= 0 ? beforeParen.substring(lastSpace + 1).trim() : beforeParen;
+        String parameters = signature.substring(openParen + 1, closeParen).trim();
+        String[] tokens = beforeParen.split("\\s+");
+        if (tokens.length < 2) {
+            return null;
+        }
+
+        String methodName = tokens[tokens.length - 1];
+        int returnTypeIndex = tokens.length - 2;
+        while (returnTypeIndex >= 0 && isJavaModifier(tokens[returnTypeIndex])) {
+            returnTypeIndex--;
+        }
+        if (returnTypeIndex < 0 || !methodName.matches("[A-Za-z_]\\w*")) {
+            return null;
+        }
+
+        return new JavaHelperSignature(
+            methodName,
+            normalizeJavaType(tokens[returnTypeIndex]),
+            parseJavaParameterTypes(parameters)
+        );
+    }
+
+    private boolean hasMatchingJavaDefinition(String code, JavaHelperSignature signature) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+
+        var matcher = JAVA_METHOD_DEFINITION.matcher(code);
+        while (matcher.find()) {
+            if (!matcher.group(2).equals(signature.methodName())) {
+                continue;
+            }
+
+            List<String> parameterTypes = parseJavaParameterTypes(matcher.group(3));
+            if (
+                normalizeJavaType(matcher.group(1)).equals(signature.returnType()) &&
+                parameterTypes.equals(signature.parameterTypes())
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private PythonHelperSignature parsePythonSignature(String signature) {
+        if (signature == null || signature.isBlank()) {
+            return null;
+        }
+
+        var matcher = Pattern.compile("\\bdef\\s+([A-Za-z_]\\w*)\\s*\\(([^)]*)\\)").matcher(signature);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        return new PythonHelperSignature(matcher.group(1), parsePythonParameters(matcher.group(2)));
+    }
+
+    private boolean hasMatchingPythonDefinition(String code, PythonHelperSignature signature) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+
+        var matcher = PYTHON_FUNCTION_DEFINITION.matcher(code);
+        while (matcher.find()) {
+            if (matcher.group(1).equals(signature.functionName()) && parsePythonParameters(matcher.group(2)).equals(signature.parameters())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean hasInvocationWithArity(String code, String functionName, int arity) {
+        if (code == null || code.isBlank() || functionName == null || functionName.isBlank()) {
+            return false;
+        }
+
+        var matcher = Pattern.compile("\\b" + Pattern.quote(functionName) + "\\s*\\(([^)]*)\\)").matcher(code);
+        while (matcher.find()) {
+            if (isDefinitionInvocation(code, matcher.start())) {
+                continue;
+            }
+            if (splitTopLevel(matcher.group(1)).size() == arity) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isDefinitionInvocation(String code, int invocationStart) {
+        int lineStart = code.lastIndexOf('\n', Math.max(0, invocationStart - 1)) + 1;
+        String prefix = code.substring(lineStart, invocationStart);
+        return prefix.matches("\\s*def\\s+[A-Za-z_]\\w*\\s*")
+            || prefix.matches("(?s).*\\bstatic\\s+[A-Za-z_<>, ?\\[\\]]+\\s*");
+    }
+
+    private List<String> parseJavaParameterTypes(String parameters) {
+        return splitTopLevel(parameters).stream()
+            .map(String::trim)
+            .filter(parameter -> !parameter.isBlank())
+            .map(this::javaParameterType)
+            .map(this::normalizeJavaType)
+            .toList();
+    }
+
+    private String javaParameterType(String parameter) {
+        String cleaned = parameter.replaceAll("@\\w+(?:\\([^)]*\\))?\\s*", "").trim();
+        int lastSpace = cleaned.lastIndexOf(' ');
+        return lastSpace > 0 ? cleaned.substring(0, lastSpace) : cleaned;
+    }
+
+    private String normalizeJavaType(String type) {
+        return type == null ? "" : type.replaceAll("\\s+", "").replace("...", "[]");
+    }
+
+    private boolean isJavaModifier(String token) {
+        return token.equals("public")
+            || token.equals("private")
+            || token.equals("protected")
+            || token.equals("static")
+            || token.equals("final");
+    }
+
+    private List<String> parsePythonParameters(String parameters) {
+        return splitTopLevel(parameters).stream()
+            .map(String::trim)
+            .filter(parameter -> !parameter.isBlank())
+            .map(parameter -> parameter.split("=", 2)[0].trim())
+            .map(parameter -> parameter.split(":", 2)[0].trim())
+            .toList();
+    }
+
+    private List<String> splitTopLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (current == '<' || current == '[' || current == '(') {
+                depth++;
+            } else if (current == '>' || current == ']' || current == ')') {
+                depth = Math.max(0, depth - 1);
+            } else if (current == ',' && depth == 0) {
+                parts.add(value.substring(start, index));
+                start = index + 1;
+            }
+        }
+        parts.add(value.substring(start));
+        return parts;
     }
 
     private void validatePythonStarterCode(String code, List<String> errors) {
@@ -262,4 +424,8 @@ class GeneratedProblemValidator {
             errors.add(label + " is required");
         }
     }
+
+    private record JavaHelperSignature(String methodName, String returnType, List<String> parameterTypes) {}
+
+    private record PythonHelperSignature(String functionName, List<String> parameters) {}
 }

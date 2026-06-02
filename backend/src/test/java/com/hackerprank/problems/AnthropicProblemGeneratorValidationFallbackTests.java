@@ -79,8 +79,8 @@ class AnthropicProblemGeneratorValidationFallbackTests {
         assertEquals("anthropic", draft.getGenerationMetadata().provider());
         assertEquals(2, anthropicTransport.calls);
         assertTrue(anthropicTransport.requestBodies.get(1).contains("previous draft failed validation"));
-        assertTrue(anthropicTransport.requestBodies.get(1).contains("starterCode.java must call"));
-        assertTrue(anthropicTransport.requestBodies.get(1).contains("starterCode.python must call"));
+        assertTrue(anthropicTransport.requestBodies.get(1).contains("starterCode.java must define"));
+        assertTrue(anthropicTransport.requestBodies.get(1).contains("starterCode.python must define"));
     }
 
     @Test

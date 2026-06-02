@@ -918,7 +918,9 @@ What changed:
 - Deterministic fallback routing now considers topic, target concepts, notes, and interview style. This fixes the confusing behavior where broad prompts with `sliding window, hash map` concepts still fell through to the default `Signal Peaks` template because only the topic text was inspected.
 - Starter-code validation now checks that the declared helper/function is both defined and called, without requiring the call to be directly nested inside `print(...)` or `System.out.println(...)`. This accepts more natural AI-generated harnesses where the helper result is assigned to a variable before printing.
 - Generated problem construction now preserves blank `scenario` and `task` values so the validator can reject missing statement sections instead of silently backfilling them from `description`.
+- Starter-code validation now checks the advertised helper signature more deeply: Java starter code must define the same helper name, return type, and parameter type list, Python starter code must define the same function and parameter list, and both starters must call the helper outside the definition. This prevents drafts where the UI advertises one method signature but the stdin harness calls another.
 - The frontend Problem tab displays Scenario, Task, and Java/Python signatures before input/output format.
+- The Studio topbar now distinguishes active drafts from saved problems. A saved/published problem says `Viewing saved problem` instead of `Local Mode`, and the last generated draft title/provider remains visible after generation so provider/fallback state is less ambiguous.
 
 Why:
 
@@ -928,6 +930,8 @@ Why:
 Verification:
 
 - `mvn -Dtest=GeneratedProblemFixtureValidationTests,OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests,ProblemControllerTests test`
+- `mvn -Dtest=GeneratedProblemFixtureValidationTests,ProblemControllerTests,AnthropicProblemGeneratorValidationFallbackTests,OpenAiProblemGeneratorValidationFallbackTests test`
+- `npm run build` from `frontend`
 
 ## Studio Concept Polish
 

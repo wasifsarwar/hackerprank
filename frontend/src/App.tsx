@@ -33,6 +33,12 @@ import type {
 } from "./types";
 import type { ResultView } from "./ui";
 
+interface LastGenerationStatus {
+  id: string;
+  provider: string;
+  title: string;
+}
+
 function parseTargetConcepts(value: string) {
   return value
     .split(",")
@@ -50,6 +56,7 @@ function App() {
   const [generatorTargetConcepts, setGeneratorTargetConcepts] = useState("");
   const [generatorConstraintsNotes, setGeneratorConstraintsNotes] = useState("");
   const [generatorInterviewStyle, setGeneratorInterviewStyle] = useState<InterviewStyle>("Classic");
+  const [lastGenerationStatus, setLastGenerationStatus] = useState<LastGenerationStatus | null>(null);
   const [draftFeedbackTags, setDraftFeedbackTags] = useState<string[]>([]);
   const [draftFeedbackNotes, setDraftFeedbackNotes] = useState("");
   const [language, setLanguage] = useState<Language>("python");
@@ -317,6 +324,11 @@ function App() {
       isDraftPreviewRef.current = true;
       currentDraftIdRef.current = nextDraft.id;
       setDraft(nextDraft);
+      setLastGenerationStatus({
+        id: nextDraft.id,
+        provider: nextDraft.generationMetadata.provider,
+        title: nextDraft.problem.title
+      });
       resetDraftFeedback();
       resetSubmissionHistory();
       setCode(nextDraft.problem.starterCode[language]);
@@ -647,8 +659,13 @@ function App() {
           </div>
           <div className="topbar-status">
             {isGenerating ? <span className="autosave-pill">Generating draft...</span> : null}
-            {draft ? <span>Draft ID: {draft.id}</span> : <span>Local Mode</span>}
+            {draft ? <span>Draft ID: {draft.id}</span> : <span>Viewing saved problem</span>}
             {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
+            {!draft && lastGenerationStatus ? (
+              <span>
+                Last draft: {lastGenerationStatus.title} ({lastGenerationStatus.provider})
+              </span>
+            ) : null}
             {draft ? (
               <button disabled={isSavingDraftFeedback || isRegeneratingDraft} onClick={handleSaveDraftFeedback} type="button">
                 {isSavingDraftFeedback ? "Saving..." : "Save Feedback"}
