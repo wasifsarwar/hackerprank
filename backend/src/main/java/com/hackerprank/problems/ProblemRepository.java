@@ -66,7 +66,8 @@ public class ProblemRepository {
     public List<Problem> findAll() {
         List<ProblemRow> rows = jdbcTemplate.query(
             """
-                SELECT id, title, difficulty, description, input_format, output_format
+                SELECT id, title, difficulty, scenario, task, java_signature, python_signature,
+                       description, input_format, output_format
                 FROM problems
                 WHERE publication_status = ?
                 ORDER BY sort_order, id
@@ -75,6 +76,10 @@ public class ProblemRepository {
                 rs.getString("id"),
                 rs.getString("title"),
                 rs.getString("difficulty"),
+                rs.getString("scenario"),
+                rs.getString("task"),
+                rs.getString("java_signature"),
+                rs.getString("python_signature"),
                 rs.getString("description"),
                 rs.getString("input_format"),
                 rs.getString("output_format")
@@ -88,7 +93,8 @@ public class ProblemRepository {
     public Optional<Problem> findById(String id) {
         return findProblem(
             """
-                SELECT id, title, difficulty, description, input_format, output_format
+                SELECT id, title, difficulty, scenario, task, java_signature, python_signature,
+                       description, input_format, output_format
                 FROM problems
                 WHERE id = ? AND publication_status = ?
                 """,
@@ -100,7 +106,8 @@ public class ProblemRepository {
     Optional<Problem> findAnyById(String id) {
         return findProblem(
             """
-                SELECT id, title, difficulty, description, input_format, output_format
+                SELECT id, title, difficulty, scenario, task, java_signature, python_signature,
+                       description, input_format, output_format
                 FROM problems
                 WHERE id = ?
                 """,
@@ -316,6 +323,10 @@ public class ProblemRepository {
                 UPDATE problems
                 SET title = ?,
                     difficulty = ?,
+                    scenario = ?,
+                    task = ?,
+                    java_signature = ?,
+                    python_signature = ?,
                     description = ?,
                     input_format = ?,
                     output_format = ?,
@@ -327,6 +338,10 @@ public class ProblemRepository {
                 """,
             problem.getTitle(),
             problem.getDifficulty(),
+            problem.getScenario(),
+            problem.getTask(),
+            problem.getJavaSignature(),
+            problem.getPythonSignature(),
             problem.getDescription(),
             problem.getInputFormat(),
             problem.getOutputFormat(),
@@ -343,6 +358,10 @@ public class ProblemRepository {
                         id,
                         title,
                         difficulty,
+                        scenario,
+                        task,
+                        java_signature,
+                        python_signature,
                         description,
                         input_format,
                         output_format,
@@ -350,11 +369,15 @@ public class ProblemRepository {
                         source_type,
                         sort_order
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                 problem.getId(),
                 problem.getTitle(),
                 problem.getDifficulty(),
+                problem.getScenario(),
+                problem.getTask(),
+                problem.getJavaSignature(),
+                problem.getPythonSignature(),
                 problem.getDescription(),
                 problem.getInputFormat(),
                 problem.getOutputFormat(),
@@ -375,6 +398,10 @@ public class ProblemRepository {
                 rs.getString("id"),
                 rs.getString("title"),
                 rs.getString("difficulty"),
+                rs.getString("scenario"),
+                rs.getString("task"),
+                rs.getString("java_signature"),
+                rs.getString("python_signature"),
                 rs.getString("description"),
                 rs.getString("input_format"),
                 rs.getString("output_format")
@@ -403,6 +430,10 @@ public class ProblemRepository {
                 row.title(),
                 row.difficulty(),
                 tagsByProblemId.getOrDefault(row.id(), List.of()),
+                row.scenario(),
+                row.task(),
+                row.javaSignature(),
+                row.pythonSignature(),
                 row.description(),
                 row.inputFormat(),
                 row.outputFormat(),
@@ -662,6 +693,12 @@ public class ProblemRepository {
         if (problem == null || problem.getId() == null || problem.getId().isBlank()) {
             throw new IllegalArgumentException("Problem id is required");
         }
+        if (problem.getScenario() == null || problem.getScenario().isBlank()) {
+            throw new IllegalArgumentException("Problem scenario is required");
+        }
+        if (problem.getTask() == null || problem.getTask().isBlank()) {
+            throw new IllegalArgumentException("Problem task is required");
+        }
     }
 
     private Problem addPairProblem() {
@@ -697,6 +734,10 @@ public class ProblemRepository {
             "Add a Pair",
             "Easy",
             Arrays.asList("Warmup", "Input/Output"),
+            "A training platform wants to verify that a new candidate environment can read stdin, call the intended helper method, and print a deterministic result. The simplest calibration task sends two signed integers through the same execution pipeline used for larger interview problems.",
+            "Return the sum of the two provided integers. The stdin harness should parse the two values and call the candidate helper method with those exact values.",
+            "static int sumPair(int a, int b)",
+            "def sum_pair(a, b):",
             "Given two integers, print their sum. This tiny warmup makes sure your code can read stdin and write stdout.",
             "A single line containing two space-separated integers: a and b.",
             "Print a single integer: the sum of a and b.",
@@ -752,6 +793,10 @@ public class ProblemRepository {
             "Most Frequent Word",
             "Easy",
             Arrays.asList("Maps", "Counting"),
+            "A support triage dashboard receives short normalized tags from incoming reports. The team wants to surface the tag that dominates the batch while preserving the earliest observed tag when several tags are tied.",
+            "Given the words in their original order, return the word with the highest frequency. If more than one word has that frequency, return the one that appears earliest in the input.",
+            "static String mostFrequentWord(String[] words)",
+            "def most_frequent_word(words):",
             "Given a list of lowercase words, print the word that appears the most often. If there is a tie, print the word that appears first among the tied words in the original list.",
             "The first line contains n. The second line contains n lowercase words separated by spaces.",
             "Print the most frequent word.",
@@ -777,6 +822,10 @@ public class ProblemRepository {
         String id,
         String title,
         String difficulty,
+        String scenario,
+        String task,
+        String javaSignature,
+        String pythonSignature,
         String description,
         String inputFormat,
         String outputFormat

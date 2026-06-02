@@ -1,12 +1,16 @@
 {
   "topic": "arrays",
   "difficulty": "Easy",
-  "expectedFailureMessage": "starterCode.java main must print the result of the TODO helper method",
+  "expectedFailureMessage": "starterCode.java must call the declared javaSignature helper method",
   "problem": {
     "id": "bad-starter-edge-window-sum",
     "title": "Bad Starter Edge Window Sum",
     "difficulty": "Easy",
     "tags": ["Arrays", "Implementation"],
+    "scenario": "A telemetry review service receives ordered integer readings from a device window after an upload completes. Analysts use a small edge-window check to compare the first and final values before running deeper diagnostics.",
+    "task": "Given n readings, return the sum of the first and last reading. If the window contains one reading, return that value once.",
+    "javaSignature": "static int edgeSum(int[] values)",
+    "pythonSignature": "def edge_sum(values):",
     "description": "Given n integers, print the sum of the first and last value. If there is only one value, print that value once.",
     "inputFormat": "The first line contains n. The second line contains n space-separated integers.",
     "outputFormat": "Print one integer: the edge window sum.",
@@ -34,7 +38,7 @@
     ],
     "starterCode": {
       "python": "import sys\n\ndef main():\n    tokens = list(map(int, sys.stdin.read().strip().split()))\n    n = tokens[0]\n    values = tokens[1:1 + n]\n    print(edge_sum(values))\n\ndef edge_sum(values):\n    # TODO: return the sum of the first and last value\n    return 0\n\nif __name__ == \"__main__\":\n    main()\n",
-      "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int n = scanner.nextInt();\n        int[] values = new int[n];\n        for (int i = 0; i < n; i++) {\n            values[i] = scanner.nextInt();\n        }\n        // TODO: print the sum of the first and last value\n        System.out.println(0);\n    }\n}\n"
+      "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int n = scanner.nextInt();\n        int[] values = new int[n];\n        for (int i = 0; i < n; i++) {\n            values[i] = scanner.nextInt();\n        }\n        // TODO: print the sum of the first and last value\n        System.out.println(0);\n    }\n\n    static int edgeSum(int[] values) {\n        return 0;\n    }\n}\n"
     }
   },
   "referenceSolutions": {

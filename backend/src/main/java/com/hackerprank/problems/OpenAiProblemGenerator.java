@@ -37,6 +37,10 @@ class OpenAiProblemGenerator {
                 "title": { "type": "string" },
                 "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
                 "tags": { "type": "array", "items": { "type": "string" } },
+                "scenario": { "type": "string" },
+                "task": { "type": "string" },
+                "javaSignature": { "type": "string" },
+                "pythonSignature": { "type": "string" },
                 "description": { "type": "string" },
                 "inputFormat": { "type": "string" },
                 "outputFormat": { "type": "string" },
@@ -83,6 +87,10 @@ class OpenAiProblemGenerator {
                 "title",
                 "difficulty",
                 "tags",
+                "scenario",
+                "task",
+                "javaSignature",
+                "pythonSignature",
                 "description",
                 "inputFormat",
                 "outputFormat",
@@ -238,7 +246,11 @@ class OpenAiProblemGenerator {
 
             Requirements:
             - Use simple stdin/stdout input and output only.
-            - Include at least two examples.
+            - Create a concrete real-world scenario inspired by the requested topic/company context, not a generic textbook wrapper.
+            - Include a separate scenario paragraph and task paragraph. The scenario should be 2-4 sentences; the task should precisely define what to compute.
+            - Include a Java method signature and a Python function signature for the candidate's core solution.
+            - The starter code must parse stdin in main, call that exact method/function signature, and print the returned value.
+            - Include at least two examples with explanations that teach the rule and boundary behavior.
             - Include at least two visible tests and at least three hidden tests.
             - Include Python starter code and Java starter code with TODO comments.
             - Starter code must include the complete stdin parsing and output loop for the stated input format.
@@ -246,6 +258,7 @@ class OpenAiProblemGenerator {
             - Do not leave main as only Scanner setup or generic TODO comments; main should pass parsed values into the helper and print its return value.
             - Include complete Python and Java reference solutions that pass every test case.
             - Keep the Java reference solution and starter code in a public class named Main.
+            - Make the statement detailed enough that a candidate can solve it without guessing hidden assumptions.
             - Make the intended technique clear enough for a tutor to explain later.
             %s
             """.formatted(
@@ -315,6 +328,10 @@ class OpenAiProblemGenerator {
             problemPayload.title(),
             textOrDefault(problemPayload.difficulty(), difficulty),
             listOrEmpty(problemPayload.tags()),
+            problemPayload.scenario(),
+            problemPayload.task(),
+            problemPayload.javaSignature(),
+            problemPayload.pythonSignature(),
             problemPayload.description(),
             problemPayload.inputFormat(),
             problemPayload.outputFormat(),
@@ -450,6 +467,10 @@ class OpenAiProblemGenerator {
         String title,
         String difficulty,
         List<String> tags,
+        String scenario,
+        String task,
+        String javaSignature,
+        String pythonSignature,
         String description,
         String inputFormat,
         String outputFormat,

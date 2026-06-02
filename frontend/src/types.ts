@@ -18,6 +18,10 @@ export interface ProblemSummary {
 }
 
 export interface Problem extends ProblemSummary {
+  scenario: string;
+  task: string;
+  javaSignature: string;
+  pythonSignature: string;
   description: string;
   inputFormat: string;
   outputFormat: string;

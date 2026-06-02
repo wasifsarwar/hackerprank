@@ -8,6 +8,10 @@ public class PublicProblem {
     private final String title;
     private final String difficulty;
     private final List<String> tags;
+    private final String scenario;
+    private final String task;
+    private final String javaSignature;
+    private final String pythonSignature;
     private final String description;
     private final String inputFormat;
     private final String outputFormat;
@@ -27,10 +31,48 @@ public class PublicProblem {
         List<Example> examples,
         Map<String, String> starterCode
     ) {
+        this(
+            id,
+            title,
+            difficulty,
+            tags,
+            description,
+            description,
+            "",
+            "",
+            description,
+            inputFormat,
+            outputFormat,
+            constraints,
+            examples,
+            starterCode
+        );
+    }
+
+    public PublicProblem(
+        String id,
+        String title,
+        String difficulty,
+        List<String> tags,
+        String scenario,
+        String task,
+        String javaSignature,
+        String pythonSignature,
+        String description,
+        String inputFormat,
+        String outputFormat,
+        List<String> constraints,
+        List<Example> examples,
+        Map<String, String> starterCode
+    ) {
         this.id = id;
         this.title = title;
         this.difficulty = difficulty;
         this.tags = tags;
+        this.scenario = scenario;
+        this.task = task;
+        this.javaSignature = javaSignature;
+        this.pythonSignature = pythonSignature;
         this.description = description;
         this.inputFormat = inputFormat;
         this.outputFormat = outputFormat;
@@ -45,6 +87,10 @@ public class PublicProblem {
             problem.getTitle(),
             problem.getDifficulty(),
             problem.getTags(),
+            problem.getScenario(),
+            problem.getTask(),
+            problem.getJavaSignature(),
+            problem.getPythonSignature(),
             problem.getDescription(),
             problem.getInputFormat(),
             problem.getOutputFormat(),
@@ -68,6 +114,22 @@ public class PublicProblem {
 
     public List<String> getTags() {
         return tags;
+    }
+
+    public String getScenario() {
+        return scenario;
+    }
+
+    public String getTask() {
+        return task;
+    }
+
+    public String getJavaSignature() {
+        return javaSignature;
+    }
+
+    public String getPythonSignature() {
+        return pythonSignature;
     }
 
     public String getDescription() {

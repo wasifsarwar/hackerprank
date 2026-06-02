@@ -16,14 +16,12 @@ import org.springframework.stereotype.Component;
 class GeneratedProblemValidator {
     private static final List<String> REQUIRED_LANGUAGES = List.of("python", "java");
     private static final Pattern PYTHON_HELPER_DEFINITION = Pattern.compile("(?m)^\\s*def\\s+(?!main\\b)[A-Za-z_]\\w*\\s*\\(");
-    private static final Pattern PYTHON_PRINTS_HELPER_RESULT = Pattern.compile("print\\s*\\([^\\n]*[A-Za-z_]\\w*\\s*\\(");
     private static final Pattern PYTHON_STDIN_READ = Pattern.compile(
         "(?s)(sys\\.stdin\\.read\\s*\\(|sys\\.stdin\\.readline\\s*\\(|input\\s*\\()"
     );
     private static final Pattern JAVA_HELPER_DEFINITION = Pattern.compile(
         "(?s)(?:public|private|protected)?\\s*static\\s+(?!void\\s+main\\b)[A-Za-z_<>, ?\\[\\]]+\\s+[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*\\{"
     );
-    private static final Pattern JAVA_PRINTS_HELPER_RESULT = Pattern.compile("System\\.out\\.println\\s*\\(\\s*[A-Za-z_]\\w*\\s*\\(");
     private static final Pattern JAVA_STDIN_READ = Pattern.compile(
         "(?s)(new\\s+Scanner\\s*\\(\\s*System\\.in\\s*\\)|new\\s+BufferedReader\\s*\\([^;]*System\\.in|System\\.in\\.read\\s*\\()"
     );
@@ -68,6 +66,12 @@ class GeneratedProblemValidator {
         requireText(problem.getId(), "problem.id", errors);
         requireText(problem.getTitle(), "problem.title", errors);
         requireDifficulty(problem.getDifficulty(), errors);
+        requireText(problem.getScenario(), "problem.scenario", errors);
+        requireMinimumLength(problem.getScenario(), "problem.scenario", 80, errors);
+        requireText(problem.getTask(), "problem.task", errors);
+        requireMinimumLength(problem.getTask(), "problem.task", 60, errors);
+        requireText(problem.getJavaSignature(), "problem.javaSignature", errors);
+        requireText(problem.getPythonSignature(), "problem.pythonSignature", errors);
         requireText(problem.getDescription(), "problem.description", errors);
         requireText(problem.getInputFormat(), "problem.inputFormat", errors);
         requireText(problem.getOutputFormat(), "problem.outputFormat", errors);
@@ -89,6 +93,7 @@ class GeneratedProblemValidator {
 
         validateLanguageMap(problem.getStarterCode(), "starterCode", errors);
         validateLanguageMap(spec.referenceSolutions(), "referenceSolutions", errors);
+        validateSignatureContract(problem, errors);
     }
 
     private void validateReferenceSolutions(GeneratedProblemSpec spec, List<String> errors) {
@@ -114,6 +119,10 @@ class GeneratedProblemValidator {
             problem.getTitle(),
             problem.getDifficulty(),
             problem.getTags(),
+            problem.getScenario(),
+            problem.getTask(),
+            problem.getJavaSignature(),
+            problem.getPythonSignature(),
             problem.getDescription(),
             problem.getInputFormat(),
             problem.getOutputFormat(),
@@ -138,6 +147,46 @@ class GeneratedProblemValidator {
         validateJavaStarterCode(starterCode.get("java"), errors);
     }
 
+    private void validateSignatureContract(Problem problem, List<String> errors) {
+        Map<String, String> starterCode = problem.getStarterCode();
+        if (starterCode == null) {
+            return;
+        }
+
+        String javaMethodName = methodName(problem.getJavaSignature());
+        if (!javaMethodName.isBlank() && callCount(starterCode.getOrDefault("java", ""), javaMethodName) < 2) {
+            errors.add("starterCode.java must call the declared javaSignature helper method");
+        }
+
+        String pythonFunctionName = methodName(problem.getPythonSignature());
+        if (!pythonFunctionName.isBlank() && callCount(starterCode.getOrDefault("python", ""), pythonFunctionName) < 2) {
+            errors.add("starterCode.python must call the declared pythonSignature helper function");
+        }
+    }
+
+    private int callCount(String code, String methodName) {
+        if (code == null || code.isBlank() || methodName == null || methodName.isBlank()) {
+            return 0;
+        }
+
+        return code.split("\\b" + Pattern.quote(methodName) + "\\s*\\(", -1).length - 1;
+    }
+
+    private String methodName(String signature) {
+        if (signature == null || signature.isBlank()) {
+            return "";
+        }
+
+        int openParen = signature.indexOf('(');
+        if (openParen <= 0) {
+            return "";
+        }
+
+        String beforeParen = signature.substring(0, openParen).trim();
+        int lastSpace = Math.max(beforeParen.lastIndexOf(' '), beforeParen.lastIndexOf('\t'));
+        return lastSpace >= 0 ? beforeParen.substring(lastSpace + 1).trim() : beforeParen;
+    }
+
     private void validatePythonStarterCode(String code, List<String> errors) {
         if (code == null || code.isBlank()) {
             return;
@@ -155,9 +204,6 @@ class GeneratedProblemValidator {
         if (!PYTHON_HELPER_DEFINITION.matcher(code).find()) {
             errors.add("starterCode.python must include a named TODO helper function");
         }
-        if (!PYTHON_PRINTS_HELPER_RESULT.matcher(code).find()) {
-            errors.add("starterCode.python main must print the result of the TODO helper function");
-        }
     }
 
     private void validateJavaStarterCode(String code, List<String> errors) {
@@ -173,9 +219,6 @@ class GeneratedProblemValidator {
         }
         if (!JAVA_HELPER_DEFINITION.matcher(code).find()) {
             errors.add("starterCode.java must include a named static TODO helper method");
-        }
-        if (!JAVA_PRINTS_HELPER_RESULT.matcher(code).find()) {
-            errors.add("starterCode.java main must print the result of the TODO helper method");
         }
     }
 
@@ -205,6 +248,12 @@ class GeneratedProblemValidator {
     private void requireText(String value, String label, List<String> errors) {
         if (value == null || value.isBlank()) {
             errors.add(label + " is required");
+        }
+    }
+
+    private void requireMinimumLength(String value, String label, int minimumLength, List<String> errors) {
+        if (value != null && !value.isBlank() && value.trim().length() < minimumLength) {
+            errors.add(label + " must be at least " + minimumLength + " characters");
         }
     }
 

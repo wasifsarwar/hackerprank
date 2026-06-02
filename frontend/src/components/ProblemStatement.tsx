@@ -93,7 +93,26 @@ export function ProblemStatement({
             </div>
           </div>
 
-          <p>{problem.description}</p>
+          <section className="statement-copy">
+            <h3>Scenario</h3>
+            <p>{problem.scenario || problem.description}</p>
+          </section>
+
+          <section className="statement-copy">
+            <h3>Task</h3>
+            <p>{problem.task || problem.description}</p>
+          </section>
+
+          <div className="signature-grid" aria-label="Solution method signatures">
+            <section>
+              <h3>Java</h3>
+              <code>{problem.javaSignature || "Implement the helper method in Main."}</code>
+            </section>
+            <section>
+              <h3>Python</h3>
+              <code>{problem.pythonSignature || "Implement the helper function."}</code>
+            </section>
+          </div>
 
           <div className="format-grid">
             <section>

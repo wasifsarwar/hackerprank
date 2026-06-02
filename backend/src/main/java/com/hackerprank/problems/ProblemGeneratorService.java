@@ -400,11 +400,12 @@ public class ProblemGeneratorService {
     }
 
     private GeneratedProblemSpec deterministicDraftFor(NormalizedGenerationRequest normalizedRequest) {
-        if (containsAny(normalizedRequest.topic(), "stack", "bracket", "parentheses")) {
+        String selectionText = deterministicSelectionText(normalizedRequest);
+        if (containsAny(selectionText, "stack", "bracket", "parentheses")) {
             return bracketBalanceProblem(normalizedRequest);
         }
 
-        if (containsAny(normalizedRequest.topic(), "string", "map", "hash", "count")) {
+        if (containsAny(selectionText, "string", "map", "hash", "count", "anagram", "word", "frequency")) {
             return firstSoloWordProblem(normalizedRequest);
         }
 
@@ -418,6 +419,10 @@ public class ProblemGeneratorService {
             current.getTitle(),
             current.getDifficulty(),
             current.getTags(),
+            current.getScenario(),
+            current.getTask(),
+            current.getJavaSignature(),
+            current.getPythonSignature(),
             current.getDescription(),
             current.getInputFormat(),
             current.getOutputFormat(),
@@ -486,6 +491,10 @@ public class ProblemGeneratorService {
             "Signal Peaks",
             request.difficulty(),
             Arrays.asList("Arrays", "Scanning"),
+            "A field operations team reviews telemetry from a line of connected safety devices after an incident response. Each device reports one numeric signal strength for a short time window, and isolated jumps can indicate a local event worth reviewing before video is archived.",
+            "Given the ordered signal readings, count how many internal readings are strict peaks. A reading is a peak only when it is greater than both immediate neighbors; the first and last readings do not have two neighbors and never count.",
+            "static int countPeaks(int[] readings)",
+            "def count_peaks(readings):",
             "A sensor line reports n readings. A reading is a peak if it is strictly greater than the reading immediately before it and immediately after it. The first and last readings never count as peaks.",
             "The first line contains n. The second line contains n space-separated integers.",
             "Print a single integer: the number of peak readings.",
@@ -599,6 +608,10 @@ public class ProblemGeneratorService {
             "First Solo Word",
             request.difficulty(),
             Arrays.asList("Maps", "Counting", "Strings"),
+            "An interview feedback system receives short normalized labels from multiple reviewers. Repeated labels usually represent common themes, but a single unique label can reveal the earliest unusual concern that should be escalated for manual review.",
+            "Given the labels in arrival order, return the first word that appears exactly once in the entire list. If every word appears more than once, return NONE.",
+            "static String firstSoloWord(String[] words)",
+            "def first_solo_word(words):",
             "Given a list of lowercase words, print the first word that appears exactly once. If every word repeats, print NONE.",
             "The first line contains n. The second line contains n lowercase words separated by spaces.",
             "Print the first word with frequency one, or NONE if no such word exists.",
@@ -712,6 +725,10 @@ public class ProblemGeneratorService {
             "Bracket Balance",
             request.difficulty(),
             Arrays.asList("Stacks", "Parsing"),
+            "A lightweight rules engine receives bracket-only filter expressions from a device configuration tool. Before sending a configuration downstream, the platform must reject expressions whose bracket pairs are nested or closed incorrectly.",
+            "Given a string containing only bracket characters, decide whether every opening bracket is closed by the same bracket type and in the correct order. Return true for balanced expressions and false otherwise.",
+            "static boolean isBalanced(String text)",
+            "def is_balanced(text):",
             "Given a string containing only bracket characters, decide whether every opening bracket is closed by the same type of bracket in the correct order.",
             "A single line containing a string made of (, ), [, ], {, and } characters.",
             "Print YES if the bracket string is balanced. Otherwise, print NO.",
@@ -852,6 +869,17 @@ public class ProblemGeneratorService {
 
     private boolean containsAny(String topic, String... needles) {
         return Arrays.stream(needles).anyMatch(topic::contains);
+    }
+
+    private String deterministicSelectionText(NormalizedGenerationRequest request) {
+        String concepts = String.join(" ", request.targetConcepts());
+        return String.join(
+            " ",
+            request.topic(),
+            concepts,
+            request.constraintsNotes(),
+            request.interviewStyle()
+        ).toLowerCase(Locale.ROOT);
     }
 
     private String uniqueId(String base) {
