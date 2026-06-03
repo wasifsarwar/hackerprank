@@ -1,6 +1,6 @@
 # HackerPrank Project Notes
 
-Last updated: 2026-05-28
+Last updated: 2026-06-03
 
 This is the living handoff file for HackerPrank. Future chats should read this first, then run `git status --short --branch`, then check `README.md` for setup commands.
 
@@ -94,6 +94,7 @@ The product roadmap now lives in `docs/PRODUCT_PLAN.md`. The current recommended
 - Current session - Correct the over-bold UI pass by lowering the global type scale, reducing 800/900 font weights across chrome/content/results, tightening example cards, and dropping Monaco to 13px
 - Current session - Clean up the Studio shell by removing fake nav/topbar controls, moving draft generation into a first-class prompt composer, and adding Monaco v1 interview snippets/completions/hover plus reset/format editor actions
 - Current session - Improve Monaco v1 suggestions with ranked Java/Python interview snippets, Java API/type completions, dot-context methods for common helpers/collections, and cleaner hover explanations
+- Current session - Add Generation Reliability UX v1 to the Draft QA panel with provider/fallback status, repair-loop messaging, token and character usage, attempt timeline, trace hashes, and regeneration actions aimed at realism, hidden cases, statement quality, and company flavor
 
 ## Current Application Shape
 
@@ -119,6 +120,7 @@ The frontend is a Vite React app. It currently provides:
 - Generator panel with topic, difficulty, target concepts, constraints/notes, and interview-style controls
 - Generated draft preview with publish and discard actions
 - Generated draft QA panel with provider, model, prompt version, repair signal, example/test counts, validation checks, and intended technique
+- Generation Reliability UX v1 inside Draft QA with local-template fallback messaging, first-pass versus repair-loop status, token/character usage, attempt timestamps, trace hashes, and focused regeneration actions
 - Generation Quality Studio v1 controls for saving draft feedback tags/notes and regenerating revised drafts from critique
 - Submission history tab for the selected published problem
 - Persisted submission detail view with saved code, compile output, and per-test results
