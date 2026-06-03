@@ -904,6 +904,40 @@ Verification:
 
 - `mvn -Dtest=GenerationUsageEstimatorTests,ProblemControllerTests test`
 
+## Problem Quality Contract
+
+Generated problems now have an explicit LeetCode-style solution contract instead of relying on one generic description field.
+
+What changed:
+
+- `V9__problem_solution_contract.sql` adds `scenario`, `task`, `java_signature`, and `python_signature` columns to `problems`, backfilled from existing descriptions where needed.
+- `Problem` now exposes separate scenario/task/signature fields, and `ProblemRepository` persists and hydrates them.
+- OpenAI and Anthropic generation schemas require those fields, and prompts now demand a concrete real-world scenario, precise task paragraph, candidate method/function signatures, and examples that explain behavior.
+- `GeneratedProblemValidator` requires sufficiently descriptive scenario/task fields and checks starter code calls the declared Java/Python helper signature.
+- Deterministic fallback and seeded problems now include first-class method signatures, so local/fallback mode does not look like a thin toy problem.
+- Deterministic fallback routing now considers topic, target concepts, notes, and interview style. This fixes the confusing behavior where broad prompts with `sliding window, hash map` concepts still fell through to the default `Signal Peaks` template because only the topic text was inspected.
+- Starter-code validation now checks that the declared helper/function is both defined and called, without requiring the call to be directly nested inside `print(...)` or `System.out.println(...)`. This accepts more natural AI-generated harnesses where the helper result is assigned to a variable before printing.
+- Generated problem construction now preserves blank `scenario` and `task` values so the validator can reject missing statement sections instead of silently backfilling them from `description`.
+- Starter-code validation now checks the advertised helper signature more deeply: Java starter code must define the same helper name, return type, and parameter type list, Python starter code must define the same function and parameter list, and both starters must call the helper outside the definition. This prevents drafts where the UI advertises one method signature but the stdin harness calls another.
+- Malformed but non-empty helper signatures now fail validation instead of silently skipping starter-code contract checks. This keeps generated drafts from advertising unusable signatures like `edgeSum(values)`.
+- Python starter-code validation now accepts normal return type annotations in helper definitions, such as `def solve(items: list[int]) -> int:`. This fixed a real Anthropic fallback case where Claude generated a good typed helper but validation rejected it and fell back to the deterministic template.
+- Deterministic fallback routing now prioritizes sliding-window/window-scanning language before generic hash-map/frequency language, so prompts like `sliding window, hash maps` no longer route to `First Solo Word` if AI generation is unavailable.
+- The frontend Problem tab displays Scenario, Task, and Java/Python signatures before input/output format.
+- The Studio topbar now distinguishes active drafts from saved problems. A saved/published problem says `Viewing saved problem` instead of `Local Mode`, and the last generated draft title/provider remains visible after generation so provider/fallback state is less ambiguous.
+
+Why:
+
+- This directly addresses the thin generated statement problem: a candidate should see the story, exact task, and method contract before writing code.
+- The schema and validator enforce the shape instead of hoping prompt wording alone does the job.
+
+Verification:
+
+- `mvn -Dtest=GeneratedProblemFixtureValidationTests,OpenAiProblemGeneratorTests,AnthropicProblemGeneratorTests,ProblemControllerTests test`
+- `mvn -Dtest=GeneratedProblemFixtureValidationTests,ProblemControllerTests,AnthropicProblemGeneratorValidationFallbackTests,OpenAiProblemGeneratorValidationFallbackTests test`
+- `mvn -Dtest=GeneratedProblemFixtureValidationTests,ProblemControllerTests test`
+- Live Anthropic smoke via `POST /api/problems/drafts` with a Meta/sliding-window/hash-map prompt returned provider `anthropic`, title `Unique Reaction Window`, and no repair.
+- `npm run build` from `frontend`
+
 ## Studio Concept Polish
 
 The frontend is being tightened toward `concept.png`: a quieter interview-workbench shell with a left problem rail, compact generation command bar, split problem/editor workspace, restrained typography, and a darker editor surface.

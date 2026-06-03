@@ -79,7 +79,8 @@ class OpenAiProblemGeneratorValidationFallbackTests {
         assertEquals("openai", draft.getGenerationMetadata().provider());
         assertEquals(2, openAiTransport.calls);
         assertTrue(openAiTransport.requestBodies.get(1).contains("previous draft failed validation"));
-        assertTrue(openAiTransport.requestBodies.get(1).contains("WRONG_ANSWER"));
+        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.java must define"));
+        assertTrue(openAiTransport.requestBodies.get(1).contains("starterCode.python must define"));
     }
 
     @Test
@@ -210,6 +211,16 @@ class OpenAiProblemGeneratorValidationFallbackTests {
         problem.put("title", title);
         problem.put("difficulty", "Easy");
         problem.putArray("tags").add("Arrays").add("Implementation");
+        problem.put(
+            "scenario",
+            "A batch telemetry job receives compact integer readings from a device after each upload window. Before deeper analysis, the platform needs a quick aggregate for the readings in the current batch."
+        );
+        problem.put(
+            "task",
+            "Given n integer readings, return the sum of all values in the same order they appear in the upload batch."
+        );
+        problem.put("javaSignature", "static int sumValues(int[] values)");
+        problem.put("pythonSignature", "def sum_values(values):");
         problem.put("description", "Given n integers, print their sum.");
         problem.put("inputFormat", "The first line contains n. The second line contains n space-separated integers.");
         problem.put("outputFormat", "Print one integer: the sum of the values.");

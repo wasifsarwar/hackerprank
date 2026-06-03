@@ -101,6 +101,16 @@ class OpenAiProblemGeneratorTests {
         problem.put("title", "Trail Checkpoints");
         problem.put("difficulty", "Medium");
         problem.putArray("tags").add("Graphs").add("Reachability");
+        problem.put(
+            "scenario",
+            "A trail-monitoring system receives directed handoff records between checkpoints after a field drill. Analysts want to know how many checkpoints could have been reached from the starting checkpoint before reviewing the full route log."
+        );
+        problem.put(
+            "task",
+            "Given n checkpoints and directed edges, return the number of checkpoints reachable from checkpoint one, including checkpoint one itself."
+        );
+        problem.put("javaSignature", "private static int countReachable(int n, int[][] edges)");
+        problem.put("pythonSignature", "def count_reachable(n, edges):");
         problem.put("description", "Count checkpoints that can be reached from checkpoint one.");
         problem.put("inputFormat", "The first line contains n and m. The next m lines contain directed edges.");
         problem.put("outputFormat", "Print the number of reachable checkpoints.");

@@ -108,7 +108,7 @@ export function ProblemRail({
         {filteredProblems.length === 0 && <p className="rail-empty">No matching problems.</p>}
       </nav>
       <div className="rail-footer">
-        <span>Local Mode</span>
+        <span>Local workspace</span>
         <small>v0.9.0</small>
       </div>
     </aside>

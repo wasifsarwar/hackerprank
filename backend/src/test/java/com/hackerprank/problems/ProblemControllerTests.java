@@ -92,6 +92,25 @@ class ProblemControllerTests {
     }
 
     @Test
+    void deterministicDraftUsesConceptsAndNotesWhenSelectingFallbackTemplate() throws Exception {
+        mockMvc.perform(post("/api/problems/drafts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "topic": "Generate a realistic Axon-style interview problem",
+                      "difficulty": "Easy",
+                      "targetConcepts": ["sliding window", "hash map"],
+                      "constraintsNotes": "Prefer a window-scanning problem over a pure frequency-map problem."
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.generationMetadata.provider").value("deterministic"))
+            .andExpect(jsonPath("$.problem.title").value("Signal Peaks"))
+            .andExpect(jsonPath("$.problem.id", startsWith("signal-peaks-")))
+            .andExpect(jsonPath("$.problem.title", not("First Solo Word")));
+    }
+
+    @Test
     void createsValidatedDraftWithoutPublishingIt() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/problems/drafts")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -124,6 +143,10 @@ class ProblemControllerTests {
             .andExpect(jsonPath("$.quality.checks[0].status").value("PASSED"))
             .andExpect(jsonPath("$.problem.id", startsWith("bracket-balance-")))
             .andExpect(jsonPath("$.problem.title").value("Bracket Balance"))
+            .andExpect(jsonPath("$.problem.scenario", containsString("bracket-only filter expressions")))
+            .andExpect(jsonPath("$.problem.task", containsString("Return true for balanced expressions")))
+            .andExpect(jsonPath("$.problem.javaSignature").value("static boolean isBalanced(String text)"))
+            .andExpect(jsonPath("$.problem.pythonSignature").value("def is_balanced(text):"))
             .andExpect(jsonPath("$.problem.starterCode.python", containsString("print(\"YES\" if is_balanced(text) else \"NO\")")))
             .andExpect(jsonPath("$.problem.starterCode.java", containsString("System.out.println(isBalanced(text) ? \"YES\" : \"NO\");")))
             .andExpect(jsonPath("$.referenceSolution").doesNotExist())
