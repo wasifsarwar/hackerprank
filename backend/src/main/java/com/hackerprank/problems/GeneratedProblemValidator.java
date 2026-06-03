@@ -161,7 +161,9 @@ class GeneratedProblemValidator {
 
         String javaCode = starterCode.getOrDefault("java", "");
         JavaHelperSignature javaSignature = parseJavaSignature(problem.getJavaSignature());
-        if (javaSignature != null) {
+        if (javaSignature == null) {
+            errors.add("problem.javaSignature must be a supported Java helper method signature");
+        } else {
             if (!hasMatchingJavaDefinition(javaCode, javaSignature)) {
                 errors.add("starterCode.java must define the declared javaSignature helper method");
             } else if (!hasInvocationWithArity(javaCode, javaSignature.methodName(), javaSignature.parameterTypes().size())) {
@@ -171,7 +173,9 @@ class GeneratedProblemValidator {
 
         String pythonCode = starterCode.getOrDefault("python", "");
         PythonHelperSignature pythonSignature = parsePythonSignature(problem.getPythonSignature());
-        if (pythonSignature != null) {
+        if (pythonSignature == null) {
+            errors.add("problem.pythonSignature must be a supported Python helper function signature");
+        } else {
             if (!hasMatchingPythonDefinition(pythonCode, pythonSignature)) {
                 errors.add("starterCode.python must define the declared pythonSignature helper function");
             } else if (!hasInvocationWithArity(pythonCode, pythonSignature.functionName(), pythonSignature.parameters().size())) {
