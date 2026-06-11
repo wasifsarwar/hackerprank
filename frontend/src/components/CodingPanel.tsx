@@ -268,6 +268,19 @@ export function CodingPanel({
     };
   }, [activeProblem.id, code, editorReady, language]);
 
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter" || isDraftPreview || isRunning) {
+        return;
+      }
+      event.preventDefault();
+      onRun(event.shiftKey);
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [isDraftPreview, isRunning, onRun]);
+
   function handleFormatCode() {
     editorRef.current?.getAction("editor.action.formatDocument")?.run().catch(() => {});
   }
@@ -314,11 +327,14 @@ export function CodingPanel({
             <button className="editor-action" onClick={handleFormatCode} type="button">
               Format
             </button>
-            <button disabled={isRunning} onClick={() => onRun(false)} type="button">
+            <button disabled={isRunning} onClick={() => onRun(false)} title="Run samples (Cmd/Ctrl+Enter)" type="button">
+              {isRunning ? <span className="spinner" /> : null}
               Run Samples
+              <kbd>⌘↵</kbd>
             </button>
-            <button disabled={isRunning} onClick={() => onRun(true)} type="button">
+            <button disabled={isRunning} onClick={() => onRun(true)} title="Submit (Cmd/Ctrl+Shift+Enter)" type="button">
               Submit
+              <kbd>⌘⇧↵</kbd>
             </button>
           </div>
         )}

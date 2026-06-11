@@ -37,6 +37,11 @@ public class SubmissionController {
         return submissionService.findRecent(problemId, limit);
     }
 
+    @GetMapping("/solved")
+    public List<String> solvedProblemIds() {
+        return submissionService.findSolvedProblemIds();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<SubmissionDetail> get(@PathVariable String id) {
         return submissionService.findById(id)

@@ -63,6 +63,10 @@ public class SubmissionService {
         return submissionRepository.findById(id);
     }
 
+    public List<String> findSolvedProblemIds() {
+        return submissionRepository.findSolvedProblemIds();
+    }
+
     public SubmissionResult run(Problem problem, String requestedLanguage, String code, boolean runHiddenTests) {
         String language = normalizeLanguage(requestedLanguage);
         List<TestCase> cases = problem.getTestCases().stream()

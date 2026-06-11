@@ -1,752 +1,327 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  createProblemDraft,
-  deleteProblemDraft,
-  fetchProblem,
-  fetchProblems,
-  fetchSubmissionDetail,
-  fetchSubmissionHint,
-  fetchSubmissionHistory,
-  fetchTutorMessages,
-  publishProblemDraft,
-  regenerateProblemDraft,
-  runSubmission,
-  saveDraftFeedback,
-  sendTutorMessage
-} from "./api";
 import { CodingPanel } from "./components/CodingPanel";
+import { ErrorToast } from "./components/ErrorToast";
 import { GenerationComposer } from "./components/GenerationComposer";
 import { ProblemRail } from "./components/ProblemRail";
 import { ProblemStatement } from "./components/ProblemStatement";
-import type {
-  Difficulty,
-  InterviewStyle,
-  Language,
-  Problem,
-  ProblemDraft,
-  ProblemSummary,
-  SubmissionDetail,
-  SubmissionResult,
-  SubmissionSummary,
-  TutorHint,
-  TutorMessage
-} from "./types";
-import type { ResultView } from "./ui";
-
-interface LastGenerationStatus {
-  id: string;
-  provider: string;
-  title: string;
-}
-
-function parseTargetConcepts(value: string) {
-  return value
-    .split(",")
-    .map((concept) => concept.trim())
-    .filter(Boolean);
-}
+import { StatementSkeleton } from "./components/StatementSkeleton";
+import { TopBar } from "./components/TopBar";
+import { useAutosave } from "./hooks/useAutosave";
+import { useDraftStudio } from "./hooks/useDraftStudio";
+import { useProblemCatalog } from "./hooks/useProblemCatalog";
+import { useSubmissions } from "./hooks/useSubmissions";
+import { useTutor } from "./hooks/useTutor";
+import { clearStoredCode, loadStoredCode } from "./lib/codeStorage";
+import type { Language, Problem, ProblemDraft, ProblemSummary, SubmissionSummary } from "./types";
 
 function App() {
-  const [problems, setProblems] = useState<ProblemSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [problem, setProblem] = useState<Problem | null>(null);
-  const [draft, setDraft] = useState<ProblemDraft | null>(null);
-  const [generatorTopic, setGeneratorTopic] = useState("");
-  const [generatorDifficulty, setGeneratorDifficulty] = useState<Difficulty>("Easy");
-  const [generatorTargetConcepts, setGeneratorTargetConcepts] = useState("");
-  const [generatorConstraintsNotes, setGeneratorConstraintsNotes] = useState("");
-  const [generatorInterviewStyle, setGeneratorInterviewStyle] = useState<InterviewStyle>("Classic");
-  const [lastGenerationStatus, setLastGenerationStatus] = useState<LastGenerationStatus | null>(null);
-  const [draftFeedbackTags, setDraftFeedbackTags] = useState<string[]>([]);
-  const [draftFeedbackNotes, setDraftFeedbackNotes] = useState("");
   const [language, setLanguage] = useState<Language>("python");
   const [code, setCode] = useState("");
-  const [result, setResult] = useState<SubmissionResult | null>(null);
-  const [resultView, setResultView] = useState<ResultView>("current");
-  const [submissions, setSubmissions] = useState<SubmissionSummary[]>([]);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string>("");
-  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetail | null>(null);
-  const [tutorHint, setTutorHint] = useState<TutorHint | null>(null);
-  const [tutorHintSubmissionId, setTutorHintSubmissionId] = useState<string>("");
-  const [tutorMessages, setTutorMessages] = useState<TutorMessage[]>([]);
-  const [tutorMessagesSubmissionId, setTutorMessagesSubmissionId] = useState<string>("");
-  const [isRunning, setIsRunning] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isRegeneratingDraft, setIsRegeneratingDraft] = useState(false);
-  const [isSavingDraftFeedback, setIsSavingDraftFeedback] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
-  const [isLoadingTutorHint, setIsLoadingTutorHint] = useState(false);
-  const [isLoadingTutorMessages, setIsLoadingTutorMessages] = useState(false);
-  const [isSendingTutorMessage, setIsSendingTutorMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const codeOverrideRef = useRef<string | null>(null);
-  const selectedSubmissionRequestRef = useRef<string>("");
-  const selectedSubmissionIdRef = useRef<string>("");
-  const resultSubmissionIdRef = useRef<string>("");
-  const selectedProblemIdRef = useRef<string>("");
-  const currentDraftIdRef = useRef<string>("");
-  const isDraftPreviewRef = useRef(false);
-  const problemRequestRef = useRef(0);
-  const submissionHistoryRequestRef = useRef(0);
-  const runRequestRef = useRef(0);
-  const draftRequestRef = useRef(0);
-  const tutorHintRequestRef = useRef(0);
-  const tutorChatRequestRef = useRef(0);
 
-  const activeProblem = draft?.problem ?? problem;
-  const isDraftPreview = draft !== null;
-  selectedProblemIdRef.current = selectedId;
-  selectedSubmissionIdRef.current = selectedSubmissionId;
-  resultSubmissionIdRef.current = result?.submissionId ?? "";
-  currentDraftIdRef.current = draft?.id ?? "";
-  isDraftPreviewRef.current = isDraftPreview;
+  const catalog = useProblemCatalog({ setError });
 
-  function resetTutorHint() {
-    tutorHintRequestRef.current += 1;
-    tutorChatRequestRef.current += 1;
-    setTutorHint(null);
-    setTutorHintSubmissionId("");
-    setIsLoadingTutorHint(false);
-    setTutorMessages([]);
-    setTutorMessagesSubmissionId("");
-    setIsLoadingTutorMessages(false);
-    setIsSendingTutorMessage(false);
-  }
+  const draftStudio = useDraftStudio({
+    setError,
+    onDraftReady: handleDraftReady,
+    onPublished: handlePublished,
+    onDiscarded: handleDiscarded
+  });
 
-  function clearSelectedSubmission() {
-    setSelectedSubmission(null);
-    setSelectedSubmissionId("");
-    setIsLoadingSubmission(false);
-    selectedSubmissionRequestRef.current = "";
-  }
+  const submissions = useSubmissions({
+    isCurrentPublishedProblem,
+    setError
+  });
 
-  function resetSubmissionHistory() {
-    submissionHistoryRequestRef.current += 1;
-    setIsLoadingHistory(false);
-    setSubmissions([]);
-    clearSelectedSubmission();
-    resetTutorHint();
-  }
+  const tutor = useTutor({
+    isSubmissionVisible: submissions.isSubmissionVisible,
+    setError
+  });
 
-  function resetDraftFeedback() {
-    setDraftFeedbackTags([]);
-    setDraftFeedbackNotes("");
-    setIsSavingDraftFeedback(false);
-    setIsRegeneratingDraft(false);
-  }
+  const activeProblem = draftStudio.draft?.problem ?? catalog.problem;
+  const isDraftPreview = draftStudio.isDraftPreview;
+
+  const autosave = useAutosave(activeProblem, language, code, !isDraftPreview);
 
   function isCurrentPublishedProblem(problemId: string) {
-    return selectedProblemIdRef.current === problemId && !isDraftPreviewRef.current;
+    return catalog.selectedIdRef.current === problemId && !draftStudio.isDraftPreviewRef.current;
   }
 
-  function isCurrentHistoryRequest(problemId: string, requestId: number) {
-    return submissionHistoryRequestRef.current === requestId && isCurrentPublishedProblem(problemId);
+  function resetWorkbench() {
+    submissions.resetHistory();
+    tutor.reset();
   }
 
-  function isCurrentDraftAction(draftId: string, requestId: number) {
-    return draftRequestRef.current === requestId && currentDraftIdRef.current === draftId;
-  }
-
-  function isCurrentTutorHintRequest(submissionId: string, requestId: number) {
-    return (
-      tutorHintRequestRef.current === requestId &&
-      (resultSubmissionIdRef.current === submissionId || selectedSubmissionIdRef.current === submissionId)
-    );
-  }
-
-  function isCurrentTutorConversationRequest(submissionId: string, requestId: number) {
-    return (
-      tutorChatRequestRef.current === requestId &&
-      (resultSubmissionIdRef.current === submissionId || selectedSubmissionIdRef.current === submissionId)
-    );
-  }
-
+  // Load the problem whenever the selection changes, resetting run state.
   useEffect(() => {
-    fetchProblems()
-      .then((items) => {
-        selectedProblemIdRef.current = items[0]?.id ?? "";
-        setProblems(items);
-        setSelectedId(items[0]?.id ?? "");
-      })
-      .catch((err: Error) => setError(err.message));
-  }, []);
-
-  useEffect(() => {
-    if (!selectedId) {
+    if (!catalog.selectedId) {
       return;
     }
 
-    setProblem(null);
-    setResult(null);
-    setResultView("current");
-    resetSubmissionHistory();
-    runRequestRef.current += 1;
-    setIsRunning(false);
-    const requestId = problemRequestRef.current + 1;
-    problemRequestRef.current = requestId;
-    fetchProblem(selectedId)
-      .then((loaded) => {
-        if (problemRequestRef.current === requestId && selectedProblemIdRef.current === selectedId) {
-          setProblem(loaded);
-          setCode(loaded.starterCode[language]);
-        }
-      })
-      .catch((err: Error) => {
-        if (problemRequestRef.current === requestId && selectedProblemIdRef.current === selectedId) {
-          setError(err.message);
-        }
-      });
-  }, [selectedId]);
+    submissions.clearResult();
+    submissions.setResultView("current");
+    resetWorkbench();
+    submissions.cancelRun();
+    void catalog.loadSelected(catalog.selectedId);
+  }, [catalog.selectedId]);
 
+  // Swap editor contents when the active problem or language changes.
   useEffect(() => {
     if (activeProblem) {
       if (codeOverrideRef.current !== null) {
         setCode(codeOverrideRef.current);
         codeOverrideRef.current = null;
       } else {
-        setCode(activeProblem.starterCode[language]);
+        const stored = isDraftPreview ? null : loadStoredCode(activeProblem.id, language);
+        setCode(stored ?? activeProblem.starterCode[language]);
       }
-      setResult(null);
+      autosave.resetAutosavedAt();
+      submissions.clearResult();
     }
   }, [activeProblem?.id, language]);
 
+  // Keep submission history in sync with the visible published problem.
   useEffect(() => {
-    if (!problem || isDraftPreview) {
-      resetSubmissionHistory();
+    if (!catalog.problem || isDraftPreview) {
+      resetWorkbench();
       return;
     }
 
-    refreshSubmissionHistory(problem.id);
-  }, [problem?.id, isDraftPreview]);
+    void submissions.refreshHistory(catalog.problem.id);
+  }, [catalog.problem?.id, isDraftPreview]);
 
   const statusTone = useMemo(() => {
-    if (!result) {
+    if (!submissions.result) {
       return "idle";
     }
-
-    return result.status === "ACCEPTED" ? "success" : "danger";
-  }, [result]);
+    return submissions.result.status === "ACCEPTED" ? "success" : "danger";
+  }, [submissions.result]);
 
   const historyTone = useMemo(() => {
-    if (!selectedSubmission) {
+    if (!submissions.selectedSubmission) {
       return "idle";
     }
+    return submissions.selectedSubmission.status === "ACCEPTED" ? "success" : "danger";
+  }, [submissions.selectedSubmission]);
 
-    return selectedSubmission.status === "ACCEPTED" ? "success" : "danger";
-  }, [selectedSubmission]);
+  const resultsTone = submissions.resultView === "history" ? historyTone : statusTone;
 
-  const resultsTone = resultView === "history" ? historyTone : statusTone;
+  function handleDraftReady(draft: ProblemDraft) {
+    resetWorkbench();
+    setCode(draft.problem.starterCode[language]);
+  }
 
-  async function refreshSubmissionHistory(problemId: string) {
-    if (!isCurrentPublishedProblem(problemId)) {
-      return;
-    }
+  async function handlePublished(published: Problem) {
+    const summary: ProblemSummary = {
+      id: published.id,
+      title: published.title,
+      difficulty: published.difficulty,
+      tags: published.tags
+    };
 
-    const requestId = submissionHistoryRequestRef.current + 1;
-    submissionHistoryRequestRef.current = requestId;
-    setIsLoadingHistory(true);
-    try {
-      const items = await fetchSubmissionHistory(problemId);
-      if (isCurrentHistoryRequest(problemId, requestId)) {
-        setSubmissions(items);
-      }
-    } catch (err) {
-      if (isCurrentHistoryRequest(problemId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (isCurrentHistoryRequest(problemId, requestId)) {
-        setIsLoadingHistory(false);
-      }
+    catalog.upsertSummary(summary);
+    catalog.setProblem(published);
+    catalog.select(published.id);
+    setCode(published.starterCode[language]);
+    submissions.setResultView("current");
+    await submissions.refreshHistory(published.id);
+  }
+
+  function handleDiscarded() {
+    if (catalog.problem) {
+      setCode(loadStoredCode(catalog.problem.id, language) ?? catalog.problem.starterCode[language]);
     }
   }
 
   async function handleRun(runHiddenTests: boolean) {
-    if (!problem || isDraftPreview) {
+    if (!catalog.problem || isDraftPreview) {
       return;
     }
 
-    const runProblemId = problem.id;
-    const runRequestId = runRequestRef.current + 1;
-    runRequestRef.current = runRequestId;
-    setIsRunning(true);
-    setError(null);
-    setResult(null);
-    resetTutorHint();
-
-    try {
-      const nextResult = await runSubmission({
-        problemId: runProblemId,
-        language,
-        code,
-        runHiddenTests
-      });
-      if (runRequestRef.current === runRequestId && isCurrentPublishedProblem(runProblemId)) {
-        setResult(nextResult);
-        setResultView("current");
-      }
-      await refreshSubmissionHistory(runProblemId);
-    } catch (err) {
-      if (runRequestRef.current === runRequestId && isCurrentPublishedProblem(runProblemId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (runRequestRef.current === runRequestId) {
-        setIsRunning(false);
-      }
+    const runProblemId = catalog.problem.id;
+    tutor.reset();
+    const result = await submissions.run(catalog.problem, language, code, runHiddenTests);
+    if (runHiddenTests && result?.status === "ACCEPTED") {
+      catalog.markSolved(runProblemId);
     }
   }
 
   async function handleGenerate() {
-    const previousDraftId = draft?.id;
-    const requestId = draftRequestRef.current + 1;
-    draftRequestRef.current = requestId;
-
-    setIsGenerating(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const nextDraft = await createProblemDraft({
-        topic: generatorTopic.trim() || undefined,
-        difficulty: generatorDifficulty,
-        targetConcepts: parseTargetConcepts(generatorTargetConcepts),
-        constraintsNotes: generatorConstraintsNotes.trim() || undefined,
-        interviewStyle: generatorInterviewStyle
-      });
-      if (draftRequestRef.current !== requestId) {
-        deleteProblemDraft(nextDraft.id).catch(() => {});
-        return;
-      }
-
-      isDraftPreviewRef.current = true;
-      currentDraftIdRef.current = nextDraft.id;
-      setDraft(nextDraft);
-      setLastGenerationStatus({
-        id: nextDraft.id,
-        provider: nextDraft.generationMetadata.provider,
-        title: nextDraft.problem.title
-      });
-      resetDraftFeedback();
-      resetSubmissionHistory();
-      setCode(nextDraft.problem.starterCode[language]);
-      if (previousDraftId && previousDraftId !== nextDraft.id) {
-        deleteProblemDraft(previousDraftId).catch(() => {});
-      }
-    } catch (err) {
-      if (draftRequestRef.current === requestId) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (draftRequestRef.current === requestId) {
-        setIsGenerating(false);
-      }
-    }
-  }
-
-  async function handlePublishDraft() {
-    if (!draft) {
-      return;
-    }
-
-    const draftId = draft.id;
-    const requestId = draftRequestRef.current + 1;
-    draftRequestRef.current = requestId;
-
-    setIsPublishing(true);
-    setError(null);
-
-    try {
-      const published = await publishProblemDraft(draftId);
-      if (!isCurrentDraftAction(draftId, requestId)) {
-        return;
-      }
-
-      selectedProblemIdRef.current = published.id;
-      isDraftPreviewRef.current = false;
-      currentDraftIdRef.current = "";
-      const publishedSummary: ProblemSummary = {
-        id: published.id,
-        title: published.title,
-        difficulty: published.difficulty,
-        tags: published.tags
-      };
-
-      setProblems((items) => [...items.filter((item) => item.id !== published.id), publishedSummary]);
-      setDraft(null);
-      resetDraftFeedback();
-      setProblem(published);
-      setSelectedId(published.id);
-      setCode(published.starterCode[language]);
-      setResultView("current");
-      await refreshSubmissionHistory(published.id);
-    } catch (err) {
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (draftRequestRef.current === requestId) {
-        setIsPublishing(false);
-      }
-    }
-  }
-
-  async function handleDiscardDraft() {
-    if (!draft) {
-      return;
-    }
-
-    const draftId = draft.id;
-    const requestId = draftRequestRef.current + 1;
-    draftRequestRef.current = requestId;
-
-    setError(null);
-
-    try {
-      await deleteProblemDraft(draftId);
-      if (!isCurrentDraftAction(draftId, requestId)) {
-        return;
-      }
-
-      isDraftPreviewRef.current = false;
-      currentDraftIdRef.current = "";
-      setDraft(null);
-      resetDraftFeedback();
-      if (problem) {
-        setCode(problem.starterCode[language]);
-      }
-    } catch (err) {
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    }
-  }
-
-  function handleSelectProblem(id: string) {
-    if (draft) {
-      deleteProblemDraft(draft.id).catch(() => {});
-    }
-    draftRequestRef.current += 1;
-    selectedProblemIdRef.current = id;
-    currentDraftIdRef.current = "";
-    isDraftPreviewRef.current = false;
-    problemRequestRef.current += 1;
-    resetSubmissionHistory();
-    runRequestRef.current += 1;
-    setIsRunning(false);
-    setIsGenerating(false);
-    setIsRegeneratingDraft(false);
-    setIsSavingDraftFeedback(false);
-    setIsPublishing(false);
-    setDraft(null);
-    resetDraftFeedback();
-    setSelectedId(id);
-  }
-
-  function handleDraftFeedbackTagToggle(tag: string) {
-    setDraftFeedbackTags((current) =>
-      current.includes(tag) ? current.filter((value) => value !== tag) : [...current, tag]
-    );
-  }
-
-  async function handleSaveDraftFeedback() {
-    if (!draft) {
-      return;
-    }
-
-    const draftId = draft.id;
-    const requestId = draftRequestRef.current;
-    setIsSavingDraftFeedback(true);
-    setError(null);
-
-    try {
-      const attempt = await saveDraftFeedback(draftId, {
-        tags: draftFeedbackTags,
-        notes: draftFeedbackNotes.trim() || undefined
-      });
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setDraft((current) => (current?.id === draftId ? { ...current, generationAttempt: attempt } : current));
-      }
-    } catch (err) {
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setIsSavingDraftFeedback(false);
-      }
-    }
+    submissions.clearResult();
+    await draftStudio.generate();
   }
 
   async function handleRegenerateDraft(action: string) {
-    if (!draft) {
+    submissions.clearResult();
+    await draftStudio.regenerate(action);
+  }
+
+  function handleSelectProblem(id: string) {
+    draftStudio.abandon();
+    resetWorkbench();
+    submissions.cancelRun();
+    catalog.select(id);
+  }
+
+  async function handleDeleteProblem(id: string) {
+    const target = catalog.problems.find((item) => item.id === id);
+    const confirmed = window.confirm(
+      `Delete "${target?.title ?? id}"? It is archived and removed from the list; submission history is kept.`
+    );
+    if (!confirmed) {
       return;
     }
 
-    const draftId = draft.id;
-    const requestId = draftRequestRef.current + 1;
-    draftRequestRef.current = requestId;
-    setIsRegeneratingDraft(true);
     setError(null);
-    setResult(null);
-
     try {
-      const nextDraft = await regenerateProblemDraft(draftId, {
-        action,
-        tags: draftFeedbackTags,
-        notes: draftFeedbackNotes.trim() || undefined
-      });
-      if (!isCurrentDraftAction(draftId, requestId)) {
-        deleteProblemDraft(nextDraft.id).catch(() => {});
-        return;
+      const remaining = await catalog.deleteProblem(id);
+      (["python", "java"] as Language[]).forEach((lang) => clearStoredCode(id, lang));
+      if (catalog.selectedIdRef.current === id) {
+        if (remaining[0]) {
+          handleSelectProblem(remaining[0].id);
+        } else {
+          catalog.clearSelection();
+        }
       }
-
-      isDraftPreviewRef.current = true;
-      currentDraftIdRef.current = nextDraft.id;
-      setDraft(nextDraft);
-      resetDraftFeedback();
-      resetSubmissionHistory();
-      setCode(nextDraft.problem.starterCode[language]);
     } catch (err) {
-      if (isCurrentDraftAction(draftId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (draftRequestRef.current === requestId) {
-        setIsRegeneratingDraft(false);
-      }
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
 
-  async function handleSelectSubmission(summary: SubmissionSummary) {
-    selectedSubmissionRequestRef.current = summary.id;
-    setResultView("history");
-    setSelectedSubmissionId(summary.id);
-    setSelectedSubmission(null);
-    setIsLoadingSubmission(true);
-    setError(null);
-    resetTutorHint();
+  function handleResetCode() {
+    if (!activeProblem) {
+      return;
+    }
+    if (!isDraftPreview) {
+      clearStoredCode(activeProblem.id, language);
+    }
+    autosave.resetAutosavedAt();
+    setCode(activeProblem.starterCode[language]);
+  }
 
-    try {
-      const detail = await fetchSubmissionDetail(summary.id);
-      if (selectedSubmissionRequestRef.current === summary.id) {
-        setSelectedSubmission(detail);
-        void loadTutorMessages(summary.id);
-      }
-    } catch (err) {
-      if (selectedSubmissionRequestRef.current === summary.id) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (selectedSubmissionRequestRef.current === summary.id) {
-        setIsLoadingSubmission(false);
-      }
+  async function handleSelectSubmission(summary: SubmissionSummary) {
+    tutor.reset();
+    const detail = await submissions.selectSubmission(summary);
+    if (detail) {
+      void tutor.loadMessages(summary.id);
     }
   }
 
   function handleLoadSubmissionCode() {
-    if (!selectedSubmission) {
+    const selected = submissions.selectedSubmission;
+    if (!selected) {
       return;
     }
 
-    if (selectedSubmission.language !== language) {
-      codeOverrideRef.current = selectedSubmission.code;
-      setLanguage(selectedSubmission.language);
+    if (selected.language !== language) {
+      codeOverrideRef.current = selected.code;
+      setLanguage(selected.language);
     } else {
-      setCode(selectedSubmission.code);
+      setCode(selected.code);
     }
-    setResultView("current");
-  }
-
-  async function handleRequestTutorHint(submissionId: string) {
-    if (!submissionId) {
-      return;
-    }
-
-    const requestId = tutorHintRequestRef.current + 1;
-    tutorHintRequestRef.current = requestId;
-    setTutorHint(null);
-    setTutorHintSubmissionId(submissionId);
-    setIsLoadingTutorHint(true);
-    setError(null);
-
-    try {
-      const hint = await fetchSubmissionHint(submissionId);
-      if (isCurrentTutorHintRequest(submissionId, requestId)) {
-        setTutorHint(hint);
-      }
-    } catch (err) {
-      if (isCurrentTutorHintRequest(submissionId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (isCurrentTutorHintRequest(submissionId, requestId)) {
-        setIsLoadingTutorHint(false);
-      }
-    }
-  }
-
-  async function loadTutorMessages(submissionId: string) {
-    const requestId = tutorChatRequestRef.current + 1;
-    tutorChatRequestRef.current = requestId;
-    setTutorMessages([]);
-    setTutorMessagesSubmissionId(submissionId);
-    setIsLoadingTutorMessages(true);
-
-    try {
-      const messages = await fetchTutorMessages(submissionId);
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setTutorMessages(messages);
-      }
-    } catch (err) {
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setIsLoadingTutorMessages(false);
-      }
-    }
-  }
-
-  async function handleSendTutorMessage(submissionId: string, message: string) {
-    if (!submissionId || !message.trim()) {
-      return;
-    }
-
-    const requestId = tutorChatRequestRef.current + 1;
-    tutorChatRequestRef.current = requestId;
-    setTutorMessagesSubmissionId(submissionId);
-    setIsSendingTutorMessage(true);
-    setError(null);
-
-    try {
-      const response = await sendTutorMessage(submissionId, message);
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setTutorMessages(response.messages);
-      }
-    } catch (err) {
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      }
-    } finally {
-      if (isCurrentTutorConversationRequest(submissionId, requestId)) {
-        setIsSendingTutorMessage(false);
-      }
-    }
+    submissions.setResultView("current");
   }
 
   return (
     <main className="app-shell">
       <ProblemRail
-        draft={draft}
-        isPublishing={isPublishing}
-        onDiscardDraft={handleDiscardDraft}
-        onPublishDraft={handlePublishDraft}
+        draft={draftStudio.draft}
+        isPublishing={draftStudio.isPublishing}
+        onDeleteProblem={handleDeleteProblem}
+        onDiscardDraft={draftStudio.discard}
+        onPublishDraft={draftStudio.publish}
         onSelectProblem={handleSelectProblem}
-        problems={problems}
-        selectedId={selectedId}
+        problems={catalog.problems}
+        selectedId={catalog.selectedId}
+        solvedIds={catalog.solvedIds}
       />
 
       <section className="app-main">
-        <header className="topbar">
-          <div className="topbar-breadcrumb">
-            <span>Studio</span>
-            <span aria-hidden="true">&gt;</span>
-            <strong>{activeProblem?.title ?? "Loading problem"}</strong>
-          </div>
-          <div className="topbar-status">
-            {isGenerating ? <span className="autosave-pill">Generating draft...</span> : null}
-            {draft ? <span>Draft ID: {draft.id}</span> : <span>Viewing saved problem</span>}
-            {draft?.generationMetadata.provider ? <span>{draft.generationMetadata.provider}</span> : null}
-            {!draft && lastGenerationStatus ? (
-              <span>
-                Last draft: {lastGenerationStatus.title} ({lastGenerationStatus.provider})
-              </span>
-            ) : null}
-            {draft ? (
-              <button disabled={isSavingDraftFeedback || isRegeneratingDraft} onClick={handleSaveDraftFeedback} type="button">
-                {isSavingDraftFeedback ? "Saving..." : "Save Feedback"}
-              </button>
-            ) : null}
-          </div>
-        </header>
+        <TopBar
+          autosavedAt={autosave.autosavedAt}
+          draft={draftStudio.draft}
+          isGenerating={draftStudio.isGenerating}
+          isRegeneratingDraft={draftStudio.isRegenerating}
+          isSavingDraftFeedback={draftStudio.isSavingFeedback}
+          lastGenerationStatus={draftStudio.lastGenerationStatus}
+          onSaveDraftFeedback={draftStudio.saveFeedback}
+          title={activeProblem?.title ?? "Loading problem"}
+        />
 
         <GenerationComposer
-          constraintsNotes={generatorConstraintsNotes}
-          difficulty={generatorDifficulty}
-          interviewStyle={generatorInterviewStyle}
-          isGenerating={isGenerating}
-          onConstraintsNotesChange={setGeneratorConstraintsNotes}
-          onDifficultyChange={setGeneratorDifficulty}
+          constraintsNotes={draftStudio.constraintsNotes}
+          difficulty={draftStudio.difficulty}
+          interviewStyle={draftStudio.interviewStyle}
+          isGenerating={draftStudio.isGenerating}
+          onConstraintsNotesChange={draftStudio.setConstraintsNotes}
+          onDifficultyChange={draftStudio.setDifficulty}
           onGenerate={handleGenerate}
-          onInterviewStyleChange={setGeneratorInterviewStyle}
-          onTargetConceptsChange={setGeneratorTargetConcepts}
-          onTopicChange={setGeneratorTopic}
-          targetConcepts={generatorTargetConcepts}
-          topic={generatorTopic}
+          onInterviewStyleChange={draftStudio.setInterviewStyle}
+          onTargetConceptsChange={draftStudio.setTargetConcepts}
+          onTopicChange={draftStudio.setTopic}
+          targetConcepts={draftStudio.targetConcepts}
+          topic={draftStudio.topic}
         />
 
         <section className="workspace">
-          {error && <div className="alert">{error}</div>}
+          <ErrorToast message={error} onDismiss={() => setError(null)} />
 
           {activeProblem ? (
             <>
               <ProblemStatement
-                draftFeedbackNotes={draftFeedbackNotes}
-                draftFeedbackTags={draftFeedbackTags}
-                generationAttempt={draft?.generationAttempt}
-                generationMetadata={draft?.generationMetadata}
+                draftFeedbackNotes={draftStudio.feedbackNotes}
+                draftFeedbackTags={draftStudio.feedbackTags}
+                generationAttempt={draftStudio.draft?.generationAttempt}
+                generationMetadata={draftStudio.draft?.generationMetadata}
                 isDraftPreview={isDraftPreview}
-                isRegeneratingDraft={isRegeneratingDraft}
-                isSavingDraftFeedback={isSavingDraftFeedback}
-                onDraftFeedbackNotesChange={setDraftFeedbackNotes}
-                onDraftFeedbackTagToggle={handleDraftFeedbackTagToggle}
+                isRegeneratingDraft={draftStudio.isRegenerating}
+                isSavingDraftFeedback={draftStudio.isSavingFeedback}
+                onDraftFeedbackNotesChange={draftStudio.setFeedbackNotes}
+                onDraftFeedbackTagToggle={draftStudio.toggleFeedbackTag}
                 onRegenerateDraft={handleRegenerateDraft}
-                onSaveDraftFeedback={handleSaveDraftFeedback}
+                onSaveDraftFeedback={draftStudio.saveFeedback}
                 problem={activeProblem}
-                quality={draft?.quality}
+                quality={draftStudio.draft?.quality}
               />
               <CodingPanel
                 activeProblem={activeProblem}
                 code={code}
-                draft={draft}
+                draft={draftStudio.draft}
                 isDraftPreview={isDraftPreview}
-                isLoadingHistory={isLoadingHistory}
-                isLoadingSubmission={isLoadingSubmission}
-                isLoadingTutorHint={isLoadingTutorHint}
-                isLoadingTutorMessages={isLoadingTutorMessages}
-                isPublishing={isPublishing}
-                isRunning={isRunning}
-                isSendingTutorMessage={isSendingTutorMessage}
+                isLoadingHistory={submissions.isLoadingHistory}
+                isLoadingSubmission={submissions.isLoadingSubmission}
+                isLoadingTutorHint={tutor.isLoadingHint}
+                isLoadingTutorMessages={tutor.isLoadingMessages}
+                isPublishing={draftStudio.isPublishing}
+                isRunning={submissions.isRunning}
+                isSendingTutorMessage={tutor.isSendingMessage}
                 language={language}
                 onCodeChange={setCode}
-                onDiscardDraft={handleDiscardDraft}
+                onDiscardDraft={draftStudio.discard}
                 onLanguageChange={setLanguage}
                 onLoadSubmissionCode={handleLoadSubmissionCode}
-                onPublishDraft={handlePublishDraft}
-                onResetCode={() => setCode(activeProblem.starterCode[language])}
-                onResultViewChange={setResultView}
-                onRequestTutorHint={handleRequestTutorHint}
+                onPublishDraft={draftStudio.publish}
+                onResetCode={handleResetCode}
+                onResultViewChange={submissions.setResultView}
+                onRequestTutorHint={tutor.requestHint}
                 onRun={handleRun}
                 onSelectSubmission={handleSelectSubmission}
-                onSendTutorMessage={handleSendTutorMessage}
-                result={result}
-                resultView={resultView}
+                onSendTutorMessage={tutor.sendMessage}
+                result={submissions.result}
+                resultView={submissions.resultView}
                 resultsTone={resultsTone}
-                selectedSubmission={selectedSubmission}
-                selectedSubmissionId={selectedSubmissionId}
-                submissions={submissions}
-                tutorHint={tutorHint}
-                tutorHintSubmissionId={tutorHintSubmissionId}
-                tutorMessages={tutorMessages}
-                tutorMessagesSubmissionId={tutorMessagesSubmissionId}
+                selectedSubmission={submissions.selectedSubmission}
+                selectedSubmissionId={submissions.selectedSubmissionId}
+                submissions={submissions.submissions}
+                tutorHint={tutor.hint}
+                tutorHintSubmissionId={tutor.hintSubmissionId}
+                tutorMessages={tutor.messages}
+                tutorMessagesSubmissionId={tutor.messagesSubmissionId}
               />
             </>
           ) : (
-            <div className="loading">Loading problem...</div>
+            <StatementSkeleton />
           )}
         </section>
       </section>

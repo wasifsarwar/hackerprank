@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -29,6 +30,9 @@ class SubmissionControllerTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void returnsHintForPersistedWrongAnswer() throws Exception {
@@ -103,6 +107,42 @@ class SubmissionControllerTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"message\":\"Can you help?\"}"))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void solvedEndpointCountsOnlyHiddenTestAccepts() throws Exception {
+        // Other test classes share this database and may have persisted
+        // accepted runs for the seed problem; start from a clean slate.
+        jdbcTemplate.update("DELETE FROM submissions WHERE problem_id = ?", "add-a-pair");
+
+        String acceptedCode = """
+            {
+              "problemId": "add-a-pair",
+              "language": "python",
+              "code": "import sys\\nnumbers = list(map(int, sys.stdin.read().strip().split()))\\nprint(numbers[0] + numbers[1])\\n",
+              "runHiddenTests": %s
+            }
+            """;
+
+        mockMvc.perform(post("/api/submissions/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(acceptedCode.formatted("false")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/submissions/solved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@ == 'add-a-pair')]").isEmpty());
+
+        mockMvc.perform(post("/api/submissions/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(acceptedCode.formatted("true")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/submissions/solved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@ == 'add-a-pair')]").isNotEmpty());
     }
 
     private String wrongAnswerSubmissionId() throws Exception {

@@ -1,28 +1,35 @@
 import { useMemo, useState } from "react";
+import { useTheme } from "../hooks/useTheme";
 import type { Difficulty, ProblemDraft, ProblemSummary } from "../types";
 import { difficultyOptions } from "../ui";
 
 interface ProblemRailProps {
   draft: ProblemDraft | null;
   isPublishing: boolean;
+  onDeleteProblem: (id: string) => void;
   onDiscardDraft: () => void;
   onPublishDraft: () => void;
   onSelectProblem: (id: string) => void;
   problems: ProblemSummary[];
   selectedId: string;
+  solvedIds: Set<string>;
 }
 
 export function ProblemRail({
   draft,
   isPublishing,
+  onDeleteProblem,
   onDiscardDraft,
   onPublishDraft,
   onSelectProblem,
   problems,
-  selectedId
+  selectedId,
+  solvedIds
 }: ProblemRailProps) {
   const [search, setSearch] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<"All" | Difficulty>("All");
+  const [hideSolved, setHideSolved] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const filteredProblems = useMemo(() => {
     const query = search.trim().toLowerCase();
     return problems.filter((problem) => {
@@ -31,9 +38,10 @@ export function ProblemRail({
         problem.title.toLowerCase().includes(query) ||
         problem.tags.some((tag) => tag.toLowerCase().includes(query));
       const matchesDifficulty = difficultyFilter === "All" || problem.difficulty === difficultyFilter;
-      return matchesQuery && matchesDifficulty;
+      const matchesSolved = !hideSolved || !solvedIds.has(problem.id);
+      return matchesQuery && matchesDifficulty && matchesSolved;
     });
-  }, [difficultyFilter, problems, search]);
+  }, [difficultyFilter, hideSolved, problems, search, solvedIds]);
 
   return (
     <aside className="problem-rail" aria-label="Problems">
@@ -71,6 +79,7 @@ export function ProblemRail({
 
       <div className="problem-list-header">
         <span>Problem List</span>
+        <small>{filteredProblems.length}</small>
       </div>
       <div className="problem-search">
         <input
@@ -92,24 +101,51 @@ export function ProblemRail({
             {difficulty}
           </button>
         ))}
+        <button
+          className={hideSolved ? "selected" : ""}
+          onClick={() => setHideSolved((current) => !current)}
+          title="Hide problems you have already solved"
+          type="button"
+        >
+          Hide solved
+        </button>
       </div>
       <nav className="problem-list">
         {filteredProblems.map((item) => (
-          <button
-            className={item.id === selectedId ? "problem-item active" : "problem-item"}
-            key={item.id}
-            onClick={() => onSelectProblem(item.id)}
-            type="button"
-          >
-            <span>{item.title}</span>
-            <small>{item.difficulty}</small>
-          </button>
+          <div className={item.id === selectedId ? "problem-item active" : "problem-item"} key={item.id}>
+            <button className="problem-item-main" onClick={() => onSelectProblem(item.id)} type="button">
+              {solvedIds.has(item.id) ? (
+                <span aria-label="Solved" className="solved-check" title="Solved">
+                  ✓
+                </span>
+              ) : null}
+              <span className="problem-item-title">{item.title}</span>
+              <small className={`diff-badge ${item.difficulty.toLowerCase()}`}>{item.difficulty}</small>
+            </button>
+            <button
+              aria-label={`Delete ${item.title}`}
+              className="problem-delete"
+              onClick={() => onDeleteProblem(item.id)}
+              title="Delete problem"
+              type="button"
+            >
+              ✕
+            </button>
+          </div>
         ))}
         {filteredProblems.length === 0 && <p className="rail-empty">No matching problems.</p>}
       </nav>
       <div className="rail-footer">
         <span>Local workspace</span>
-        <small>v0.9.0</small>
+        <button
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="theme-toggle"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          type="button"
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
       </div>
     </aside>
   );
