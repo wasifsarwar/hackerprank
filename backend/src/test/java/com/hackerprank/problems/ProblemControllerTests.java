@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -344,6 +345,34 @@ class ProblemControllerTests {
         assertEquals("PUBLISHED", attemptRepository.findByDraftId(draftId).orElseThrow().getOutcome());
 
         mockMvc.perform(get("/api/problems/drafts/" + draftId))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void archivesPublishedProblemViaDelete() throws Exception {
+        MvcResult generated = mockMvc.perform(post("/api/problems/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"topic\":\"arrays\",\"difficulty\":\"Easy\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String problemId = objectMapper.readTree(generated.getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(delete("/api/problems/" + problemId))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/problems/" + problemId))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/problems"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.id == '" + problemId + "')]").isEmpty());
+
+        assertEquals(
+            "ARCHIVED",
+            jdbcTemplate.queryForObject("SELECT publication_status FROM problems WHERE id = ?", String.class, problemId)
+        );
+
+        mockMvc.perform(delete("/api/problems/" + problemId))
             .andExpect(status().isNotFound());
     }
 

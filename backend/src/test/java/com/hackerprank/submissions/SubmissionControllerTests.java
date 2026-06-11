@@ -105,6 +105,38 @@ class SubmissionControllerTests {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void solvedEndpointCountsOnlyHiddenTestAccepts() throws Exception {
+        String acceptedCode = """
+            {
+              "problemId": "add-a-pair",
+              "language": "python",
+              "code": "import sys\\nnumbers = list(map(int, sys.stdin.read().strip().split()))\\nprint(numbers[0] + numbers[1])\\n",
+              "runHiddenTests": %s
+            }
+            """;
+
+        mockMvc.perform(post("/api/submissions/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(acceptedCode.formatted("false")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/submissions/solved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@ == 'add-a-pair')]").isEmpty());
+
+        mockMvc.perform(post("/api/submissions/run")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(acceptedCode.formatted("true")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/submissions/solved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@ == 'add-a-pair')]").isNotEmpty());
+    }
+
     private String wrongAnswerSubmissionId() throws Exception {
         MvcResult runResult = mockMvc.perform(post("/api/submissions/run")
                 .contentType(MediaType.APPLICATION_JSON)
