@@ -21,10 +21,12 @@ const feedbackOptions = [
   "Weak examples",
   "Needs edge cases",
   "Not original enough",
+  "Company flavor missing",
+  "Too template-like",
   "Strong interview feel"
 ];
 
-const regenerateActions = ["Make harder", "Add edge cases", "Cleaner examples", "Different premise"];
+const regenerateActions = ["More realistic", "Add harder hidden cases", "Improve statement", "Change company flavor"];
 
 function displayValue(value: string | null | undefined) {
   const normalized = value?.trim() ?? "";
@@ -46,6 +48,46 @@ function formatNumber(value: number | null | undefined) {
   return typeof value === "number" ? new Intl.NumberFormat().format(value) : "Not recorded";
 }
 
+function formatProvider(provider: string | null | undefined) {
+  const normalized = provider?.trim().toLowerCase() ?? "";
+
+  if (normalized === "openai") {
+    return "OpenAI";
+  }
+
+  if (normalized === "anthropic") {
+    return "Claude";
+  }
+
+  if (normalized === "deterministic") {
+    return "Local template";
+  }
+
+  return displayValue(provider);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not recorded";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function abbreviateHash(value: string | null | undefined) {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 8 ? normalized.slice(0, 8) : displayValue(normalized);
+}
+
 export function DraftMetadata({
   feedbackNotes,
   feedbackTags,
@@ -59,20 +101,43 @@ export function DraftMetadata({
   onSaveFeedback,
   quality
 }: DraftMetadataProps) {
+  const provider = generationMetadata.provider?.toLowerCase() ?? "";
+  const isDeterministic = provider === "deterministic";
+  const repairUsed = quality.repairUsed;
+  const reliabilityTone = isDeterministic ? "warning" : repairUsed ? "attention" : "success";
+  const reliabilityTitle = isDeterministic
+    ? "Local template fallback"
+    : repairUsed
+      ? "AI draft repaired"
+      : "AI draft validated";
+  const reliabilityCopy = isDeterministic
+    ? "The provider was unavailable or did not produce a valid draft, so HackerPrank used a vetted built-in template. Good for practice, less original than a live model draft."
+    : repairUsed
+      ? "The first model response failed the draft contract. The repair loop produced this validated version before it reached you."
+      : "The selected provider produced a draft that passed schema, reference-solution, example, and hidden-test validation on the first accepted pass.";
   const estimatedTokens =
     (generationAttempt?.estimatedPromptTokens ?? 0) + (generationAttempt?.estimatedResponseTokens ?? 0);
   const metrics = [
-    { label: "Provider", value: displayValue(generationMetadata.provider) },
+    { label: "Provider", value: formatProvider(generationMetadata.provider) },
     { label: "Model", value: displayValue(generationMetadata.modelId) },
-    { label: "Prompt", value: displayValue(generationMetadata.promptVersion) },
-    { label: "Attempt", value: generationAttempt?.outcome ?? "Drafted" },
-    { label: "Est. Tokens", value: estimatedTokens > 0 ? formatNumber(estimatedTokens) : "Not recorded" },
+    { label: "Prompt Version", value: displayValue(generationMetadata.promptVersion) },
+    { label: "Outcome", value: formatStatus(generationAttempt?.outcome ?? "DRAFTED") },
+    { label: "Prompt Tokens", value: formatNumber(generationAttempt?.estimatedPromptTokens) },
+    { label: "Response Tokens", value: formatNumber(generationAttempt?.estimatedResponseTokens) },
+    { label: "Total Tokens", value: estimatedTokens > 0 ? formatNumber(estimatedTokens) : "Not recorded" },
     { label: "Prompt Chars", value: formatNumber(generationAttempt?.promptCharCount) },
-    { label: "Repair", value: quality.repairUsed ? "Used" : "Not used" },
-    { label: "Examples", value: String(quality.exampleCount) },
-    { label: "Visible", value: String(quality.visibleTestCount) },
-    { label: "Hidden", value: String(quality.hiddenTestCount) },
-    { label: "Total Tests", value: String(quality.totalTestCount) }
+    { label: "Response Chars", value: formatNumber(generationAttempt?.responseCharCount) },
+    { label: "Examples", value: formatNumber(quality.exampleCount) },
+    { label: "Visible Tests", value: formatNumber(quality.visibleTestCount) },
+    { label: "Hidden Tests", value: formatNumber(quality.hiddenTestCount) },
+    { label: "Total Tests", value: formatNumber(quality.totalTestCount) }
+  ];
+  const timeline = [
+    { label: "Draft requested", value: formatDateTime(generationAttempt?.createdAt) },
+    { label: "Provider path", value: formatProvider(generationMetadata.provider) },
+    { label: "Repair loop", value: repairUsed ? "Used" : "Not used" },
+    { label: "Validation", value: formatStatus(generationMetadata.validationStatus || quality.status) },
+    { label: "Last updated", value: formatDateTime(generationAttempt?.updatedAt) }
   ];
 
   return (
@@ -88,6 +153,14 @@ export function DraftMetadata({
         </div>
       </div>
 
+      <div className={`generation-reliability ${reliabilityTone}`}>
+        <div>
+          <span>Generation Path</span>
+          <strong>{reliabilityTitle}</strong>
+        </div>
+        <p>{reliabilityCopy}</p>
+      </div>
+
       <dl className="draft-metadata-grid">
         {metrics.map((metric) => (
           <div key={metric.label}>
@@ -96,6 +169,27 @@ export function DraftMetadata({
           </div>
         ))}
       </dl>
+
+      <div className="attempt-card">
+        <div className="attempt-card-header">
+          <div>
+            <span>Attempt Timeline</span>
+            <strong>{generationAttempt?.id ? `Attempt ${generationAttempt.id.slice(0, 8)}` : "Current draft"}</strong>
+          </div>
+          <div className="trace-row" aria-label="Generation trace identifiers">
+            <span>Prompt {abbreviateHash(generationAttempt?.promptHash)}</span>
+            <span>Response {abbreviateHash(generationAttempt?.responseHash)}</span>
+          </div>
+        </div>
+        <ol className="attempt-timeline">
+          {timeline.map((item) => (
+            <li key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </li>
+          ))}
+        </ol>
+      </div>
 
       <ul className="draft-quality-checks" aria-label="Validation checks">
         {quality.checks.map((check) => (
