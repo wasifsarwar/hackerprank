@@ -29,8 +29,32 @@ public class ProblemRepository {
 
     @PostConstruct
     public void seedProblems() {
-        saveSeed(addPairProblem(), 1);
-        saveSeed(frequencyProblem(), 2);
+        seedIfAbsent(addPairProblem(), 1);
+        seedIfAbsent(frequencyProblem(), 2);
+    }
+
+    private void seedIfAbsent(Problem problem, int sortOrder) {
+        Integer existing = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM problems WHERE id = ?",
+            Integer.class,
+            problem.getId()
+        );
+        if (existing == null || existing == 0) {
+            saveSeed(problem, sortOrder);
+        }
+    }
+
+    @Transactional
+    public boolean archiveById(String id) {
+        return jdbcTemplate.update(
+            """
+                UPDATE problems
+                SET publication_status = 'ARCHIVED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND publication_status = ?
+                """,
+            id,
+            PUBLISHED
+        ) > 0;
     }
 
     public List<ProblemSummary> findAllSummaries() {

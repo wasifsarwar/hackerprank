@@ -35,6 +35,15 @@ public class ProblemController {
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProblem(@PathVariable String id) {
+        if (repository.archiveById(id)) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/generate")
     public PublicProblem generateProblem(@RequestBody(required = false) GenerateProblemRequest request) {
         return generatorService.generate(request);

@@ -76,6 +76,17 @@ public class SubmissionRepository {
         return result.withPersistence(submissionId, createdAt);
     }
 
+    public List<String> findSolvedProblemIds() {
+        return jdbcTemplate.queryForList(
+            """
+                SELECT DISTINCT problem_id
+                FROM submissions
+                WHERE status = 'ACCEPTED' AND problem_id IS NOT NULL
+                """,
+            String.class
+        );
+    }
+
     public List<SubmissionSummary> findRecent(String problemId, Integer limit) {
         int normalizedLimit = normalizeLimit(limit);
         if (problemId != null && !problemId.isBlank()) {

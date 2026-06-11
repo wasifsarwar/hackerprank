@@ -50,6 +50,14 @@ export function fetchProblem(id: string): Promise<Problem> {
   return request<Problem>(`/api/problems/${id}`);
 }
 
+export function deleteProblem(id: string): Promise<void> {
+  return request<void>(`/api/problems/${id}`, { method: "DELETE" });
+}
+
+export function fetchSolvedProblemIds(): Promise<string[]> {
+  return request<string[]>("/api/submissions/solved");
+}
+
 export function generateProblem(payload: GenerateProblemRequest): Promise<Problem> {
   return request<Problem>("/api/problems/generate", {
     method: "POST",
