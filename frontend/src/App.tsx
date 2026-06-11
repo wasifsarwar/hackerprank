@@ -142,7 +142,7 @@ function App() {
     const runProblemId = catalog.problem.id;
     tutor.reset();
     const result = await submissions.run(catalog.problem, language, code, runHiddenTests);
-    if (result?.status === "ACCEPTED") {
+    if (runHiddenTests && result?.status === "ACCEPTED") {
       catalog.markSolved(runProblemId);
     }
   }

@@ -81,7 +81,7 @@ public class SubmissionRepository {
             """
                 SELECT DISTINCT problem_id
                 FROM submissions
-                WHERE status = 'ACCEPTED' AND problem_id IS NOT NULL
+                WHERE status = 'ACCEPTED' AND run_hidden_tests = TRUE AND problem_id IS NOT NULL
                 """,
             String.class
         );
